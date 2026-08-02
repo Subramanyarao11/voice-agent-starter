@@ -19,8 +19,8 @@ Requires: huggingface_hub, pdfplumber
 import json
 from pathlib import Path
 
-from huggingface_hub import list_repo_files, hf_hub_download
 import pdfplumber
+from huggingface_hub import hf_hub_download, list_repo_files
 
 REPO_ID = "shrijayan/gov_myscheme"
 REPO_TYPE = "dataset"

@@ -8,8 +8,8 @@ without touching the agent graph.
 """
 from abc import ABC, abstractmethod
 
-from openai import OpenAI
 import httpx
+from openai import OpenAI
 
 from app.core.config import settings
 

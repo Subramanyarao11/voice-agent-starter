@@ -1,9 +1,9 @@
-from fastapi import APIRouter, UploadFile, Depends
+from fastapi import APIRouter, Depends, UploadFile
 from sqlmodel import Session
 
+from app.agents.graph import AgentState, agent_graph
 from app.core.db import get_session
-from app.services.voice import STT_PROVIDERS, get_or_synthesize
-from app.agents.graph import agent_graph, AgentState
+from app.services.voice import STT_PROVIDERS
 
 router = APIRouter()
 

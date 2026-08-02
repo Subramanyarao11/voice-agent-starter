@@ -1,5 +1,5 @@
-from fastapi import FastAPI
 import structlog
+from fastapi import FastAPI
 
 from app.core.db import init_db
 from app.routers import session, voice

@@ -4,19 +4,19 @@ repo — everything downstream (matching accuracy, voice reasoning, explainabili
 depends on eligibility being parsed into these fields correctly, not left as
 free text. See spec-v2 section 4 for the CSSS worked example this was built from.
 """
-from typing import Optional
+
 from pydantic import BaseModel, Field
 
 
 class EligibilityCriteria(BaseModel):
-    age_min: Optional[int] = None
-    age_max: Optional[int] = None
-    max_annual_family_income_inr: Optional[int] = None
-    category: Optional[list[str]] = None  # ["SC", "ST", "OBC", "EWS", "General"]
-    gender: Optional[str] = None
-    occupation: Optional[list[str]] = None
-    education_level: Optional[list[str]] = None  # ["UG", "PG", "Class 10", ...]
-    enrollment_mode: Optional[list[str]] = None  # ["regular"], excludes correspondence
+    age_min: int | None = None
+    age_max: int | None = None
+    max_annual_family_income_inr: int | None = None
+    category: list[str] | None = None  # ["SC", "ST", "OBC", "EWS", "General"]
+    gender: str | None = None
+    occupation: list[str] | None = None
+    education_level: list[str] | None = None  # ["UG", "PG", "Class 10", ...]
+    enrollment_mode: list[str] | None = None  # ["regular"], excludes correspondence
     state_residency_required: bool = False
     exclusions: list[str] = Field(default_factory=list)
 

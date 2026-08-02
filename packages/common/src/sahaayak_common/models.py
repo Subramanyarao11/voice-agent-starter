@@ -6,9 +6,10 @@ state means running the ingestion pipeline again with a different filter.
 Neither requires touching the agent.
 """
 
-from datetime import date, datetime, timezone
+from datetime import UTC, date, datetime
 
-from sqlalchemy import JSON, Column, Enum as SAEnum, Index
+from sqlalchemy import JSON, Column, Index
+from sqlalchemy import Enum as SAEnum
 from sqlalchemy.ext.mutable import MutableDict, MutableList
 from sqlmodel import Field, SQLModel
 
@@ -16,7 +17,7 @@ from sahaayak_contracts import Domain
 
 
 def _utcnow() -> datetime:
-    return datetime.now(timezone.utc)
+    return datetime.now(UTC)
 
 
 def json_dict() -> Column:
@@ -124,7 +125,15 @@ class UserSession(SQLModel, table=True):
     state_code: str = Field(foreign_key="state.code")
     language_code: str = Field(foreign_key="language.code")
 
+    # Durable facts about the caller: age, income, category. These outlive any
+    # single call and are what stop a returning caller being re-interviewed.
     profile: dict = Field(default_factory=dict, sa_column=json_dict())
+
+    # Where the conversation itself had got to — the domain being discussed and
+    # the question awaiting an answer. Kept apart from `profile` because it is
+    # dialogue bookkeeping, not something true about the caller.
+    conversation_state: dict = Field(default_factory=dict, sa_column=json_dict())
+
     open_tasks: list[dict] = Field(default_factory=list, sa_column=json_list())
     matched_benefit_ids: list[str] = Field(default_factory=list, sa_column=json_list())
 

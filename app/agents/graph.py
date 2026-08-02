@@ -9,9 +9,8 @@ Wire each node through Langfuse's @observe decorator once tracing is set up
 asset, don't skip it).
 """
 from enum import Enum
-from typing import Optional
 
-from langgraph.graph import StateGraph, END
+from langgraph.graph import END, StateGraph
 from pydantic import BaseModel
 
 from app.schemas.eligibility import EligibilityMatchResult

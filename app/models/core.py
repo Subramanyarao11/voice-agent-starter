@@ -3,11 +3,10 @@ Core data model. Language, State, and Domain are all rows/enums, not code branch
 this is what lets us scale to 5 languages x 5 states x 3 domains by adding data,
 not rewriting the agent. See spec-v2 section 5 (Extensibility).
 """
-from datetime import date, datetime, timezone
+from datetime import UTC, date, datetime
 from enum import Enum
-from typing import Optional
 
-from sqlmodel import SQLModel, Field, Column, JSON
+from sqlmodel import JSON, Column, Field, SQLModel
 
 
 class Domain(str, Enum):
@@ -40,12 +39,12 @@ class Benefit(SQLModel, table=True):
     id: str = Field(primary_key=True)  # slug, e.g. "csss-cus"
     domain: Domain
     name: str
-    state_code: Optional[str] = Field(default=None, foreign_key="state.code")  # null = central/all-India
+    state_code: str | None = Field(default=None, foreign_key="state.code")  # null = central/all-India
     category: str  # e.g. "Education & Learning", "Housing", "Agriculture"
     description: str
 
     eligibility_initial: dict = Field(default_factory=dict, sa_column=Column(JSON))
-    eligibility_renewal: Optional[dict] = Field(default=None, sa_column=Column(JSON))
+    eligibility_renewal: dict | None = Field(default=None, sa_column=Column(JSON))
 
     benefits_text: str
     documents_required: list[str] = Field(default_factory=list, sa_column=Column(JSON))
@@ -73,5 +72,5 @@ class UserSession(SQLModel, table=True):
     open_tasks: list[dict] = Field(default_factory=list, sa_column=Column(JSON))
     matched_benefit_ids: list[str] = Field(default_factory=list, sa_column=Column(JSON))
 
-    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
-    last_contact_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    created_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
+    last_contact_at: datetime = Field(default_factory=lambda: datetime.now(UTC))

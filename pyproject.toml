@@ -46,6 +46,22 @@ target-version = "py312"
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "UP", "B"]
+ignore = [
+    # `class X(str, Enum)` rather than StrEnum: this is what Pydantic and
+    # SQLAlchemy's Enum column expect, and both are load-bearing here.
+    "UP042",
+    # `Depends(...)` in a parameter default is FastAPI's dependency-injection
+    # idiom, not the mutable-default bug this rule targets.
+    "B008",
+]
+
+[tool.ruff.lint.isort]
+known-first-party = [
+    "sahaayak_agent",
+    "sahaayak_api",
+    "sahaayak_common",
+    "sahaayak_contracts",
+]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
