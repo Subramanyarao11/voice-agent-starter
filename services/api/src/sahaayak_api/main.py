@@ -21,7 +21,9 @@ from sahaayak_api.routers import (
     escalations,
     health,
     rag,
+    saved_benefits,
     sessions,
+    telephony,
     turns,
 )
 from sahaayak_common import configure_logging, get_logger, init_db, settings
@@ -76,7 +78,9 @@ app.include_router(health.router)
 app.include_router(catalog.router)
 app.include_router(turns.router)
 app.include_router(rag.router)
+app.include_router(saved_benefits.router)
 app.include_router(browser_sessions.router)
 app.include_router(sessions.router)
+app.include_router(telephony.router)
 app.include_router(escalations.router)
 app.include_router(admin.router)

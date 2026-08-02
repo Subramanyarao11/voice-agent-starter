@@ -7,7 +7,9 @@ from sahaayak_api.routers import (
     escalations,
     health,
     rag,
+    saved_benefits,
     sessions,
+    telephony,
     turns,
 )
 
@@ -18,6 +20,8 @@ __all__ = [
     "escalations",
     "health",
     "rag",
+    "saved_benefits",
     "sessions",
+    "telephony",
     "turns",
 ]

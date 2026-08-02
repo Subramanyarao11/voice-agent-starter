@@ -1,0 +1,39 @@
+[
+  {
+    "id": "scholarship-eligible-en",
+    "language": "en",
+    "state": "KA",
+    "turns": [
+      "I need a scholarship",
+      "I am 22",
+      "2 lakh",
+      "regular degree college",
+      "SC"
+    ],
+    "expect": {"match_id": "demo-csss-cus", "response": true, "escalated": false}
+  },
+  {
+    "id": "scholarship-uncertain-hi",
+    "language": "hi",
+    "state": "DL",
+    "turns": [
+      "मुझे छात्रवृत्ति चाहिए",
+      "मेरी उम्र 65 है",
+      "50 लाख",
+      "पीएचडी"
+    ],
+    "expect": {"response": true, "escalated": true}
+  },
+  {
+    "id": "scheme-farmer-kn",
+    "language": "kn",
+    "state": "KA",
+    "turns": [
+      "ನನಗೆ ಒಂದು ಯೋಜನೆ ಬೇಕು",
+      "35",
+      "ಒಂದು ಲಕ್ಷ",
+      "farmer"
+    ],
+    "expect": {"match_id": "demo-pm-kisan", "response": true, "escalated": false}
+  }
+]

@@ -27,6 +27,9 @@ def test_catalog_is_read_from_the_database(client):
     # A state whose language is not served yet is listed but inactive, so the
     # expansion path is visible without over-claiming coverage.
     assert states["TN"]["is_active"] is False
+    language_rows = {row["code"]: row for row in client.get("/api/languages").json()}
+    assert language_rows["ta"]["is_active"] is False
+    assert language_rows["bn"]["is_active"] is False
 
 
 def test_coverage_counts_loaded_benefits(client):
@@ -130,6 +133,53 @@ def test_an_inbound_request_id_is_echoed_back(client):
     """So a telephony provider's trace and ours line up on one identifier."""
     response = client.get("/health", headers={"X-Request-ID": "trace-me"})
     assert response.headers["X-Request-ID"] == "trace-me"
+
+
+def test_readiness_and_metrics_are_safe_operational_surfaces(client):
+    readiness = client.get("/readyz")
+    assert readiness.status_code == 200
+    assert readiness.json()["status"] == "ready"
+    metrics = client.get("/metrics")
+    assert metrics.status_code == 200
+    assert "sahaayak_database_up 1" in metrics.text
+    assert "session_id" not in metrics.text
+
+
+def test_guest_can_save_benefit_and_schedule_private_reminder(client, guest_session):
+    from datetime import UTC, datetime, timedelta
+
+    session = guest_session()
+    saved = client.post(
+        f"/api/sessions/{session['session_id']}/saved-benefits",
+        json={"benefit_id": "demo-csss-cus"},
+        headers=session["headers"],
+    )
+    assert saved.status_code == 201
+    assert saved.json()["benefit_id"] == "demo-csss-cus"
+
+    due_at = (datetime.now(UTC) + timedelta(hours=2)).isoformat()
+    reminder = client.post(
+        f"/api/sessions/{session['session_id']}/reminders",
+        json={"benefit_id": "demo-csss-cus", "due_at": due_at},
+        headers=session["headers"],
+    )
+    assert reminder.status_code == 201
+    assert reminder.json()["status"] == "scheduled"
+    assert len(
+        client.get(
+            f"/api/sessions/{session['session_id']}/saved-benefits",
+            headers=session["headers"],
+        ).json()
+    ) == 1
+
+
+def test_telephony_is_disabled_until_a_provider_secret_is_configured(client):
+    session = client.post(
+        "/api/telephony/turns",
+        files={"audio": ("turn.wav", b"not-real-audio", "audio/wav")},
+        data={"caller_id": "+910000000000", "language_code": "en"},
+    )
+    assert session.status_code == 404
 
 
 def test_session_and_transcript_are_retrievable(client, guest_session):

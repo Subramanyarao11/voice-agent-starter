@@ -247,7 +247,10 @@ async def _load_oidc_keys(*, force: bool = False) -> _OIDCKeyCache:
         issuer = settings.admin_oidc_issuer_url.strip().rstrip("/")
         if not issuer:
             raise _OIDCUnavailable("OIDC issuer is not configured")
-        discovery_url = f"{issuer}/.well-known/openid-configuration"
+        discovery_url = (
+            settings.admin_oidc_discovery_url.strip()
+            or f"{issuer}/.well-known/openid-configuration"
+        )
         discovery = await _fetch_json(discovery_url)
         discovered_issuer = discovery.get("issuer")
         if discovered_issuer and str(discovered_issuer).rstrip("/") != issuer:
@@ -315,6 +318,12 @@ def _mfa_verified(claims: dict[str, Any]) -> bool:
 
 def _role_from_claims(claims: dict[str, Any]) -> str:
     raw_roles = _claim_value(claims, settings.admin_oidc_roles_claim)
+    # Keycloak's standard realm-role representation is nested under
+    # `realm_access.roles`. A custom `roles` mapper remains supported for
+    # other providers, but local Keycloak should work with the standard token
+    # shape out of the box.
+    if raw_roles is None:
+        raw_roles = _claim_value(claims, "realm_access.roles")
     values = [raw_roles] if isinstance(raw_roles, str) else raw_roles
     if not isinstance(values, list):
         values = []

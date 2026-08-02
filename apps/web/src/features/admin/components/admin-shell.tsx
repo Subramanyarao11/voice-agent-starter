@@ -1,4 +1,4 @@
-import { useState, type FormEvent, type ReactNode } from "react";
+import { useEffect, useState, type FormEvent, type ReactNode } from "react";
 
 import { Activity, ArrowLeft, Database, FileCheck2, Gauge, Languages, ListChecks, LogOut, Server, ShieldCheck, Users } from "lucide-react";
 import { Link } from "@tanstack/react-router";
@@ -9,6 +9,11 @@ import { Badge } from "@/components/ui/badge";
 import { useAdminMeQuery } from "@/features/admin/queries";
 import { useAdminSessionStore } from "@/features/admin/store";
 import { toUserMessage } from "@/lib/api";
+import {
+  beginAdminOidcLogin,
+  beginAdminOidcLogout,
+  isAdminOidcConfigured,
+} from "@/features/admin/oidc";
 
 export type AdminView = "overview" | "conversations" | "telemetry" | "escalations" | "benefits" | "providers" | "languages" | "audit" | "system";
 
@@ -31,12 +36,26 @@ type AdminShellProps = {
 
 export function AdminShell({ activeView, children }: AdminShellProps) {
   const token = useAdminSessionStore((state) => state.token);
+  const idToken = useAdminSessionStore((state) => state.idToken);
+  const expiresAt = useAdminSessionStore((state) => state.expiresAt);
   const setToken = useAdminSessionStore((state) => state.setToken);
   const clearToken = useAdminSessionStore((state) => state.clearToken);
   const meQuery = useAdminMeQuery(token);
+  const oidcConfigured = isAdminOidcConfigured();
+
+  useEffect(() => {
+    if (!token || expiresAt <= 0) return;
+    const remaining = expiresAt - Date.now();
+    if (remaining <= 0) {
+      clearToken();
+      return;
+    }
+    const timer = window.setTimeout(clearToken, remaining);
+    return () => window.clearTimeout(timer);
+  }, [clearToken, expiresAt, token]);
 
   if (!token) {
-    return <AdminAccessGate onToken={setToken} />;
+    return <AdminAccessGate onToken={setToken} oidcConfigured={oidcConfigured} />;
   }
 
   if (meQuery.isPending) {
@@ -44,7 +63,7 @@ export function AdminShell({ activeView, children }: AdminShellProps) {
   }
 
   if (meQuery.isError || !meQuery.data) {
-    return <AdminAccessGate onToken={setToken} error={toUserMessage(meQuery.error)} onClear={clearToken} />;
+    return <AdminAccessGate onToken={setToken} error={toUserMessage(meQuery.error)} onClear={clearToken} oidcConfigured={oidcConfigured} />;
   }
 
   return (
@@ -67,7 +86,7 @@ export function AdminShell({ activeView, children }: AdminShellProps) {
               <ShieldCheck className="size-3" aria-hidden="true" />
               {meQuery.data.role} · {meQuery.data.auth_source === "oidc" && meQuery.data.mfa_verified ? "MFA" : "local"}
             </Badge>
-            <Button variant="ghost" size="sm" onClick={clearToken} aria-label="End admin session">
+            <Button variant="ghost" size="sm" onClick={() => { clearToken(); if (oidcConfigured) beginAdminOidcLogout(idToken); }} aria-label="End admin session">
               <LogOut className="size-3.5" aria-hidden="true" />
               Sign out
             </Button>
@@ -112,8 +131,10 @@ export function AdminShell({ activeView, children }: AdminShellProps) {
   );
 }
 
-function AdminAccessGate({ onToken, error, onClear }: { onToken: (token: string) => void; error?: string; onClear?: () => void }) {
+function AdminAccessGate({ onToken, error, onClear, oidcConfigured }: { onToken: (token: string) => void; error?: string; onClear?: () => void; oidcConfigured: boolean }) {
   const [draft, setDraft] = useState("");
+  const [oidcError, setOidcError] = useState<string | null>(null);
+  const allowManualToken = !oidcConfigured || import.meta.env.VITE_ADMIN_ALLOW_MANUAL_TOKEN === "true";
   const submit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (draft.trim()) onToken(draft);
@@ -127,11 +148,25 @@ function AdminAccessGate({ onToken, error, onClear }: { onToken: (token: string)
             <p className="font-mono text-[0.62rem] uppercase tracking-[0.22em] text-acid">Workforce access</p>
             <h1 id="admin-access-title" className="mt-3 text-3xl font-extrabold">Platform control center</h1>
             <p className="mt-3 text-sm leading-6 text-paper/60">
-              Enter the deployment’s admin bearer token. It is kept in this browser tab’s session storage and is never displayed back to the page.
+              {oidcConfigured
+                ? "Use the organization identity provider. Sahaayak requires a workforce role and MFA assurance before showing platform data."
+                : "Enter the deployment’s admin bearer token. It is kept in this browser tab’s session storage and is never displayed back to the page."}
             </p>
           </div>
           {error && <p role="alert" className="rounded-xl border border-orange/30 bg-orange/10 px-4 py-3 text-sm text-orange">{error}</p>}
-          <form className="space-y-3" onSubmit={submit} aria-label="Admin sign in">
+          {oidcConfigured && (
+            <div className="space-y-3">
+              <Button
+                type="button"
+                className="w-full bg-acid text-ink hover:bg-acid/90"
+                onClick={() => { setOidcError(null); void beginAdminOidcLogin().catch((reason: unknown) => setOidcError(reason instanceof Error ? reason.message : "Could not start admin sign-in.")); }}
+              >
+                Sign in with organization SSO
+              </Button>
+              {oidcError && <p role="alert" className="text-sm text-orange">{oidcError}</p>}
+            </div>
+          )}
+          {allowManualToken && <form className="space-y-3" onSubmit={submit} aria-label="Admin sign in">
             <label className="grid gap-2 text-sm font-semibold" htmlFor="admin-token">
               Admin token
               <input
@@ -144,7 +179,7 @@ function AdminAccessGate({ onToken, error, onClear }: { onToken: (token: string)
               />
             </label>
             <Button type="submit" className="w-full bg-acid text-ink hover:bg-acid/90">Continue securely</Button>
-          </form>
+          </form>}
           <div className="flex flex-wrap items-center justify-between gap-3 text-xs text-paper/45">
             <Link to="/" className="inline-flex items-center gap-2 hover:text-acid"><ArrowLeft className="size-3.5" aria-hidden="true" />Return to citizen app</Link>
             {onClear && <button type="button" onClick={onClear} className="underline underline-offset-4 hover:text-paper">Clear rejected session</button>}

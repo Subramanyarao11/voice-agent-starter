@@ -10,13 +10,18 @@ Whisper and Sarvam Bulbul keys are configured.
 
 ## Current scope
 
-The architecture is designed for five languages and five states. The working
-demo catalog is intentionally narrower:
+The architecture is designed for a ten-language rollout and multiple states. The
+working demo catalog is intentionally narrower:
 
 - Languages: Kannada (`kn`), Hindi (`hi`), and English (`en`)
 - Active states in the catalog: Karnataka (`KA`) and Delhi (`DL`)
 - Data: eight hand-entered illustrative benefits for local development
 - Voice: OpenAI Whisper for speech-to-text, Sarvam Bulbul for speech output
+
+Additional language profiles are registered as inactive until their translated
+prompts, speech quality, and benefit coverage are validated. See
+[`docs/production-operations.md`](docs/production-operations.md) for deployment,
+backup, retention, alerting, Keycloak, and rollout operations.
 
 The demo rows are not a claim of verified nationwide eligibility coverage. Run
 the ingestion pipeline in `scripts/01_download_and_extract.py` through

@@ -1,6 +1,6 @@
 .DEFAULT_GOAL := help
 .PHONY: help setup up down infra api web lint fmt test check types seed validate-data migrate \
-        pipeline extract prefilter structure spotcheck logs-api ps clean
+pipeline extract prefilter structure spotcheck evaluate retention rate-limit-smoke logs-api ps clean
 
 help: ## Show every available target
 	@grep -hE '^[a-zA-Z_-]+:.*?## ' $(MAKEFILE_LIST) \
@@ -50,6 +50,15 @@ seed: ## Load languages, states, and structured benefits into the database
 
 validate-data: ## Reject active benefit rows without source/review evidence
 	uv run python scripts/validate_benefits.py
+
+evaluate: ## Run deterministic conversation regression cases without provider calls
+	uv run python scripts/12_run_evaluations.py --seed-demo
+
+retention: ## Preview privacy retention deletions; add --execute explicitly to apply
+	uv run python scripts/11_retention.py
+
+rate-limit-smoke: ## Verify two Redis limiter instances share one atomic window
+	uv run python scripts/13_rate_limit_smoke.py
 
 migrate: ## Apply all Alembic migrations to the configured database
 	uv run alembic upgrade head

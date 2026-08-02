@@ -13,7 +13,7 @@ from pydantic import BaseModel, Field
 from sqlmodel import Session, select
 
 from sahaayak_api.browser_auth import BrowserSessionPrincipal, require_browser_session
-from sahaayak_common import ConversationTurnLog, UserSession, get_session
+from sahaayak_common import ConversationTurnLog, Reminder, SavedBenefit, UserSession, get_session
 
 router = APIRouter(prefix="/api/sessions", tags=["sessions"])
 
@@ -90,6 +90,14 @@ def reset_session(
         select(ConversationTurnLog).where(ConversationTurnLog.session_id == row.id)
     ).all():
         db.delete(turn)
+    for saved in db.exec(
+        select(SavedBenefit).where(SavedBenefit.session_id == row.id)
+    ).all():
+        db.delete(saved)
+    for reminder in db.exec(
+        select(Reminder).where(Reminder.session_id == row.id)
+    ).all():
+        db.delete(reminder)
     db.delete(row)
     db.commit()
 

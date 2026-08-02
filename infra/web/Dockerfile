@@ -1,0 +1,30 @@
+FROM node:22-alpine AS build
+
+WORKDIR /app
+COPY package.json package-lock.json ./
+COPY apps/web/package.json apps/web/package.json
+COPY packages/api-types/package.json packages/api-types/package.json
+RUN npm ci
+
+COPY apps/web/ apps/web/
+COPY packages/api-types/ packages/api-types/
+
+ARG VITE_API_BASE_URL=
+ARG VITE_ADMIN_OIDC_ISSUER=
+ARG VITE_ADMIN_OIDC_CLIENT_ID=sahaayak-admin
+ARG VITE_ADMIN_OIDC_REDIRECT_URI=
+ARG VITE_ADMIN_OIDC_SCOPE="openid profile email"
+ARG VITE_ADMIN_ALLOW_MANUAL_TOKEN=false
+ENV VITE_API_BASE_URL=$VITE_API_BASE_URL \
+    VITE_ADMIN_OIDC_ISSUER=$VITE_ADMIN_OIDC_ISSUER \
+    VITE_ADMIN_OIDC_CLIENT_ID=$VITE_ADMIN_OIDC_CLIENT_ID \
+    VITE_ADMIN_OIDC_REDIRECT_URI=$VITE_ADMIN_OIDC_REDIRECT_URI \
+    VITE_ADMIN_OIDC_SCOPE=$VITE_ADMIN_OIDC_SCOPE \
+    VITE_ADMIN_ALLOW_MANUAL_TOKEN=$VITE_ADMIN_ALLOW_MANUAL_TOKEN
+
+RUN npm run build --workspace @sahaayak/web
+
+FROM nginx:1.29-alpine
+COPY infra/web/nginx.conf /etc/nginx/conf.d/default.conf
+COPY --from=build /app/apps/web/dist /usr/share/nginx/html
+EXPOSE 80

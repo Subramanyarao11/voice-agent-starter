@@ -1,0 +1,75 @@
+name: sahaayak
+
+services:
+  keycloak-db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: keycloak
+      POSTGRES_PASSWORD: ${KEYCLOAK_DB_PASSWORD:-keycloak-local-only}
+      POSTGRES_DB: keycloak
+    volumes:
+      - keycloak_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U keycloak -d keycloak"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  keycloak:
+    image: quay.io/keycloak/keycloak:26.7.0
+    restart: unless-stopped
+    command: ["start-dev", "--import-realm"]
+    environment:
+      KC_BOOTSTRAP_ADMIN_USERNAME: ${KEYCLOAK_ADMIN_USERNAME:-admin}
+      KC_BOOTSTRAP_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD:-change-me-local}
+      KC_DB: postgres
+      KC_DB_URL: jdbc:postgresql://keycloak-db:5432/keycloak
+      KC_DB_USERNAME: keycloak
+      KC_DB_PASSWORD: ${KEYCLOAK_DB_PASSWORD:-keycloak-local-only}
+      KC_HOSTNAME: localhost
+      KC_HOSTNAME_STRICT: "false"
+      KC_HTTP_ENABLED: "true"
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./infra/keycloak/realm:/opt/keycloak/data/import:ro
+    depends_on:
+      keycloak-db:
+        condition: service_healthy
+
+  keycloak-backup:
+    image: postgres:16-alpine
+    profiles: ["ops"]
+    restart: unless-stopped
+    environment:
+      PGHOST: keycloak-db
+      PGPORT: "5432"
+      PGUSER: keycloak
+      PGPASSWORD: ${KEYCLOAK_DB_PASSWORD:-keycloak-local-only}
+      PGDATABASE: keycloak
+      BACKUP_DIR: /backups
+      BACKUP_PREFIX: keycloak
+      BACKUP_RETENTION_DAYS: ${BACKUP_RETENTION_DAYS:-14}
+      BACKUP_INTERVAL_SECONDS: ${BACKUP_INTERVAL_SECONDS:-86400}
+    volumes:
+      - keycloak_backups:/backups
+      - ./infra/postgres/backup.sh:/usr/local/bin/sahaayak-backup:ro
+    entrypoint: ["/bin/sh", "/usr/local/bin/sahaayak-backup"]
+    depends_on:
+      keycloak-db:
+        condition: service_healthy
+
+  api:
+    environment:
+      ADMIN_STATIC_TOKENS_ENABLED: "false"
+      ADMIN_OIDC_ENABLED: "true"
+      ADMIN_OIDC_ISSUER_URL: ${ADMIN_OIDC_ISSUER_URL:-http://localhost:8080/realms/sahaayak}
+      ADMIN_OIDC_DISCOVERY_URL: ${ADMIN_OIDC_DISCOVERY_URL:-http://keycloak:8080/realms/sahaayak/.well-known/openid-configuration}
+      ADMIN_OIDC_JWKS_URL: ${ADMIN_OIDC_JWKS_URL:-http://keycloak:8080/realms/sahaayak/protocol/openid-connect/certs}
+      ADMIN_OIDC_AUDIENCE: ${ADMIN_OIDC_AUDIENCE:-sahaayak-admin}
+      ADMIN_OIDC_REQUIRED_AMR: ${ADMIN_OIDC_REQUIRED_AMR:-otp}
+
+volumes:
+  keycloak_pgdata:
+  keycloak_backups:

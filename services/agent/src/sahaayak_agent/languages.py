@@ -1,9 +1,10 @@
-"""The language catalog the deployment ships with.
+"""The language rollout catalog.
 
-Kannada and Hindi are the languages targeted for the submission demo. The other
-three are listed because the pipeline and prompts are the only work each one
-needs — they are here to make the remaining effort concrete rather than to
-claim coverage that does not exist yet.
+Kannada, Hindi, and English are currently served. Eight additional Indian
+language profiles are registered as inactive rollout targets so the admin
+console, data pipeline, and frontend can plan a ten-language local-language
+expansion without claiming that translated prompts, benefits, or voices are
+ready before they have evidence.
 """
 
 from sahaayak_contracts import LanguageCatalog, LanguageProfile
@@ -34,11 +35,17 @@ DEFAULT_CATALOG = LanguageCatalog(
     ]
 )
 
-# Ready for data and prompts; not served until both exist.
+# Ready for data and prompts; not served until both exist. Together with the
+# three active profiles this is the ten-language Indian-language rollout set.
 PLANNED_PROFILES = [
     LanguageProfile(code="ta", name="Tamil", native_name="தமிழ்", tts_voice_id="anushka"),
     LanguageProfile(code="te", name="Telugu", native_name="తెలుగు", tts_voice_id="anushka"),
     LanguageProfile(code="mr", name="Marathi", native_name="मराठी", tts_voice_id="anushka"),
+    LanguageProfile(code="bn", name="Bengali", native_name="বাংলা", tts_voice_id="anushka"),
+    LanguageProfile(code="gu", name="Gujarati", native_name="ગુજરાતી", tts_voice_id="anushka"),
+    LanguageProfile(code="ml", name="Malayalam", native_name="മലയാളം", tts_voice_id="anushka"),
+    LanguageProfile(code="pa", name="Punjabi", native_name="ਪੰਜਾਬੀ", tts_voice_id="anushka"),
+    LanguageProfile(code="or", name="Odia", native_name="ଓଡ଼ିଆ", tts_voice_id="anushka"),
 ]
 
 

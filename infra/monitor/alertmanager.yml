@@ -1,0 +1,15 @@
+global:
+  resolve_timeout: 5m
+
+route:
+  receiver: log-only
+  group_by: [alertname, severity]
+  group_wait: 30s
+  group_interval: 5m
+  repeat_interval: 4h
+
+receivers:
+  # Replace this with the deployment's PagerDuty, email, Slack, or webhook
+  # receiver before production. Keeping a valid no-op receiver makes the
+  # local Compose monitoring profile safe to start without credentials.
+  - name: log-only

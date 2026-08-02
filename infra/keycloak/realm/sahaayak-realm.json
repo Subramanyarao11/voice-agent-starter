@@ -1,0 +1,47 @@
+{
+  "realm": "sahaayak",
+  "enabled": true,
+  "displayName": "Sahaayak Workforce",
+  "sslRequired": "NONE",
+  "registrationAllowed": false,
+  "loginWithEmailAllowed": true,
+  "duplicateEmailsAllowed": false,
+  "roles": {
+    "realm": [
+      {"name": "observer", "description": "Read-only operations access"},
+      {"name": "operator", "description": "Operations and escalation access"},
+      {"name": "reviewer", "description": "Benefit review access"},
+      {"name": "admin", "description": "Full platform control access"}
+    ]
+  },
+  "clients": [
+    {
+      "clientId": "sahaayak-admin",
+      "name": "Sahaayak Operations Console",
+      "protocol": "openid-connect",
+      "publicClient": true,
+      "standardFlowEnabled": true,
+      "directAccessGrantsEnabled": false,
+      "serviceAccountsEnabled": false,
+      "redirectUris": ["http://localhost:5173/admin/callback"],
+      "webOrigins": ["http://localhost:5173"],
+      "attributes": {
+        "pkce.code.challenge.method": "S256",
+        "post.logout.redirect.uris": "http://localhost:5173/*"
+      },
+      "protocolMappers": [
+        {
+          "name": "sahaayak-admin-audience",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-audience-mapper",
+          "config": {
+            "included.client.audience": "sahaayak-admin",
+            "id.token.claim": "false",
+            "access.token.claim": "true",
+            "userinfo.token.claim": "false"
+          }
+        }
+      ]
+    }
+  ]
+}

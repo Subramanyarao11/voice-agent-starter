@@ -110,6 +110,32 @@ export const benefitDetailSchema = z.object({
   valid_until: z.string().nullable(),
 });
 
+export const savedBenefitSchema = z.object({
+  id: z.string(),
+  benefit_id: z.string(),
+  name: z.string(),
+  domain: z.string(),
+  state_code: z.string().nullable(),
+  description: z.string(),
+  source_title: z.string(),
+  source_document_url: z.string(),
+  verification_status: z.string(),
+  saved_at: z.string(),
+});
+
+export const reminderSchema = z.object({
+  id: z.string(),
+  benefit_id: z.string(),
+  benefit_name: z.string(),
+  due_at: z.string(),
+  note: z.string(),
+  timezone: z.string(),
+  channel: z.string(),
+  status: z.string(),
+  created_at: z.string(),
+  delivered_at: z.string().nullable(),
+});
+
 export const turnResponseSchema = z.object({
   session_id: z.string(),
   transcript: z.string(),
@@ -145,6 +171,8 @@ export type TurnResponse = z.infer<typeof turnResponseSchema>;
 export type MatchSummary = z.infer<typeof matchSchema>;
 export type BenefitDetail = z.infer<typeof benefitDetailSchema>;
 export type RetrievedSource = z.infer<typeof retrievedSourceSchema>;
+export type SavedBenefit = z.infer<typeof savedBenefitSchema>;
+export type Reminder = z.infer<typeof reminderSchema>;
 
 export type Catalog = {
   languages: Language[];
@@ -251,6 +279,66 @@ export function sendTextTurn(payload: TurnRequest, accessToken: string): Promise
 
 export function getBenefit(benefitId: string): Promise<BenefitDetail> {
   return request(`/api/benefits/${encodeURIComponent(benefitId)}`, benefitDetailSchema);
+}
+
+export function getSavedBenefits(sessionId: string, accessToken: string): Promise<SavedBenefit[]> {
+  return request(
+    `/api/sessions/${encodeURIComponent(sessionId)}/saved-benefits`,
+    z.array(savedBenefitSchema),
+    { headers: { Authorization: `Bearer ${accessToken}` } },
+  );
+}
+
+export function saveBenefit(
+  sessionId: string,
+  benefitId: string,
+  accessToken: string,
+): Promise<SavedBenefit> {
+  return request(
+    `/api/sessions/${encodeURIComponent(sessionId)}/saved-benefits`,
+    savedBenefitSchema,
+    {
+      method: "POST",
+      body: JSON.stringify({ benefit_id: benefitId }),
+      headers: { Authorization: `Bearer ${accessToken}` },
+    },
+  );
+}
+
+export function removeSavedBenefit(
+  sessionId: string,
+  benefitId: string,
+  accessToken: string,
+): Promise<void> {
+  return request(
+    `/api/sessions/${encodeURIComponent(sessionId)}/saved-benefits/${encodeURIComponent(benefitId)}`,
+    z.undefined(),
+    { method: "DELETE", headers: { Authorization: `Bearer ${accessToken}` } },
+  );
+}
+
+export function getReminders(sessionId: string, accessToken: string): Promise<Reminder[]> {
+  return request(
+    `/api/sessions/${encodeURIComponent(sessionId)}/reminders`,
+    z.array(reminderSchema),
+    { headers: { Authorization: `Bearer ${accessToken}` } },
+  );
+}
+
+export function createReminder(
+  sessionId: string,
+  payload: { benefit_id: string; due_at: string; note?: string },
+  accessToken: string,
+): Promise<Reminder> {
+  return request(
+    `/api/sessions/${encodeURIComponent(sessionId)}/reminders`,
+    reminderSchema,
+    {
+      method: "POST",
+      body: JSON.stringify(payload),
+      headers: { Authorization: `Bearer ${accessToken}` },
+    },
+  );
 }
 
 function extensionForMimeType(mimeType: string): string {

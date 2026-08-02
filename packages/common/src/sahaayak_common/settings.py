@@ -83,6 +83,11 @@ class Settings(BaseSettings):
     admin_static_tokens_enabled: bool = True
     admin_oidc_enabled: bool = False
     admin_oidc_issuer_url: str = ""
+    # A deployment may need the API to reach the IdP over an internal Docker
+    # hostname while tokens still carry the browser-visible issuer URL. Keep
+    # discovery separate from issuer so that split-horizon networking is
+    # explicit rather than hidden in the authentication code.
+    admin_oidc_discovery_url: str = ""
     admin_oidc_audience: str = ""
     admin_oidc_jwks_url: str = ""
     admin_oidc_allowed_algorithms: str = "RS256"
@@ -119,6 +124,24 @@ class Settings(BaseSettings):
     otel_exporter_otlp_headers: str = ""
     otel_console_exporter: bool = False
     otel_sample_ratio: float = 1.0
+
+    # --- Data lifecycle ----------------------------------------------------
+    # These are intentionally bounded defaults for sensitive conversation and
+    # operational data. The retention command supports dry runs before a
+    # deployment enables the scheduled job.
+    retention_transcript_days: int = 30
+    retention_telemetry_days: int = 30
+    retention_audit_days: int = 365
+    retention_escalation_days: int = 365
+    retention_expired_session_days: int = 7
+
+    # --- Telephony seam ----------------------------------------------------
+    # The generic signed webhook is disabled until a telephony provider and
+    # webhook secret are configured. Browser callers never use this path.
+    telephony_enabled: bool = False
+    telephony_webhook_secret: str = ""
+    telephony_provider: str = "generic"
+    telephony_max_timestamp_skew_seconds: int = 300
 
     # --- Application ---
     env: str = "development"

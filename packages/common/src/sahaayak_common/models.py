@@ -175,6 +175,52 @@ class UserSession(SQLModel, table=True):
     last_contact_at: datetime = Field(default_factory=_utcnow)
 
 
+class SavedBenefit(SQLModel, table=True):
+    """A caller's private shortlist of benefits.
+
+    The row is deliberately keyed to the server-owned session rather than a
+    browser-controlled identifier. Guest users can save items without creating
+    an account, and deleting the guest session removes the relationship with
+    the rest of that session's data.
+    """
+
+    __tablename__ = "saved_benefit"
+    __table_args__ = (
+        Index("ix_saved_benefit_session_benefit", "session_id", "benefit_id", unique=True),
+    )
+
+    id: str = Field(primary_key=True)
+    session_id: str = Field(foreign_key="user_session.id", index=True)
+    benefit_id: str = Field(foreign_key="benefit.id", index=True)
+    created_at: datetime = Field(default_factory=_utcnow, index=True)
+
+
+class Reminder(SQLModel, table=True):
+    """A bounded in-app reminder for a saved benefit.
+
+    Delivery channels other than ``in_app`` are intentionally not accepted by
+    the API until a verified contact/account channel exists. This keeps the
+    feature useful today without pretending that an anonymous browser session
+    has an SMS or email destination.
+    """
+
+    __tablename__ = "reminder"
+    __table_args__ = (
+        Index("ix_reminder_session_status_due", "session_id", "status", "due_at"),
+    )
+
+    id: str = Field(primary_key=True)
+    session_id: str = Field(foreign_key="user_session.id", index=True)
+    benefit_id: str = Field(foreign_key="benefit.id", index=True)
+    note: str = ""
+    due_at: datetime = Field(index=True)
+    timezone: str = "Asia/Kolkata"
+    channel: str = "in_app"
+    status: str = Field(default="scheduled", index=True)  # scheduled | delivered | cancelled
+    created_at: datetime = Field(default_factory=_utcnow, index=True)
+    delivered_at: datetime | None = None
+
+
 class ConversationTurnLog(SQLModel, table=True):
     """Turn-by-turn transcript, kept for demo playback and quality review."""
 

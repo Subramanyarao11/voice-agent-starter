@@ -2,6 +2,7 @@ import { createRootRoute, createRoute, createRouter, Outlet } from "@tanstack/re
 
 import { HomePage } from "@/routes/home";
 import { AdminRoutePage } from "@/routes/admin";
+import { AdminCallbackPage } from "@/routes/admin-callback";
 
 function RootLayout() {
   return <Outlet />;
@@ -32,6 +33,12 @@ const adminRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/admin",
   component: () => <AdminRoutePage view="overview" />,
+});
+
+const adminCallbackRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/admin/callback",
+  component: AdminCallbackPage,
 });
 
 const adminOverviewRoute = createRoute({
@@ -91,6 +98,7 @@ const adminSystemRoute = createRoute({
 const routeTree = rootRoute.addChildren([
   indexRoute,
   adminRoute,
+  adminCallbackRoute,
   adminOverviewRoute,
   adminConversationsRoute,
   adminTelemetryRoute,

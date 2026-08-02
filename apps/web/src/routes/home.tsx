@@ -13,6 +13,12 @@ import { useConversationStore } from "@/features/conversation/store";
 import { useCreateBrowserSessionMutation } from "@/features/session/queries";
 import { useGuestSessionStore } from "@/features/session/store";
 import { useCatalogQuery, useHealthQuery } from "@/features/catalog/queries";
+import {
+  useRemoveSavedBenefitMutation,
+  useSaveBenefitMutation,
+  useSavedBenefitsQuery,
+} from "@/features/saved/queries";
+import { SavedBenefitsPanel } from "@/features/saved/components/saved-benefits-panel";
 import { useVoiceRecorder } from "@/hooks/use-voice-recorder";
 import { audioDataUrl, cn } from "@/lib/utils";
 import { ApiError, toUserMessage } from "@/lib/api";
@@ -43,6 +49,9 @@ export function HomePage() {
   const setDraft = useConversationStore((state) => state.setDraft);
   const appendTurn = useConversationStore((state) => state.appendTurn);
   const clearConversation = useConversationStore((state) => state.clearConversation);
+  const savedBenefitsQuery = useSavedBenefitsQuery(sessionId, accessToken);
+  const saveBenefitMutation = useSaveBenefitMutation(sessionId, accessToken);
+  const removeSavedBenefitMutation = useRemoveSavedBenefitMutation(sessionId, accessToken);
 
   const [feedback, setFeedback] = useState<{ kind: "error" | "notice"; text: string } | null>(null);
 
@@ -62,6 +71,10 @@ export function HomePage() {
   const catalogLoading = catalogQuery.isPending;
   const disabled = catalogLoading || isSending || sessionPending || !accessToken || !languageCode || !stateCode;
   const audioSource = audioDataUrl(lastTurn?.audio_base64, lastTurn?.audio_mime_type);
+  const savedBenefitIds = useMemo(
+    () => new Set(savedBenefitsQuery.data?.map((benefit) => benefit.benefit_id) ?? []),
+    [savedBenefitsQuery.data],
+  );
 
   const handleVoiceComplete = useCallback(
     async (audio: Blob) => {
@@ -161,6 +174,16 @@ export function HomePage() {
       setFeedback({ kind: "error", text: toUserMessage(error) });
     }
   }, [accessToken, clearConversation, clearSession, isSending, resetMutation, sessionId]);
+
+  const handleToggleSaved = useCallback(
+    (benefitId: string, saved: boolean) => {
+      const mutation = saved ? removeSavedBenefitMutation : saveBenefitMutation;
+      mutation.mutate(benefitId, {
+        onError: (error) => setFeedback({ kind: "error", text: toUserMessage(error) }),
+      });
+    },
+    [removeSavedBenefitMutation, saveBenefitMutation],
+  );
 
   const connected = healthQuery.data?.status === "ok" && Boolean(accessToken);
   const voiceInputAvailable = healthQuery.data?.speech_to_text ?? false;
@@ -278,7 +301,16 @@ export function HomePage() {
       <div className="relative mx-auto max-w-[1440px] space-y-10 pb-14">
         <TurnInspector turn={lastTurn} />
         <SourcesPanel turn={lastTurn} />
-        <MatchesPanel turn={lastTurn} />
+        <MatchesPanel
+          turn={lastTurn}
+          savedBenefitIds={savedBenefitIds}
+          onToggleSaved={handleToggleSaved}
+        />
+        <SavedBenefitsPanel
+          sessionId={sessionId}
+          accessToken={accessToken}
+          savedBenefits={savedBenefitsQuery.data ?? []}
+        />
       </div>
 
       <footer className="relative mx-auto flex max-w-[1440px] flex-wrap justify-between gap-3 border-t border-paper/10 py-6 text-[0.68rem] uppercase tracking-[0.12em] text-paper/35">

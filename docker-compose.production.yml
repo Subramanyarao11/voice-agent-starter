@@ -1,0 +1,152 @@
+name: sahaayak
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: sahaayak
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}
+      POSTGRES_DB: sahaayak
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U sahaayak -d sahaayak"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    command: ["redis-server", "--appendonly", "yes"]
+    volumes:
+      - redisdata:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  api:
+    build:
+      context: .
+      dockerfile: infra/python/Dockerfile
+    env_file: .env
+    environment:
+      ENV: production
+      LOG_JSON: "true"
+      DATABASE_URL: postgresql+psycopg://sahaayak:${POSTGRES_PASSWORD}@postgres:5432/sahaayak
+      REDIS_URL: redis://redis:6379/0
+      RATE_LIMIT_FAIL_CLOSED: "true"
+      RATE_LIMIT_KEY_SALT: ${RATE_LIMIT_KEY_SALT:?set RATE_LIMIT_KEY_SALT in .env}
+      WEB_BASE_URL: ${WEB_BASE_URL:-http://localhost:5173}
+    expose:
+      - "8000"
+    restart: unless-stopped
+    command: ["uvicorn", "sahaayak_api.main:app", "--host", "0.0.0.0", "--port", "8000", "--workers", "${API_WORKERS:-2}"]
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/readyz', timeout=2)\""]
+      interval: 10s
+      timeout: 4s
+      retries: 10
+      start_period: 30s
+
+  web:
+    build:
+      context: .
+      dockerfile: infra/web/Dockerfile
+      args:
+        VITE_API_BASE_URL: ${VITE_API_BASE_URL:-}
+        VITE_ADMIN_OIDC_ISSUER: ${VITE_ADMIN_OIDC_ISSUER:-}
+        VITE_ADMIN_OIDC_CLIENT_ID: ${VITE_ADMIN_OIDC_CLIENT_ID:-sahaayak-admin}
+        VITE_ADMIN_OIDC_REDIRECT_URI: ${VITE_ADMIN_OIDC_REDIRECT_URI:-http://localhost:5173/admin/callback}
+        VITE_ADMIN_OIDC_SCOPE: ${VITE_ADMIN_OIDC_SCOPE:-openid profile email}
+        VITE_ADMIN_ALLOW_MANUAL_TOKEN: ${VITE_ADMIN_ALLOW_MANUAL_TOKEN:-false}
+    restart: unless-stopped
+    ports:
+      - "${WEB_PORT:-5173}:80"
+    depends_on:
+      api:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O /dev/null http://127.0.0.1/health"]
+      interval: 10s
+      timeout: 4s
+      retries: 10
+
+  prometheus:
+    image: prom/prometheus:v2.55.1
+    restart: unless-stopped
+    ports:
+      - "${PROMETHEUS_PORT:-9090}:9090"
+    volumes:
+      - ./infra/monitor/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./infra/monitor/alert.rules.yml:/etc/prometheus/alert.rules.yml:ro
+      - prometheusdata:/prometheus
+    command:
+      - --config.file=/etc/prometheus/prometheus.yml
+      - --storage.tsdb.path=/prometheus
+      - --storage.tsdb.retention.time=${PROMETHEUS_RETENTION:-15d}
+    depends_on:
+      api:
+        condition: service_healthy
+
+  alertmanager:
+    image: prom/alertmanager:v0.27.0
+    restart: unless-stopped
+    ports:
+      - "${ALERTMANAGER_PORT:-9093}:9093"
+    volumes:
+      - ./infra/monitor/alertmanager.yml:/etc/alertmanager/alertmanager.yml:ro
+      - alertmanagerdata:/alertmanager
+    command:
+      - --config.file=/etc/alertmanager/alertmanager.yml
+      - --storage.path=/alertmanager
+
+  postgres-backup:
+    image: postgres:16-alpine
+    profiles: ["ops"]
+    restart: unless-stopped
+    environment:
+      PGHOST: postgres
+      PGPORT: "5432"
+      PGUSER: sahaayak
+      PGPASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}
+      PGDATABASE: sahaayak
+      BACKUP_DIR: /backups
+      BACKUP_RETENTION_DAYS: ${BACKUP_RETENTION_DAYS:-14}
+      BACKUP_INTERVAL_SECONDS: ${BACKUP_INTERVAL_SECONDS:-86400}
+    volumes:
+      - pgbackups:/backups
+      - ./infra/postgres/backup.sh:/usr/local/bin/sahaayak-backup:ro
+    entrypoint: ["/bin/sh", "/usr/local/bin/sahaayak-backup"]
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  retention:
+    build:
+      context: .
+      dockerfile: infra/python/Dockerfile
+    profiles: ["ops"]
+    env_file: .env
+    environment:
+      ENV: production
+      DATABASE_URL: postgresql+psycopg://sahaayak:${POSTGRES_PASSWORD}@postgres:5432/sahaayak
+    command: ["sh", "-c", "while true; do python scripts/11_retention.py --execute; sleep ${RETENTION_INTERVAL_SECONDS:-3600}; done"]
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+volumes:
+  pgdata:
+  redisdata:
+  prometheusdata:
+  alertmanagerdata:
+  pgbackups:

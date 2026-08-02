@@ -1,0 +1,27 @@
+groups:
+  - name: sahaayak-api
+    rules:
+      - alert: SahaayakApiTargetDown
+        expr: up{job="sahaayak-api"} == 0
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: Sahaayak API metrics target is down
+          description: Prometheus cannot scrape the Sahaayak API metrics endpoint.
+
+      - alert: SahaayakDatabaseUnavailable
+        expr: sahaayak_database_up == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: Sahaayak database is unavailable
+
+      - alert: SahaayakHttpErrorSpike
+        expr: sahaayak_http_requests_total > 20 and (sahaayak_http_errors_total / sahaayak_http_requests_total) > 0.05
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: Sahaayak HTTP 5xx rate is above 5 percent
