@@ -42,6 +42,17 @@ export const healthSchema = z.object({
   languages: z.array(z.string()),
 });
 
+const retrievedSourceSchema = z.object({
+  source_id: z.string(),
+  filename: z.string(),
+  score: z.number(),
+  excerpt: z.string(),
+  source_url: z.string().default(""),
+  attributes: z
+    .record(z.string(), z.union([z.string(), z.number(), z.boolean()]))
+    .default({}),
+});
+
 const matchSchema = z.object({
   benefit_id: z.string(),
   benefit_name: z.string(),
@@ -96,19 +107,7 @@ export const turnResponseSchema = z.object({
   transcript: z.string(),
   response_text: z.string(),
   grounded_answer: z.string().nullable().optional(),
-  sources: z.array(
-    z.object({
-      source_id: z.string(),
-      filename: z.string(),
-      score: z.number(),
-      excerpt: z.string(),
-      source_url: z.string().default(""),
-      attributes: z.record(
-        z.string(),
-        z.union([z.string(), z.number(), z.boolean()]),
-      ).default({}),
-    }),
-  ).default([]),
+  sources: z.array(retrievedSourceSchema).default([]),
   intent: z.enum([
     "find_scheme",
     "find_scholarship",
@@ -136,6 +135,7 @@ export type Health = z.infer<typeof healthSchema>;
 export type TurnResponse = z.infer<typeof turnResponseSchema>;
 export type MatchSummary = z.infer<typeof matchSchema>;
 export type BenefitDetail = z.infer<typeof benefitDetailSchema>;
+export type RetrievedSource = z.infer<typeof retrievedSourceSchema>;
 
 export type Catalog = {
   languages: Language[];

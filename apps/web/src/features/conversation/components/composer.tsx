@@ -42,15 +42,23 @@ export function Composer({
   }
 
   return (
-    <form className="border-t border-paper/10 px-5 pb-3 pt-4 sm:px-8" onSubmit={(event) => onSubmit(event)}>
+    <form
+      className="border-t border-paper/10 px-5 pb-3 pt-4 sm:px-8"
+      onSubmit={(event) => onSubmit(event)}
+      aria-label="Send a message"
+    >
+      <label htmlFor="message-input" className="sr-only">
+        Message for Sahaayak
+      </label>
       <Textarea
+        id="message-input"
         value={draft}
         onChange={(event) => onDraftChange(event.target.value)}
         onKeyDown={handleKeyDown}
         placeholder={selectedLanguageName ? `Type in ${selectedLanguageName}, English, or a mix…` : "Type what you need…"}
         rows={2}
         disabled={disabled || recording}
-        aria-label="Your message"
+        aria-describedby="composer-help"
         className="border-transparent bg-paper/[0.04] px-4 py-3 text-sm leading-6 focus-visible:border-acid/30 focus-visible:bg-paper/[0.06]"
       />
 
@@ -62,27 +70,40 @@ export function Composer({
           className={recording ? "border-orange/50 bg-orange/10 text-orange" : "border-paper/15 text-paper/65"}
           onClick={recording ? onStopRecording : onStartRecording}
           disabled={disabled || !voiceInputAvailable}
+          aria-label={voiceInputAvailable ? (recording ? "Stop recording" : "Record a voice message") : "Speech-to-text is not configured"}
+          aria-pressed={recording}
           title={voiceInputAvailable ? (recording ? "Stop recording" : "Record a voice message") : "Speech-to-text is not configured"}
         >
           {recording ? <Square className="size-3.5 fill-current" /> : <Mic className="size-3.5" />}
           <span>{recording ? "Stop" : "Speak"}</span>
         </Button>
 
-        <Button type="submit" size="sm" className="bg-acid px-4 text-ink hover:bg-acid/90" disabled={disabled || recording || !draft.trim()}>
+        <Button
+          type="submit"
+          size="sm"
+          className="bg-acid px-4 text-ink hover:bg-acid/90"
+          disabled={disabled || recording || !draft.trim()}
+          aria-label="Send message"
+        >
           {isSending ? <LoaderCircle className="size-3.5 animate-spin" /> : <span>Send</span>}
           <ArrowUpRight className="size-4" />
         </Button>
       </div>
 
-      <p className="mt-3 flex min-h-5 items-center gap-1.5 text-[0.68rem] leading-5 text-paper/40">
+      <p
+        id="composer-help"
+        className="mt-3 flex min-h-5 items-center gap-1.5 text-[0.68rem] leading-5 text-paper/40"
+        role={recorderError ? "alert" : "status"}
+        aria-live={recorderError ? "assertive" : "polite"}
+      >
         {recording ? (
           <>Listening… press Stop when you’re done.</>
         ) : recorderError ? (
           <span className="text-orange">{recorderError}</span>
         ) : textToSpeechAvailable ? (
-          <><Volume2 className="size-3" /> Voice replies are available for this API session.</>
+          <><Volume2 className="size-3" aria-hidden="true" /> Voice replies are available for this session. Enter sends; Shift+Enter adds a line.</>
         ) : (
-          <>Text replies are ready. Voice output is off until the API has TTS keys.</>
+          <>Text replies are ready. Voice output is off until the API has TTS keys. Enter sends; Shift+Enter adds a line.</>
         )}
       </p>
     </form>

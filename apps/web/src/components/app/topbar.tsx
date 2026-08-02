@@ -22,12 +22,19 @@ export function Topbar({ callerId, connected }: TopbarProps) {
       </Link>
 
       <div className="flex items-center gap-2 text-xs text-paper/65 sm:gap-3">
-        <span className="inline-flex items-center gap-1.5" role="status">
-          <span className={`size-2 rounded-full ${connected ? "bg-acid shadow-[0_0_12px_var(--acid)]" : "bg-orange"}`} />
+        <span className="inline-flex items-center gap-1.5" role="status" aria-live="polite">
+          <span
+            className={`size-2 rounded-full ${connected ? "bg-acid shadow-[0_0_12px_var(--acid)]" : "bg-orange"}`}
+            aria-hidden="true"
+          />
           <span className="hidden sm:inline">{connected ? "API connected" : "Connecting to API"}</span>
         </span>
-        <Badge variant="outline" className="border-paper/15 bg-paper/5 font-mono text-[0.65rem] text-paper/70">
-          <Radio className="size-3" /> caller · {callerId.slice(-8)}
+        <Badge
+          variant="outline"
+          className="border-paper/15 bg-paper/5 font-mono text-[0.65rem] text-paper/70"
+          aria-label="Anonymous browser session"
+        >
+          <Radio className="size-3" aria-hidden="true" /> caller · {callerId.slice(-8)}
         </Badge>
       </div>
     </header>

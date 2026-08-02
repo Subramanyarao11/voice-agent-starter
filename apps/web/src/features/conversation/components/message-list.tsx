@@ -13,7 +13,13 @@ const SUGGESTIONS = ["I need a scholarship", "Tell me about government schemes"]
 
 export function MessageList({ messages, isSending, onSuggestion }: MessageListProps) {
   return (
-    <div className="min-h-72 space-y-5 px-5 py-6 sm:min-h-80 sm:px-8" aria-live="polite">
+    <div
+      className="min-h-72 space-y-5 px-5 py-6 sm:min-h-80 sm:px-8"
+      role="log"
+      aria-live="polite"
+      aria-relevant="additions"
+      aria-label="Conversation messages"
+    >
       {messages.length === 0 ? (
         <motion.div
           className="flex min-h-60 flex-col items-center justify-center text-center"
@@ -51,6 +57,7 @@ export function MessageList({ messages, isSending, onSuggestion }: MessageListPr
               exit={{ opacity: 0, scale: 0.98 }}
               transition={{ duration: 0.25 }}
               className={`flex gap-3 ${message.role === "caller" ? "justify-end" : "justify-start"}`}
+              aria-label={message.role === "caller" ? "Your message" : "Sahaayak message"}
             >
               <div className={`max-w-[88%] sm:max-w-[75%] ${message.role === "caller" ? "text-right" : "text-left"}`}>
                 <span className="mb-1 block font-mono text-[0.58rem] uppercase tracking-[0.18em] text-paper/35">
@@ -77,9 +84,9 @@ export function MessageList({ messages, isSending, onSuggestion }: MessageListPr
           initial={{ opacity: 0, y: 8 }}
           animate={{ opacity: 1, y: 0 }}
         >
-          <div>
+          <div role="status" aria-label="Sahaayak is preparing a response">
             <span className="mb-1 block font-mono text-[0.58rem] uppercase tracking-[0.18em] text-paper/35">sahaayak</span>
-            <div className="flex items-center gap-1 rounded-2xl rounded-bl-sm border border-paper/10 bg-paper/[0.06] px-4 py-4">
+            <div className="flex items-center gap-1 rounded-2xl rounded-bl-sm border border-paper/10 bg-paper/[0.06] px-4 py-4" aria-hidden="true">
               {[0, 1, 2].map((index) => (
                 <motion.i
                   key={index}

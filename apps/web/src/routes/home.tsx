@@ -6,6 +6,7 @@ import { Topbar } from "@/components/app/topbar";
 import { CatalogControls } from "@/features/catalog/components/catalog-controls";
 import { ConversationPanel } from "@/features/conversation/components/conversation-panel";
 import { MatchesPanel } from "@/features/conversation/components/matches-panel";
+import { SourcesPanel } from "@/features/conversation/components/sources-panel";
 import { TurnInspector } from "@/features/conversation/components/turn-inspector";
 import { useResetSessionMutation, useTextTurnMutation, useVoiceTurnMutation } from "@/features/conversation/queries";
 import { useConversationStore } from "@/features/conversation/store";
@@ -135,9 +136,25 @@ export function HomePage() {
   const voiceInputAvailable = healthQuery.data?.speech_to_text ?? false;
 
   return (
-    <main className="relative min-h-svh overflow-hidden bg-ink px-4 py-5 text-paper sm:px-8 lg:px-12">
+    <main
+      className="relative min-h-svh overflow-hidden bg-ink px-4 py-5 text-paper sm:px-8 lg:px-12"
+      aria-labelledby="page-title"
+    >
       <div className="pointer-events-none absolute -left-40 top-16 size-[30rem] rounded-full bg-blue/10 blur-3xl" />
       <div className="pointer-events-none absolute -right-48 top-[28rem] size-[36rem] rounded-full bg-orange/10 blur-3xl" />
+
+      <a
+        href="#conversation"
+        onClick={(event) => {
+          event.preventDefault();
+          const target = document.getElementById("conversation");
+          target?.focus();
+          target?.scrollIntoView({ behavior: "smooth", block: "start" });
+        }}
+        className="sr-only fixed left-4 top-4 z-50 rounded-lg bg-acid px-4 py-2 font-semibold text-ink focus:not-sr-only focus:outline-none focus:ring-2 focus:ring-paper"
+      >
+        Skip to conversation
+      </a>
 
       <Topbar callerId={callerId} connected={connected} />
 
@@ -149,7 +166,7 @@ export function HomePage() {
           transition={{ duration: 0.55, ease: "easeOut" }}
         >
           <p className="font-mono text-[0.62rem] uppercase tracking-[0.24em] text-acid">A calmer way to find out</p>
-          <h1 className="mt-5 max-w-xl text-5xl font-extrabold leading-[0.98] tracking-[-0.055em] text-paper sm:text-7xl">
+          <h1 id="page-title" className="mt-5 max-w-xl text-5xl font-extrabold leading-[0.98] tracking-[-0.055em] text-paper sm:text-7xl">
             Find the help
             <br />
             meant for <em className="font-serif font-normal text-acid">you.</em>
@@ -173,8 +190,11 @@ export function HomePage() {
           </div>
         </motion.div>
 
-        <motion.div
-          className="relative space-y-4"
+        <motion.section
+          id="conversation"
+          aria-labelledby="conversation-title"
+          tabIndex={-1}
+          className="relative scroll-mt-8 space-y-4 outline-none"
           initial={{ opacity: 0, y: 24 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.55, delay: 0.1, ease: "easeOut" }}
@@ -210,7 +230,11 @@ export function HomePage() {
             onReset={() => void handleReset()}
           />
 
-          <div className="min-h-6 px-1 text-xs" role="status">
+          <div
+            className="min-h-6 px-1 text-xs"
+            role={feedback?.kind === "error" ? "alert" : "status"}
+            aria-live={feedback?.kind === "error" ? "assertive" : "polite"}
+          >
             {feedback && (
               <p className={cn("leading-5", feedback.kind === "error" ? "text-orange" : "text-acid")}>
                 {feedback.text}
@@ -218,11 +242,12 @@ export function HomePage() {
             )}
             {!feedback && catalogLoading && <p className="text-paper/40">Loading language and state catalog…</p>}
           </div>
-        </motion.div>
+        </motion.section>
       </section>
 
       <div className="relative mx-auto max-w-[1440px] space-y-10 pb-14">
         <TurnInspector turn={lastTurn} />
+        <SourcesPanel turn={lastTurn} />
         <MatchesPanel turn={lastTurn} />
       </div>
 

@@ -11,14 +11,14 @@ export function TurnInspector({ turn }: TurnInspectorProps) {
   const slots = Object.entries(turn?.slots ?? {});
 
   return (
-    <section aria-label="Last turn details">
+    <section aria-labelledby="turn-summary-title">
       <Card className="border-paper/10 bg-paper/[0.04] text-paper">
         <CardHeader className="flex-row items-center justify-between space-y-0 px-5 pb-4 pt-5 sm:px-7">
           <div>
             <span className="font-mono text-[0.6rem] uppercase tracking-[0.2em] text-acid/75">Turn details</span>
-            <CardTitle className="mt-2 text-lg text-paper">Structured, not guessed.</CardTitle>
+            <CardTitle id="turn-summary-title" className="mt-2 text-lg text-paper">Your conversation summary</CardTitle>
           </div>
-          <Badge variant="outline" className="hidden border-paper/15 text-paper/45 sm:inline-flex">debug readout</Badge>
+          <Badge variant="outline" className="hidden border-paper/15 text-paper/45 sm:inline-flex">transparency</Badge>
         </CardHeader>
         <CardContent className="grid gap-px overflow-hidden rounded-xl border border-paper/10 bg-paper/10 p-0 sm:grid-cols-2 lg:grid-cols-5">
           <DataPoint label="intent" value={turn?.intent ?? "—"} />

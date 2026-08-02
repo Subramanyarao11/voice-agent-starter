@@ -14,19 +14,25 @@ export function MatchesPanel({ turn }: MatchesPanelProps) {
   if (matches.length === 0) return null;
 
   return (
-    <section className="space-y-5" aria-label="Eligibility matches">
+    <section className="space-y-5" aria-labelledby="matches-title">
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
           <span className="font-mono text-[0.6rem] uppercase tracking-[0.2em] text-acid/75">Eligibility readout</span>
-          <h2 className="mt-2 text-2xl font-extrabold tracking-tight text-paper">What the agent found</h2>
+          <h2 id="matches-title" className="mt-2 text-2xl font-extrabold tracking-tight text-paper">What the agent found</h2>
         </div>
         <span className="text-xs text-paper/40">Reasons come from structured criteria.</span>
       </div>
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+      <p className="max-w-3xl text-sm leading-6 text-paper/55">
+        These are guidance results based on the answers you shared. They are not an official
+        government decision; check the linked source before applying.
+      </p>
+      <ul className="grid list-none gap-4 p-0 md:grid-cols-2 lg:grid-cols-3">
         {matches.map((match) => (
-          <MatchCard match={match} key={match.benefit_id} />
+          <li key={match.benefit_id}>
+            <MatchCard match={match} />
+          </li>
         ))}
-      </div>
+      </ul>
     </section>
   );
 }
@@ -36,25 +42,23 @@ function MatchCard({ match }: { match: MatchSummary }) {
   const isEligible = verdict.includes("eligible") && !verdict.includes("not");
   const isNotEligible = verdict.includes("not") || verdict.includes("ineligible");
   const Icon = isEligible ? CheckCircle2 : isNotEligible ? CircleX : CircleAlert;
-  const verificationLabel =
-    match.verification_status === "human_verified"
-      ? "Verified"
-      : match.verification_status === "illustrative"
-        ? "Illustrative demo"
-        : match.verification_status.replaceAll("_", " ");
+  const verificationLabel = verificationLabelFor(match.verification_status);
   const sourceUrl = match.source_document_url.trim();
 
   return (
-    <Card className="border-paper/10 bg-paper/[0.04] text-paper transition-transform hover:-translate-y-1 hover:border-acid/30">
+    <Card
+      className="h-full border-paper/10 bg-paper/[0.04] text-paper transition-transform hover:-translate-y-1 hover:border-acid/30"
+      aria-labelledby={`match-${match.benefit_id}`}
+    >
       <CardContent className="p-5">
         <div className="flex items-center justify-between gap-3">
           <span className="font-mono text-[0.6rem] uppercase tracking-[0.16em] text-paper/45">{match.domain}</span>
           <Badge variant={isEligible ? "success" : isNotEligible ? "warning" : "secondary"} className="gap-1.5">
-            <Icon className="size-3" />
+            <Icon className="size-3" aria-hidden="true" />
             {match.verdict.replaceAll("_", " ")}
           </Badge>
         </div>
-        <h3 className="mt-5 text-lg font-bold leading-snug text-paper">{match.benefit_name}</h3>
+        <h3 id={`match-${match.benefit_id}`} className="mt-5 text-lg font-bold leading-snug text-paper">{match.benefit_name}</h3>
         <p className="mt-3 min-h-12 text-sm leading-6 text-paper/60">{match.reasons?.[0] ?? "No additional reason was returned."}</p>
         <div className="mt-4 flex flex-wrap items-center gap-2 text-xs text-paper/45">
           <Badge variant={match.verification_status === "human_verified" ? "success" : "warning"}>
@@ -71,6 +75,7 @@ function MatchCard({ match }: { match: MatchSummary }) {
             href={sourceUrl}
             target="_blank"
             rel="noopener noreferrer"
+            aria-label={`Open the official source for ${match.benefit_name}`}
           >
             Open source
           </a>
@@ -81,4 +86,21 @@ function MatchCard({ match }: { match: MatchSummary }) {
       </CardContent>
     </Card>
   );
+}
+
+function verificationLabelFor(status: MatchSummary["verification_status"]): string {
+  switch (status) {
+    case "human_verified":
+      return "Verified source";
+    case "machine_reviewed":
+      return "AI reviewed · not verified";
+    case "machine_structured":
+      return "Machine structured · not verified";
+    case "needs_review":
+      return "Needs human review";
+    case "stale":
+      return "Source may be out of date";
+    case "illustrative":
+      return "Illustrative demo data";
+  }
 }
