@@ -63,6 +63,9 @@ class AgentState(BaseModel):
 class TurnRequest(BaseModel):
     """A text-mode turn. The voice endpoint builds this after transcription."""
 
+    # A phone number in telephony, a browser-generated ID in the web demo.
+    # Either way it is the key a returning caller is recognised by.
+    caller_id: str
     text: str
     language_code: str | None = None
     state_code: str | None = None
