@@ -1,0 +1,91 @@
+@import url("https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Manrope:wght@400;500;600;700;800&display=swap");
+@import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
+
+@custom-variant dark (&:is(.dark *));
+
+@theme inline {
+  --font-sans: "Manrope", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "DM Mono", ui-monospace, monospace;
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-ink: var(--ink);
+  --color-ink-soft: var(--ink-soft);
+  --color-paper: var(--paper);
+  --color-acid: var(--acid);
+  --color-orange: var(--orange);
+  --color-blue: var(--blue);
+}
+
+:root {
+  --background: #10251f;
+  --foreground: #f5f1e7;
+  --card: #16342a;
+  --card-foreground: #f5f1e7;
+  --popover: #16342a;
+  --popover-foreground: #f5f1e7;
+  --primary: #d7ee55;
+  --primary-foreground: #10251f;
+  --secondary: #173228;
+  --secondary-foreground: #b9e7df;
+  --muted: #1a372e;
+  --muted-foreground: #a3b2a7;
+  --accent: #ff7a53;
+  --accent-foreground: #10251f;
+  --destructive: #ff7a53;
+  --border: rgb(245 241 231 / 14%);
+  --input: rgb(245 241 231 / 14%);
+  --ring: #d7ee55;
+  --ink: #10251f;
+  --ink-soft: #1a372e;
+  --paper: #f5f1e7;
+  --acid: #d7ee55;
+  --orange: #ff7a53;
+  --blue: #b9e7df;
+  color-scheme: dark;
+}
+
+* {
+  @apply border-border;
+}
+
+html {
+  background: var(--background);
+  scroll-behavior: smooth;
+}
+
+body {
+  @apply bg-background font-sans text-foreground antialiased;
+  min-width: 320px;
+}
+
+button,
+[role="button"] {
+  @apply cursor-pointer;
+}
+
+button:disabled {
+  @apply cursor-not-allowed;
+}
+
+::selection {
+  background: var(--acid);
+  color: var(--ink);
+}

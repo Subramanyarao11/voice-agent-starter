@@ -37,6 +37,25 @@ the ingestion pipeline in `scripts/01_download_and_extract.py` through
 | `docs/spec-v2.md` | Product and architecture specification |
 | `docs/continuation-spec.md` | Build status, acceptance criteria, and remaining work |
 
+## Frontend architecture
+
+The browser app is organized by feature rather than by one large component:
+
+- Tailwind CSS v4 provides the design tokens and responsive utility styling;
+  reusable shadcn-style primitives live under `apps/web/src/components/ui`.
+- TanStack Router owns route composition and TanStack Query owns catalog,
+  health, and conversation request state.
+- Zustand persists only caller preferences and conversation state that belongs
+  in the browser; Zod validates API payloads at the network boundary.
+- `react-media-recorder` provides the microphone recording hook used by the
+  voice flow. Audio replies use the browser audio element so playback stays
+  lightweight and works with the API's optional TTS response.
+- Motion provides reduced-motion-aware transitions for the hero, messages, and
+  loading states.
+
+Feature code is grouped under `apps/web/src/features`, shared hooks under
+`apps/web/src/hooks`, and route composition under `apps/web/src/app`.
+
 ## Quick start: text demo
 
 Prerequisites: Python 3.12 with `uv`, Node 20+ for the web app, and optionally

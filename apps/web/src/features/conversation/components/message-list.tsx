@@ -1,0 +1,97 @@
+import { AnimatePresence, motion } from "motion/react";
+
+import type { ConversationMessage } from "@/features/conversation/store";
+import { Button } from "@/components/ui/button";
+
+type MessageListProps = {
+  messages: ConversationMessage[];
+  isSending: boolean;
+  onSuggestion: (suggestion: string) => void;
+};
+
+const SUGGESTIONS = ["I need a scholarship", "Tell me about government schemes"];
+
+export function MessageList({ messages, isSending, onSuggestion }: MessageListProps) {
+  return (
+    <div className="min-h-72 space-y-5 px-5 py-6 sm:min-h-80 sm:px-8" aria-live="polite">
+      {messages.length === 0 ? (
+        <motion.div
+          className="flex min-h-60 flex-col items-center justify-center text-center"
+          initial={{ opacity: 0, y: 8 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.35 }}
+        >
+          <span className="mb-4 grid size-12 place-items-center rounded-full border border-acid/30 bg-acid/10 text-xl text-acid">
+            ✦
+          </span>
+          <p className="text-sm text-paper/55">Start with something simple, like:</p>
+          <div className="mt-4 flex flex-wrap justify-center gap-2">
+            {SUGGESTIONS.map((suggestion) => (
+              <Button
+                key={suggestion}
+                type="button"
+                variant="outline"
+                size="sm"
+                className="border-paper/15 bg-paper/[0.03] text-paper/75 hover:border-acid/50 hover:bg-acid/10 hover:text-acid"
+                onClick={() => onSuggestion(suggestion)}
+              >
+                “{suggestion}”
+              </Button>
+            ))}
+          </div>
+        </motion.div>
+      ) : (
+        <AnimatePresence initial={false} mode="popLayout">
+          {messages.map((message) => (
+            <motion.div
+              key={message.id}
+              layout
+              initial={{ opacity: 0, y: 12, scale: 0.98 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.98 }}
+              transition={{ duration: 0.25 }}
+              className={`flex gap-3 ${message.role === "caller" ? "justify-end" : "justify-start"}`}
+            >
+              <div className={`max-w-[88%] sm:max-w-[75%] ${message.role === "caller" ? "text-right" : "text-left"}`}>
+                <span className="mb-1 block font-mono text-[0.58rem] uppercase tracking-[0.18em] text-paper/35">
+                  {message.role === "caller" ? "you" : "sahaayak"}
+                </span>
+                <p
+                  className={`rounded-2xl px-4 py-3 text-sm leading-6 ${
+                    message.role === "caller"
+                      ? "rounded-br-sm bg-acid text-ink"
+                      : "rounded-bl-sm border border-paper/10 bg-paper/[0.06] text-paper/85"
+                  }`}
+                >
+                  {message.text}
+                </p>
+              </div>
+            </motion.div>
+          ))}
+        </AnimatePresence>
+      )}
+
+      {isSending && (
+        <motion.div
+          className="flex gap-3"
+          initial={{ opacity: 0, y: 8 }}
+          animate={{ opacity: 1, y: 0 }}
+        >
+          <div>
+            <span className="mb-1 block font-mono text-[0.58rem] uppercase tracking-[0.18em] text-paper/35">sahaayak</span>
+            <div className="flex items-center gap-1 rounded-2xl rounded-bl-sm border border-paper/10 bg-paper/[0.06] px-4 py-4">
+              {[0, 1, 2].map((index) => (
+                <motion.i
+                  key={index}
+                  className="size-1.5 rounded-full bg-acid"
+                  animate={{ opacity: [0.35, 1, 0.35], y: [0, -3, 0] }}
+                  transition={{ duration: 0.8, repeat: Infinity, delay: index * 0.12 }}
+                />
+              ))}
+            </div>
+          </div>
+        </motion.div>
+      )}
+    </div>
+  );
+}
