@@ -6,6 +6,7 @@ cache. That keeps the text-mode conversation loop developable on a laptop
 without Docker, while the deployed stack sets both explicitly.
 """
 
+import json
 from functools import lru_cache
 from pathlib import Path
 
@@ -52,6 +53,18 @@ class Settings(BaseSettings):
     # in the same way as chat completions. Reserve a conservative amount per
     # local transcription request so voice testing shares the same ledger.
     openai_transcription_reservation_usd: float = 0.10
+    openai_vector_store_id: str = ""
+    openai_rag_manifest_path: str = "data/rag/vector-store-manifest.json"
+    openai_rag_answer_model: str = "gpt-4o-mini"
+    openai_rag_max_results: int = 5
+    openai_rag_max_output_tokens: int = 600
+    openai_rag_search_reservation_usd: float = 0.01
+    openai_rag_upload_reservation_usd: float = 0.0005
+    openai_rag_batch_reservation_usd: float = 0.01
+    # Keep a large margin below the hosted vector-store billing boundary. The
+    # current corpus is far below this, but a future source expansion must not
+    # silently create a large remote storage bill.
+    openai_rag_max_source_bytes: int = 900_000_000
     sarvam_api_key: str = ""
 
     # --- Tracing ---
@@ -80,6 +93,26 @@ class Settings(BaseSettings):
     def resolved_openai_budget_ledger_path(self) -> Path:
         path = Path(self.openai_budget_ledger_path)
         return path if path.is_absolute() else REPO_ROOT / path
+
+    @property
+    def resolved_openai_rag_manifest_path(self) -> Path:
+        path = Path(self.openai_rag_manifest_path)
+        return path if path.is_absolute() else REPO_ROOT / path
+
+    @property
+    def resolved_openai_vector_store_id(self) -> str:
+        """Use explicit deployment configuration, then the local sync record."""
+        if self.openai_vector_store_id.strip():
+            return self.openai_vector_store_id.strip()
+        manifest_path = self.resolved_openai_rag_manifest_path
+        if not manifest_path.exists():
+            return ""
+        try:
+            payload = json.loads(manifest_path.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError):
+            return ""
+        vector_store_id = payload.get("vector_store_id") if isinstance(payload, dict) else ""
+        return vector_store_id if isinstance(vector_store_id, str) else ""
 
     @property
     def using_sqlite(self) -> bool:

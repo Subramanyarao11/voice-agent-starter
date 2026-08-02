@@ -1710,7 +1710,8 @@ Resolve these before the associated package begins:
 
 ## 11. Explicit non-goals until the core is done
 
-- Generic RAG over government PDFs at conversation time.
+- Generic/unbounded RAG that replaces structured eligibility; source-grounded
+  evidence retrieval is allowed when it preserves provenance and uncertainty.
 - An LLM making the final eligibility decision.
 - Fully autonomous form submission or claims of official approval.
 - Local GPU/model hosting.

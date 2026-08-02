@@ -382,6 +382,15 @@ class OpenAIBudgetLedger:
             error_type=error.__class__.__name__,
         )
 
+    def record_completion(self, reservation: BudgetReservation) -> None:
+        """Close a completed request whose provider exposes no usage fields."""
+        self._finish(
+            reservation,
+            status="completed",
+            observed_usd=None,
+            usage=None,
+        )
+
     def summary(self) -> dict[str, Any]:
         """Return a safe, prompt-free summary suitable for logs or CI output."""
         with self._thread_lock, self._file_lock():

@@ -10,6 +10,7 @@ from __future__ import annotations
 from functools import lru_cache
 
 from sahaayak_agent import AgentRuntime
+from sahaayak_agent.retrieval import OpenAIRetrieval
 from sahaayak_agent.voice import VoiceService, get_voice_service
 
 
@@ -20,3 +21,8 @@ def get_runtime() -> AgentRuntime:
 
 def get_voice() -> VoiceService:
     return get_voice_service()
+
+
+@lru_cache
+def get_rag() -> OpenAIRetrieval:
+    return OpenAIRetrieval()

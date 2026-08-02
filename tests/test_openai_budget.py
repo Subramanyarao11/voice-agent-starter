@@ -53,6 +53,19 @@ def test_failed_requests_keep_their_reservation(tmp_path):
     assert summary["remaining_usd"] == "0.250000"
 
 
+def test_fixed_provider_operation_can_be_closed_without_usage(tmp_path):
+    ledger = OpenAIBudgetLedger(1, tmp_path / "budget.json")
+    reservation = ledger.reserve_fixed(
+        model="openai-vector-store-search", cost_usd="0.10", operation="rag:search"
+    )
+    ledger.record_completion(reservation)
+
+    summary = ledger.summary()
+    assert summary["completed_calls"] == 1
+    assert summary["failed_calls"] == 0
+    assert summary["observed_usd"] == "0.000000"
+
+
 def test_observed_usage_is_also_a_hard_boundary(tmp_path):
     ledger = OpenAIBudgetLedger(1, tmp_path / "budget.json")
     reservation = ledger.reserve_fixed(

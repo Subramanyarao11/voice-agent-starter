@@ -9,7 +9,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from sahaayak_agent.bootstrap import ensure_reference_data
 from sahaayak_api.middleware import RequestContextMiddleware
-from sahaayak_api.routers import catalog, escalations, health, sessions, turns
+from sahaayak_api.routers import catalog, escalations, health, rag, sessions, turns
 from sahaayak_common import configure_logging, get_logger, init_db, settings
 
 configure_logging()
@@ -57,5 +57,6 @@ app.add_middleware(
 app.include_router(health.router)
 app.include_router(catalog.router)
 app.include_router(turns.router)
+app.include_router(rag.router)
 app.include_router(sessions.router)
 app.include_router(escalations.router)

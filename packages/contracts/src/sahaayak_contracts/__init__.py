@@ -31,6 +31,12 @@ from sahaayak_contracts.eligibility import (
     EligibilityMatchResult,
     MatchVerdict,
 )
+from sahaayak_contracts.retrieval import (
+    RagAnswerResponse,
+    RagSearchRequest,
+    RagSearchResponse,
+    RetrievedSource,
+)
 from sahaayak_contracts.slots import (
     MINIMUM_SLOTS,
     SLOT_REGISTRY,
@@ -65,6 +71,10 @@ __all__ = [
     "LanguageProfile",
     "MatchSummary",
     "MatchVerdict",
+    "RagAnswerResponse",
+    "RagSearchRequest",
+    "RagSearchResponse",
+    "RetrievedSource",
     "SlotKind",
     "SlotName",
     "SlotSpec",

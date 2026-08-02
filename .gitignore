@@ -27,6 +27,7 @@ data/raw_pdfs/
 data/raw_pdfs_hf_cache/
 data/structured/
 data/usage/
+data/rag/
 data/*.db
 media/
 

@@ -35,7 +35,7 @@ A long-running voice agent that lets callers discover / check eligibility for go
 | Rule | Implementation location |
 |---|---|
 | Language / state / domain are configuration, not code branches | `Language` / `State` / `Domain` rows + prompt catalogs |
-| Eligibility is structured JSON, not free-text RAG at call time | `EligibilityCriteria` + `matcher.py` |
+| Final eligibility is structured JSON; source-grounded RAG is evidence only | `EligibilityCriteria` + `matcher.py` + `routers/rag.py` |
 | Agent graph is language-agnostic | slots in → reasoning → localized prompts out |
 | STT ≠ TTS provider (OpenAI Whisper in, Sarvam Bulbul out) | `services/agent/.../voice/` |
 | Cache TTS aggressively (Sarvam credits are limited) | `VoiceService.speak` + Redis/memory cache |
@@ -360,6 +360,12 @@ candidate documents after exact-content deduplication, and a guarded 20-row
 `machine_structured` and inactive pending human review. See
 [`docs/data-review-2026-08-02.md`](data-review-2026-08-02.md).
 
+**Hosted RAG addendum (2026-08-02):** the complete extracted corpus is also
+available through a persistent OpenAI Vector Store for source discovery and
+grounded explanations. This evidence path is independent of the Karnataka
+structured-data pilot and must not be used as the final eligibility authority.
+See [`docs/rag-operations.md`](rag-operations.md).
+
 **Do not commit:** `data/raw_pdfs*`, `data/structured/*.jsonl` (large / regenerable). Commit only pipeline code + a short `docs/data-notes.md` with counts, date, and spot-check summary if useful for submission narrative.
 
 **Acceptance:**
@@ -532,7 +538,7 @@ uv run python scripts/03_structure_with_llm.py --state-code <CODE> --resume
 
 - Local model hosting / GPU
 - OpenAI TTS for vernacular output
-- Blind RAG over PDFs at call time
+- Unbounded RAG as the final eligibility authority (source-grounded evidence retrieval is allowed)
 - Claiming unverified eligibility accuracy
 
 ---

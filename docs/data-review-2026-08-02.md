@@ -37,7 +37,13 @@ The 20-row pilot recorded:
 - 0 failed or pending calls.
 
 All OpenAI call sites currently share this ledger: structuring, localization,
-agent understanding, and OpenAI transcription. No embedding calls were made.
+agent understanding, transcription, and the hosted RAG sync/query path. The
+RAG sync completed with 2,066 file uploads and 10 fixed-cost indexing attempts.
+After the live retrieval/answer smoke tests, the ledger reports `$2.276385`
+reserved, `$0.242533` observed, and 2,100 calls (one failed initial
+batch-shape request is retained as a failed reservation). Vector-store
+operations expose no token usage to this ledger, so the fixed reservations
+remain intentionally conservative.
 
 ## Review status
 
@@ -78,16 +84,26 @@ rows. The pilot rows remain inactive by design.
 
 ## Decision on embeddings and RAG
 
-Dataset acquisition, extraction, prefiltering, and the guarded structured-data
-pilot are now complete. Embeddings and a generic PDF RAG path were not added:
-the product spec explicitly requires structured eligibility data and names
-blind RAG over PDFs at conversation time as a non-goal. A vector index must not
-be allowed to turn an arbitrary retrieved sentence into an eligibility claim.
+The complete already-extracted corpus is now indexed in one persistent
+OpenAI-hosted Vector Store. The sync read `data/structured/raw_text.jsonl`
+without downloading PDFs or running the paid structuring pass again. The 2,876
+raw records collapsed to 2,066 exact-content-unique text documents with an
+estimated UTF-8 upload size of 19,753,394 bytes. The local ignored manifest
+stores the remote ID, content hashes, uploaded file IDs, and batch status;
+deployments should set the remote ID explicitly as `OPENAI_VECTOR_STORE_ID`.
 
-The safe follow-up is a search-only evidence index over reviewed source
-excerpts, used to help an operator or caller open the relevant source passage.
-It can be added after 20–50 rows are human-reviewed, with the structured
-matcher remaining the only eligibility decision path.
+OpenAI manages the vector-store chunking, embeddings, and indexing. The
+application exposes `/api/rag/search` for evidence retrieval and
+`/api/rag/answer` for a concise answer grounded in bounded excerpts with source
+citations. The answer prompt treats source text as untrusted data and labels
+the corpus as raw machine extraction, not human-verified eligibility truth.
+See [`docs/rag-operations.md`](rag-operations.md) for the sync, resume, test,
+and deployment procedure.
+
+This does not change the eligibility boundary: RAG can help discover and
+explain source material, but the structured matcher and reviewed benefit rows
+remain the only path that may produce an eligibility result. A retrieved
+sentence must never be converted into an official eligibility claim.
 
 ## Required next gate
 
