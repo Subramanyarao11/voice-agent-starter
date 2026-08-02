@@ -26,6 +26,7 @@ import pytest  # noqa: E402
 
 from sahaayak_agent import AgentRuntime  # noqa: E402
 from sahaayak_agent.bootstrap import ensure_reference_data  # noqa: E402
+from sahaayak_api.rate_limit import reset_rate_limiter  # noqa: E402
 from sahaayak_common import init_db, reset_cache  # noqa: E402
 
 
@@ -67,8 +68,24 @@ def client(seeded):
 
     from sahaayak_api.main import app
 
+    reset_rate_limiter()
     with TestClient(app, headers={"X-Admin-Token": "test-admin-token"}) as test_client:
         yield test_client
+
+
+@pytest.fixture
+def guest_session(client):
+    def create(language_code: str = "en", state_code: str = "KA") -> dict:
+        response = client.post(
+            "/api/browser-sessions",
+            json={"language_code": language_code, "state_code": state_code},
+        )
+        assert response.status_code == 201
+        body = response.json()
+        body["headers"] = {"Authorization": f"Bearer {body['access_token']}"}
+        return body
+
+    return create
 
 
 @pytest.fixture

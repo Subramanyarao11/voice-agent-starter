@@ -10,10 +10,12 @@ import { SourcesPanel } from "@/features/conversation/components/sources-panel";
 import { TurnInspector } from "@/features/conversation/components/turn-inspector";
 import { useResetSessionMutation, useTextTurnMutation, useVoiceTurnMutation } from "@/features/conversation/queries";
 import { useConversationStore } from "@/features/conversation/store";
+import { useCreateBrowserSessionMutation } from "@/features/session/queries";
+import { useGuestSessionStore } from "@/features/session/store";
 import { useCatalogQuery, useHealthQuery } from "@/features/catalog/queries";
 import { useVoiceRecorder } from "@/hooks/use-voice-recorder";
 import { audioDataUrl, cn } from "@/lib/utils";
-import { toUserMessage } from "@/lib/api";
+import { ApiError, toUserMessage } from "@/lib/api";
 
 export function HomePage() {
   const catalogQuery = useCatalogQuery();
@@ -21,8 +23,16 @@ export function HomePage() {
   const textMutation = useTextTurnMutation();
   const voiceMutation = useVoiceTurnMutation();
   const resetMutation = useResetSessionMutation();
+  const {
+    mutate: createSession,
+    isPending: sessionPending,
+    error: sessionError,
+  } = useCreateBrowserSessionMutation();
 
-  const callerId = useConversationStore((state) => state.callerId);
+  const sessionId = useGuestSessionStore((state) => state.sessionId);
+  const accessToken = useGuestSessionStore((state) => state.accessToken);
+  const setSession = useGuestSessionStore((state) => state.setSession);
+  const clearSession = useGuestSessionStore((state) => state.clearSession);
   const languageCode = useConversationStore((state) => state.languageCode);
   const stateCode = useConversationStore((state) => state.stateCode);
   const draft = useConversationStore((state) => state.draft);
@@ -50,7 +60,7 @@ export function HomePage() {
     (catalogQuery.data?.coverage.by_state[stateCode] ?? 0) + (catalogQuery.data?.coverage.by_state.central ?? 0);
   const isSending = textMutation.isPending || voiceMutation.isPending;
   const catalogLoading = catalogQuery.isPending;
-  const disabled = catalogLoading || isSending || !languageCode || !stateCode;
+  const disabled = catalogLoading || isSending || sessionPending || !accessToken || !languageCode || !stateCode;
   const audioSource = audioDataUrl(lastTurn?.audio_base64, lastTurn?.audio_mime_type);
 
   const handleVoiceComplete = useCallback(
@@ -58,15 +68,31 @@ export function HomePage() {
       if (isSending || !languageCode || !stateCode) return;
       setFeedback(null);
       try {
-        const response = await voiceMutation.mutateAsync({ audio, callerId, languageCode, stateCode });
+        const response = await voiceMutation.mutateAsync({ audio, accessToken, languageCode, stateCode });
         appendTurn(response.transcript || "Voice turn", response);
       } catch (error) {
+        if (error instanceof ApiError && error.status === 401) clearSession();
         setFeedback({ kind: "error", text: toUserMessage(error) });
       }
     },
-    [appendTurn, callerId, isSending, languageCode, stateCode, voiceMutation],
+    [accessToken, appendTurn, clearSession, isSending, languageCode, stateCode, voiceMutation],
   );
   const recorder = useVoiceRecorder(handleVoiceComplete);
+
+  useEffect(() => {
+    if (accessToken || sessionPending || !languageCode || !stateCode) return;
+    createSession(
+      { language_code: languageCode, state_code: stateCode },
+      {
+        onSuccess: (session) => {
+          setSession(session);
+          setLanguageCode(session.language_code);
+          setStateCode(session.state_code);
+        },
+        onError: (error) => setFeedback({ kind: "error", text: toUserMessage(error) }),
+      },
+    );
+  }, [accessToken, createSession, languageCode, sessionPending, setLanguageCode, setSession, setStateCode, stateCode]);
 
   useEffect(() => {
     if (activeLanguages.length > 0 && !activeLanguages.some((language) => language.code === languageCode)) {
@@ -81,11 +107,11 @@ export function HomePage() {
   }, [activeStates, setStateCode, stateCode]);
 
   useEffect(() => {
-    const queryError = catalogQuery.error ?? healthQuery.error;
+    const queryError = catalogQuery.error ?? healthQuery.error ?? sessionError;
     if (queryError && !feedback) {
       setFeedback({ kind: "error", text: toUserMessage(queryError) });
     }
-  }, [catalogQuery.error, feedback, healthQuery.error]);
+  }, [catalogQuery.error, feedback, healthQuery.error, sessionError]);
 
   const handleTextSubmit = useCallback(
     async (event?: FormEvent<HTMLFormElement>) => {
@@ -97,18 +123,21 @@ export function HomePage() {
       setDraft("");
       try {
         const response = await textMutation.mutateAsync({
-          caller_id: callerId,
-          text,
-          language_code: languageCode,
-          state_code: stateCode,
+          payload: {
+            text,
+            language_code: languageCode,
+            state_code: stateCode,
+          },
+          accessToken,
         });
         appendTurn(text, response);
       } catch (error) {
         setDraft(text);
+        if (error instanceof ApiError && error.status === 401) clearSession();
         setFeedback({ kind: "error", text: toUserMessage(error) });
       }
     },
-    [appendTurn, callerId, disabled, draft, languageCode, setDraft, stateCode, textMutation],
+    [accessToken, appendTurn, clearSession, disabled, draft, languageCode, setDraft, stateCode, textMutation],
   );
 
   const startRecording = useCallback(() => {
@@ -124,15 +153,16 @@ export function HomePage() {
     if (isSending || resetMutation.isPending) return;
     setFeedback(null);
     try {
-      await resetMutation.mutateAsync(callerId);
+      await resetMutation.mutateAsync({ sessionId, accessToken });
       clearConversation();
+      clearSession();
       setFeedback({ kind: "notice", text: "Session cleared. Your next turn starts a fresh conversation." });
     } catch (error) {
       setFeedback({ kind: "error", text: toUserMessage(error) });
     }
-  }, [callerId, clearConversation, isSending, resetMutation]);
+  }, [accessToken, clearConversation, clearSession, isSending, resetMutation, sessionId]);
 
-  const connected = healthQuery.data?.status === "ok";
+  const connected = healthQuery.data?.status === "ok" && Boolean(accessToken);
   const voiceInputAvailable = healthQuery.data?.speech_to_text ?? false;
 
   return (
@@ -156,7 +186,7 @@ export function HomePage() {
         Skip to conversation
       </a>
 
-      <Topbar callerId={callerId} connected={connected} />
+      <Topbar sessionId={sessionId} connected={connected} />
 
       <section className="relative mx-auto grid max-w-[1440px] gap-12 py-16 lg:grid-cols-[minmax(260px,.72fr)_minmax(520px,1.28fr)] lg:gap-24 lg:py-28">
         <motion.div

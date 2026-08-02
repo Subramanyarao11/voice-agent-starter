@@ -12,7 +12,7 @@ import hashlib
 
 from sahaayak_agent.languages import get_profile
 from sahaayak_agent.voice.base import STTProvider, TTSProvider, VoiceUnavailable
-from sahaayak_common import get_cache, get_logger, settings
+from sahaayak_common import get_cache, get_effective_provider_policy, get_logger, settings
 from sahaayak_contracts import LanguageProfile, SynthesisResult, TranscriptionResult
 
 log = get_logger(__name__)
@@ -82,6 +82,11 @@ class VoiceService:
         if not self.stt_available:
             raise VoiceUnavailable("no speech-to-text provider is configured")
         profile = get_profile(language_code)
+        policy = get_effective_provider_policy("stt", profile.code)
+        if not policy["enabled"] or policy["circuit_state"] == "open":
+            raise VoiceUnavailable("speech-to-text is temporarily paused by operations")
+        if policy["primary_provider"] != "openai_whisper":
+            raise VoiceUnavailable("the selected speech-to-text provider is not available")
         return await self._get_stt().transcribe(audio, profile=profile, filename=filename)
 
     async def speak(self, text: str, *, language_code: str) -> SynthesisResult:
@@ -89,6 +94,11 @@ class VoiceService:
             raise VoiceUnavailable("no text-to-speech provider is configured")
 
         profile = get_profile(language_code)
+        policy = get_effective_provider_policy("tts", profile.code)
+        if not policy["enabled"] or policy["circuit_state"] == "open":
+            raise VoiceUnavailable("text-to-speech is temporarily paused by operations")
+        if policy["primary_provider"] != "sarvam_bulbul":
+            raise VoiceUnavailable("the selected text-to-speech provider is not available")
         provider = self._get_tts()
         key = cache_key(text, profile, getattr(provider, "MODEL", provider.name))
 

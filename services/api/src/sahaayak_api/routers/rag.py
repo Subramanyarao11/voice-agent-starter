@@ -2,10 +2,12 @@
 
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request, Response
 
 from sahaayak_agent.retrieval import OpenAIRetrieval, RagUnavailable
+from sahaayak_api.browser_auth import BrowserSessionPrincipal, require_browser_session
 from sahaayak_api.deps import get_rag
+from sahaayak_api.rate_limit import apply_rate_limit_headers, enforce_rate_limit
 from sahaayak_common import BudgetError
 from sahaayak_contracts import RagAnswerResponse, RagSearchRequest, RagSearchResponse
 
@@ -15,8 +17,13 @@ router = APIRouter(prefix="/api/rag", tags=["retrieval"])
 @router.post("/answer", response_model=RagAnswerResponse)
 async def answer_from_sources(
     payload: RagSearchRequest,
+    request: Request,
+    http_response: Response,
     rag: OpenAIRetrieval | None = Depends(get_rag),
+    principal: BrowserSessionPrincipal = Depends(require_browser_session),
 ) -> RagAnswerResponse:
+    decision = await enforce_rate_limit(request, session_id=principal.session_id, bucket="rag")
+    apply_rate_limit_headers(http_response, decision)
     if rag is None:
         raise HTTPException(status_code=503, detail="RAG is not configured")
     try:
@@ -34,8 +41,13 @@ async def answer_from_sources(
 @router.post("/search", response_model=RagSearchResponse)
 async def search_sources(
     payload: RagSearchRequest,
+    request: Request,
+    http_response: Response,
     rag: OpenAIRetrieval | None = Depends(get_rag),
+    principal: BrowserSessionPrincipal = Depends(require_browser_session),
 ) -> RagSearchResponse:
+    decision = await enforce_rate_limit(request, session_id=principal.session_id, bucket="rag")
+    apply_rate_limit_headers(http_response, decision)
     if rag is None:
         raise HTTPException(status_code=503, detail="RAG is not configured")
     try:

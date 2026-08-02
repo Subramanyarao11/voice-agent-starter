@@ -166,7 +166,24 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/sessions/{caller_id}": {
+    "/api/browser-sessions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Create Browser Session */
+        post: operations["create_browser_session_api_browser_sessions_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/sessions/{session_id}": {
         parameters: {
             query?: never;
             header?: never;
@@ -174,7 +191,7 @@ export interface paths {
             cookie?: never;
         };
         /** Get Session For Caller */
-        get: operations["get_session_for_caller_api_sessions__caller_id__get"];
+        get: operations["get_session_for_caller_api_sessions__session_id__get"];
         put?: never;
         post?: never;
         /**
@@ -184,13 +201,13 @@ export interface paths {
          *     Needed for demos and re-testing, and it is also the honest answer to
          *     "delete what you know about me" for a service holding income and caste.
          */
-        delete: operations["reset_session_api_sessions__caller_id__delete"];
+        delete: operations["reset_session_api_sessions__session_id__delete"];
         options?: never;
         head?: never;
         patch?: never;
         trace?: never;
     };
-    "/api/sessions/{caller_id}/transcript": {
+    "/api/sessions/{session_id}/transcript": {
         parameters: {
             query?: never;
             header?: never;
@@ -198,7 +215,7 @@ export interface paths {
             cookie?: never;
         };
         /** Get Transcript */
-        get: operations["get_transcript_api_sessions__caller_id__transcript_get"];
+        get: operations["get_transcript_api_sessions__session_id__transcript_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -377,6 +394,57 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/admin/provider-policies": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Admin Provider Policies */
+        get: operations["admin_provider_policies_api_admin_provider_policies_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/admin/provider-policies/{provider}/{scope}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Update Provider Policy */
+        put: operations["update_provider_policy_api_admin_provider_policies__provider___scope__put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/admin/provider-policies/{provider}/{scope}/rollback": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Rollback Provider Policy */
+        post: operations["rollback_provider_policy_api_admin_provider_policies__provider___scope__rollback_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/admin/languages": {
         parameters: {
             query?: never;
@@ -440,6 +508,10 @@ export interface components {
             role: string;
             /** Permissions */
             permissions: string[];
+            /** Auth Source */
+            auth_source: string;
+            /** Mfa Verified */
+            mfa_verified: boolean;
         };
         /** AdminOverviewOut */
         AdminOverviewOut: {
@@ -583,8 +655,6 @@ export interface components {
         Body_take_voice_turn_api_voice_turns_post: {
             /** Audio */
             audio: string;
-            /** Caller Id */
-            caller_id: string;
             /** Language Code */
             language_code?: string | null;
             /** State Code */
@@ -594,6 +664,29 @@ export interface components {
              * @default true
              */
             speak: boolean;
+        };
+        /** BrowserSessionOut */
+        BrowserSessionOut: {
+            /** Session Id */
+            session_id: string;
+            /** Access Token */
+            access_token: string;
+            /** Language Code */
+            language_code: string;
+            /** State Code */
+            state_code: string;
+            /**
+             * Expires At
+             * Format: date-time
+             */
+            expires_at: string;
+        };
+        /** BrowserSessionRequest */
+        BrowserSessionRequest: {
+            /** Language Code */
+            language_code?: string | null;
+            /** State Code */
+            state_code?: string | null;
         };
         /** ConversationListOut */
         ConversationListOut: {
@@ -832,8 +925,123 @@ export interface components {
             generated_at: string;
             /** Providers */
             providers: components["schemas"]["ProviderStatusOut"][];
+            /** Policies */
+            policies?: components["schemas"]["ProviderPolicyOut"][];
             /** Controls Note */
             controls_note: string;
+        };
+        /** ProviderPolicyListOut */
+        ProviderPolicyListOut: {
+            /**
+             * Generated At
+             * Format: date-time
+             */
+            generated_at: string;
+            /** Policies */
+            policies: components["schemas"]["ProviderPolicyOut"][];
+            /** Revisions */
+            revisions: components["schemas"]["ProviderPolicyRevisionOut"][];
+            /** Controls Note */
+            controls_note: string;
+        };
+        /** ProviderPolicyOut */
+        ProviderPolicyOut: {
+            /** Id */
+            id: string;
+            /** Provider */
+            provider: string;
+            /** Scope */
+            scope: string;
+            /** Enabled */
+            enabled: boolean;
+            /** Primary Provider */
+            primary_provider: string;
+            /** Fallback Provider */
+            fallback_provider: string | null;
+            /** Circuit State */
+            circuit_state: string;
+            /** Daily Budget Usd */
+            daily_budget_usd: number | null;
+            /** Monthly Budget Usd */
+            monthly_budget_usd: number | null;
+            /** Override Expires At */
+            override_expires_at: string | null;
+            /** Revision */
+            revision: number;
+            /** Config */
+            config: {
+                [key: string]: unknown;
+            };
+            /** Updated By */
+            updated_by: string;
+            /**
+             * Updated At
+             * Format: date-time
+             */
+            updated_at: string;
+        };
+        /** ProviderPolicyRevisionOut */
+        ProviderPolicyRevisionOut: {
+            /** Id */
+            id: string;
+            /** Policy Id */
+            policy_id: string;
+            /** Revision */
+            revision: number;
+            /** Action */
+            action: string;
+            /** Actor Id */
+            actor_id: string;
+            /** Actor Role */
+            actor_role: string;
+            /** Reason */
+            reason: string;
+            /** Before */
+            before: {
+                [key: string]: unknown;
+            };
+            /** After */
+            after: {
+                [key: string]: unknown;
+            };
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+        };
+        /** ProviderPolicyRollbackRequest */
+        ProviderPolicyRollbackRequest: {
+            /** Reason */
+            reason: string;
+            /** Revision Id */
+            revision_id?: string | null;
+        };
+        /** ProviderPolicyUpdateRequest */
+        ProviderPolicyUpdateRequest: {
+            /**
+             * Enabled
+             * @default true
+             */
+            enabled: boolean;
+            /** Primary Provider */
+            primary_provider: string;
+            /** Fallback Provider */
+            fallback_provider?: string | null;
+            /**
+             * Circuit State
+             * @default closed
+             * @enum {string}
+             */
+            circuit_state: "closed" | "open" | "half_open";
+            /** Daily Budget Usd */
+            daily_budget_usd?: number | null;
+            /** Monthly Budget Usd */
+            monthly_budget_usd?: number | null;
+            /** Override Expires At */
+            override_expires_at?: string | null;
+            /** Reason */
+            reason: string;
         };
         /** ProviderStatusOut */
         ProviderStatusOut: {
@@ -986,8 +1194,6 @@ export interface components {
         SessionOut: {
             /** Id */
             id: string;
-            /** Phone Or Session Id */
-            phone_or_session_id: string;
             /** State Code */
             state_code: string;
             /** Language Code */
@@ -1066,6 +1272,10 @@ export interface components {
             event_type: string;
             /** Request Id */
             request_id: string | null;
+            /** Trace Id */
+            trace_id: string | null;
+            /** Trace Url */
+            trace_url: string | null;
             /** Route */
             route: string;
             /** Method */
@@ -1160,8 +1370,6 @@ export interface components {
          * @description A text-mode turn. The voice endpoint builds this after transcription.
          */
         TurnRequest: {
-            /** Caller Id */
-            caller_id: string;
             /** Text */
             text: string;
             /** Language Code */
@@ -1475,12 +1683,45 @@ export interface operations {
             };
         };
     };
-    get_session_for_caller_api_sessions__caller_id__get: {
+    create_browser_session_api_browser_sessions_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["BrowserSessionRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BrowserSessionOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_session_for_caller_api_sessions__session_id__get: {
         parameters: {
             query?: never;
             header?: never;
             path: {
-                caller_id: string;
+                session_id: string;
             };
             cookie?: never;
         };
@@ -1506,12 +1747,12 @@ export interface operations {
             };
         };
     };
-    reset_session_api_sessions__caller_id__delete: {
+    reset_session_api_sessions__session_id__delete: {
         parameters: {
             query?: never;
             header?: never;
             path: {
-                caller_id: string;
+                session_id: string;
             };
             cookie?: never;
         };
@@ -1535,14 +1776,14 @@ export interface operations {
             };
         };
     };
-    get_transcript_api_sessions__caller_id__transcript_get: {
+    get_transcript_api_sessions__session_id__transcript_get: {
         parameters: {
             query?: {
                 limit?: number;
             };
             header?: never;
             path: {
-                caller_id: string;
+                session_id: string;
             };
             cookie?: never;
         };
@@ -1865,6 +2106,98 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ProviderListOut"];
+                };
+            };
+        };
+    };
+    admin_provider_policies_api_admin_provider_policies_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProviderPolicyListOut"];
+                };
+            };
+        };
+    };
+    update_provider_policy_api_admin_provider_policies__provider___scope__put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                provider: string;
+                scope: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ProviderPolicyUpdateRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProviderPolicyOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    rollback_provider_policy_api_admin_provider_policies__provider___scope__rollback_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                provider: string;
+                scope: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ProviderPolicyRollbackRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProviderPolicyOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };

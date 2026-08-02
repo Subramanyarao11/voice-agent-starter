@@ -4,11 +4,11 @@ import { Radio } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 
 type TopbarProps = {
-  callerId: string;
+  sessionId: string;
   connected: boolean;
 };
 
-export function Topbar({ callerId, connected }: TopbarProps) {
+export function Topbar({ sessionId, connected }: TopbarProps) {
   return (
     <header className="mx-auto flex max-w-[1440px] items-center justify-between gap-4" aria-label="Sahaayak status">
       <Link to="/" className="group flex items-center gap-3" aria-label="Sahaayak home">
@@ -34,7 +34,7 @@ export function Topbar({ callerId, connected }: TopbarProps) {
           className="border-paper/15 bg-paper/5 font-mono text-[0.65rem] text-paper/70"
           aria-label="Anonymous browser session"
         >
-          <Radio className="size-3" aria-hidden="true" /> caller · {callerId.slice(-8)}
+          <Radio className="size-3" aria-hidden="true" /> guest · {sessionId ? sessionId.slice(-8) : "starting"}
         </Badge>
       </div>
     </header>

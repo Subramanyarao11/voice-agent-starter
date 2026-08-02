@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import json
 
+from sahaayak_agent.tracing import start_span
 from sahaayak_common import (
     BudgetReservation,
     OpenAIBudgetLedger,
@@ -104,21 +105,33 @@ class LLMUnderstanding:
             max_output_tokens=settings.openai_agent_max_output_tokens,
             operation="agent:understanding",
         )
-        try:
-            response = await self._client.chat.completions.create(
-                model=self._model,
-                response_format={"type": "json_object"},
-                temperature=0,
-                max_completion_tokens=settings.openai_agent_max_output_tokens,
-                n=1,
-                messages=[
-                    {"role": "system", "content": SYSTEM_PROMPT},
-                    {"role": "user", "content": user_content},
-                ],
-            )
-        except Exception as exc:
-            self._budget.record_failure(reservation, exc)
-            raise
+        with start_span(
+            "provider.openai.understanding",
+            {
+                "provider": "openai",
+                "provider.model": self._model,
+                "provider.language": language_code,
+                "provider.pending_slot": pending_slot.value if pending_slot else "none",
+            },
+        ) as span:
+            try:
+                response = await self._client.chat.completions.create(
+                    model=self._model,
+                    response_format={"type": "json_object"},
+                    temperature=0,
+                    max_completion_tokens=settings.openai_agent_max_output_tokens,
+                    n=1,
+                    messages=[
+                        {"role": "system", "content": SYSTEM_PROMPT},
+                        {"role": "user", "content": user_content},
+                    ],
+                )
+            except Exception as exc:
+                self._budget.record_failure(reservation, exc)
+                if span is not None:
+                    span.record_exception(exc)
+                    span.set_attribute("error.type", exc.__class__.__name__)
+                raise
         self._budget.record_chat_response(reservation, response)
 
         content = response.choices[0].message.content or "{}"

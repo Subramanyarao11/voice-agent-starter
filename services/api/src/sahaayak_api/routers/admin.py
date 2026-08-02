@@ -12,7 +12,7 @@ import os
 from collections import Counter
 from datetime import UTC, date, datetime, timedelta
 from enum import Enum
-from typing import Any, cast
+from typing import Any, Literal, cast
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel, Field
@@ -24,6 +24,7 @@ from sahaayak_api.admin_auth import AdminPrincipal, require_admin_role
 from sahaayak_api.routers.health import HealthReport, health
 from sahaayak_api.telemetry import make_audit_event
 from sahaayak_common import (
+    DEFAULT_PROVIDER_POLICIES,
     AuditEvent,
     Benefit,
     ConversationTurnLog,
@@ -31,6 +32,8 @@ from sahaayak_common import (
     EscalationTicket,
     Language,
     OpenAIBudgetLedger,
+    ProviderPolicy,
+    ProviderPolicyRevision,
     State,
     TelemetryEvent,
     UserSession,
@@ -52,6 +55,8 @@ class AdminMeOut(BaseModel):
     actor_id: str
     role: str
     permissions: list[str]
+    auth_source: str
+    mfa_verified: bool
 
 
 class HealthOut(BaseModel):
@@ -107,6 +112,59 @@ class ProviderStatusOut(BaseModel):
     note: str = ""
 
 
+class ProviderPolicyOut(BaseModel):
+    id: str
+    provider: str
+    scope: str
+    enabled: bool
+    primary_provider: str
+    fallback_provider: str | None
+    circuit_state: str
+    daily_budget_usd: float | None
+    monthly_budget_usd: float | None
+    override_expires_at: datetime | None
+    revision: int
+    config: dict
+    updated_by: str
+    updated_at: datetime
+
+
+class ProviderPolicyRevisionOut(BaseModel):
+    id: str
+    policy_id: str
+    revision: int
+    action: str
+    actor_id: str
+    actor_role: str
+    reason: str
+    before: dict
+    after: dict
+    created_at: datetime
+
+
+class ProviderPolicyListOut(BaseModel):
+    generated_at: datetime
+    policies: list[ProviderPolicyOut]
+    revisions: list[ProviderPolicyRevisionOut]
+    controls_note: str
+
+
+class ProviderPolicyUpdateRequest(BaseModel):
+    enabled: bool = True
+    primary_provider: str = Field(min_length=2, max_length=80)
+    fallback_provider: str | None = Field(default=None, max_length=80)
+    circuit_state: Literal["closed", "open", "half_open"] = "closed"
+    daily_budget_usd: float | None = Field(default=None, ge=0, le=15)
+    monthly_budget_usd: float | None = Field(default=None, ge=0, le=15)
+    override_expires_at: datetime | None = None
+    reason: str = Field(min_length=3, max_length=500)
+
+
+class ProviderPolicyRollbackRequest(BaseModel):
+    reason: str = Field(min_length=3, max_length=500)
+    revision_id: str | None = Field(default=None, max_length=160)
+
+
 class RecentErrorOut(BaseModel):
     request_id: str | None
     route: str
@@ -149,6 +207,8 @@ class TelemetryEventOut(BaseModel):
     id: str
     event_type: str
     request_id: str | None
+    trace_id: str | None
+    trace_url: str | None
     route: str
     method: str
     status_code: int | None
@@ -212,6 +272,7 @@ class ImportRunOut(BaseModel):
 class ProviderListOut(BaseModel):
     generated_at: datetime
     providers: list[ProviderStatusOut]
+    policies: list[ProviderPolicyOut] = Field(default_factory=list)
     controls_note: str
 
 
@@ -287,7 +348,11 @@ async def admin_me(
         ],
     }
     return AdminMeOut(
-        actor_id=principal.actor_id, role=principal.role, permissions=permissions[principal.role]
+        actor_id=principal.actor_id,
+        role=principal.role,
+        permissions=permissions[principal.role],
+        auth_source=principal.auth_source,
+        mfa_verified=principal.mfa_verified,
     )
 
 
@@ -563,11 +628,169 @@ async def admin_providers(
     return ProviderListOut(
         generated_at=datetime.now(UTC),
         providers=_provider_statuses(report, events),
+        policies=_provider_policy_outs(db),
         controls_note=(
-            "Provider policy mutation is intentionally disabled until workforce "
-            "MFA and an audited policy store are enabled."
+            "Only the admin role can change provider policy. Every change has a "
+            "reason, a before/after audit event, and an optional expiry/rollback."
         ),
     )
+
+
+@router.get("/provider-policies", response_model=ProviderPolicyListOut)
+def admin_provider_policies(
+    db: Session = Depends(get_session),
+    _principal: AdminPrincipal = Depends(require_admin_role(*READ_ROLES)),
+) -> ProviderPolicyListOut:
+    revisions = db.exec(
+        select(ProviderPolicyRevision)
+        .order_by(ProviderPolicyRevision.created_at.desc())
+        .limit(100)
+    ).all()
+    return ProviderPolicyListOut(
+        generated_at=datetime.now(UTC),
+        policies=_provider_policy_outs(db),
+        revisions=[ProviderPolicyRevisionOut.model_validate(row.model_dump()) for row in revisions],
+        controls_note=(
+            "Policy changes are restricted to admin, bounded to a 24-hour override, "
+            "and reversible through the latest revision or an explicit revision ID."
+        ),
+    )
+
+
+@router.put("/provider-policies/{provider}/{scope}", response_model=ProviderPolicyOut)
+def update_provider_policy(
+    provider: str,
+    scope: str,
+    payload: ProviderPolicyUpdateRequest,
+    db: Session = Depends(get_session),
+    principal: AdminPrincipal = Depends(require_admin_role("admin")),
+) -> ProviderPolicyOut:
+    _validate_policy_path(provider, scope)
+    now = datetime.now(UTC)
+    expires_at = _validated_expiry(payload.override_expires_at, now=now)
+    if (not payload.enabled or payload.circuit_state != "closed") and expires_at is None:
+        raise HTTPException(
+            status_code=400,
+            detail="Disabling or opening a circuit requires an expiry time within 24 hours",
+        )
+
+    policy_id = f"policy:{provider}:{scope}"
+    row = db.get(ProviderPolicy, policy_id)
+    before = (
+        _provider_policy_snapshot(row)
+        if row is not None
+        else _default_policy_snapshot(provider, scope)
+    )
+    if row is None:
+        row = ProviderPolicy(
+            id=policy_id,
+            provider=provider,
+            scope=scope,
+            created_at=now,
+        )
+    row.enabled = payload.enabled
+    row.primary_provider = payload.primary_provider
+    row.fallback_provider = payload.fallback_provider
+    row.circuit_state = payload.circuit_state
+    row.daily_budget_usd = payload.daily_budget_usd
+    row.monthly_budget_usd = payload.monthly_budget_usd
+    row.override_expires_at = expires_at
+    row.revision += 1
+    row.updated_by = principal.actor_id
+    row.updated_at = now
+    after = _provider_policy_snapshot(row)
+    db.add(row)
+    db.flush()
+    db.add(
+        ProviderPolicyRevision(
+            id=f"polrev_{row.id.replace(':', '_')}_{row.revision}",
+            policy_id=row.id,
+            revision=row.revision,
+            action="update",
+            actor_id=principal.actor_id,
+            actor_role=principal.role,
+            reason=payload.reason,
+            before=before,
+            after=after,
+        )
+    )
+    db.add(
+        make_audit_event(
+            principal=principal,
+            action="provider_policy.update",
+            target_type="provider_policy",
+            target_id=row.id,
+            reason=payload.reason,
+            safe_before=before,
+            safe_after=after,
+        )
+    )
+    db.commit()
+    db.refresh(row)
+    return _provider_policy_out(row)
+
+
+@router.post(
+    "/provider-policies/{provider}/{scope}/rollback",
+    response_model=ProviderPolicyOut,
+)
+def rollback_provider_policy(
+    provider: str,
+    scope: str,
+    payload: ProviderPolicyRollbackRequest,
+    db: Session = Depends(get_session),
+    principal: AdminPrincipal = Depends(require_admin_role("admin")),
+) -> ProviderPolicyOut:
+    _validate_policy_path(provider, scope)
+    row = db.get(ProviderPolicy, f"policy:{provider}:{scope}")
+    if row is None:
+        raise HTTPException(status_code=404, detail="No persisted policy exists for this scope")
+    revision_query = select(ProviderPolicyRevision).where(
+        ProviderPolicyRevision.policy_id == row.id
+    )
+    if payload.revision_id:
+        revision_query = revision_query.where(ProviderPolicyRevision.id == payload.revision_id)
+    target_revision = db.exec(
+        revision_query.order_by(ProviderPolicyRevision.created_at.desc()).limit(1)
+    ).first()
+    if target_revision is None:
+        raise HTTPException(status_code=404, detail="No policy revision is available to roll back")
+
+    before = _provider_policy_snapshot(row)
+    _apply_policy_snapshot(row, target_revision.before)
+    row.revision += 1
+    row.updated_by = principal.actor_id
+    row.updated_at = datetime.now(UTC)
+    after = _provider_policy_snapshot(row)
+    db.add(row)
+    db.flush()
+    db.add(
+        ProviderPolicyRevision(
+            id=f"polrev_{row.id.replace(':', '_')}_{row.revision}",
+            policy_id=row.id,
+            revision=row.revision,
+            action="rollback",
+            actor_id=principal.actor_id,
+            actor_role=principal.role,
+            reason=payload.reason,
+            before=before,
+            after=after,
+        )
+    )
+    db.add(
+        make_audit_event(
+            principal=principal,
+            action="provider_policy.rollback",
+            target_type="provider_policy",
+            target_id=row.id,
+            reason=payload.reason,
+            safe_before=before,
+            safe_after=after,
+        )
+    )
+    db.commit()
+    db.refresh(row)
+    return _provider_policy_out(row)
 
 
 @router.get("/languages", response_model=list[LanguageReadinessOut])
@@ -667,12 +890,19 @@ def admin_system(
             and bool(settings.resolved_openai_vector_store_id),
             "sarvam_configured": settings.tts_enabled,
             "langfuse_configured": settings.tracing_enabled,
-            "admin_auth_configured": bool(settings.admin_api_token or settings.admin_tokens_json),
+            "otel_configured": settings.otel_enabled,
+            "rate_limit_configured": settings.rate_limit_enabled,
+            "admin_auth_configured": bool(
+                settings.admin_oidc_enabled
+                or (settings.admin_static_tokens_enabled
+                    and (settings.admin_api_token or settings.admin_tokens_json))
+            ),
+            "admin_oidc_enabled": settings.admin_oidc_enabled,
         },
         deployment_notes=[
             "Overview telemetry is redacted and database-backed.",
-            "Provider controls remain read-only until managed workforce MFA and "
-            "audited policy storage are enabled.",
+            "Provider policy changes require the admin role, a reason, bounded expiry, "
+            "and an append-only rollback revision.",
             "Raw transcripts and sensitive profile values are not included in admin aggregates.",
         ],
     )
@@ -754,6 +984,7 @@ def _provider_statuses(
             reserved_usd=_float_or_none(budget.get("reserved_usd")),
             observed_usd=_float_or_none(budget.get("observed_usd")),
             remaining_usd=_float_or_none(budget.get("remaining_usd")),
+            controls_available=True,
             note="Budget ledger is a conservative reservation view, not a provider invoice.",
         ),
         ProviderStatusOut(
@@ -764,6 +995,7 @@ def _provider_statuses(
             failures=sum(event.outcome == "error" for event in tts_events),
             cache_hits=tts_hits,
             cache_misses=max(0, len(tts_events) - tts_hits),
+            controls_available=True,
             note=(
                 "Sarvam credit reconciliation is not available from the current "
                 "provider contract; request and cache telemetry is shown."
@@ -775,6 +1007,7 @@ def _provider_statuses(
             health=report.cache,
             requests=0,
             failures=0 if report.cache == "redis" else 1 if settings.redis_url else 0,
+            controls_available=True,
             note="Used for shared TTS cache and rate-limit state when available.",
         ),
         ProviderStatusOut(
@@ -783,9 +1016,143 @@ def _provider_statuses(
             health="configured" if settings.tracing_enabled else "disabled",
             requests=0,
             failures=0,
+            controls_available=False,
             note="Trace export is optional and should be verified in the deployment project.",
         ),
+        ProviderStatusOut(
+            name="opentelemetry",
+            configured=settings.otel_enabled,
+            health="configured" if settings.otel_enabled else "disabled",
+            requests=0,
+            failures=0,
+            note=(
+                "OTLP traces/metrics are exported only when an endpoint or console "
+                "exporter is configured."
+            ),
+        ),
     ]
+
+
+def _provider_policy_outs(db: Session) -> list[ProviderPolicyOut]:
+    rows = db.exec(
+        select(ProviderPolicy).order_by(ProviderPolicy.provider, ProviderPolicy.scope)
+    ).all()
+    existing = {(row.provider, row.scope) for row in rows}
+    result = [_provider_policy_out(row) for row in rows]
+    now = datetime.now(UTC)
+    for (provider, scope), default in DEFAULT_PROVIDER_POLICIES.items():
+        if (provider, scope) in existing:
+            continue
+        result.append(
+            ProviderPolicyOut(
+                id=f"default:{provider}:{scope}",
+                provider=provider,
+                scope=scope,
+                enabled=bool(default["enabled"]),
+                primary_provider=str(default["primary_provider"]),
+                fallback_provider=default.get("fallback_provider"),
+                circuit_state=str(default["circuit_state"]),
+                daily_budget_usd=None,
+                monthly_budget_usd=None,
+                override_expires_at=None,
+                revision=0,
+                config={},
+                updated_by="system",
+                updated_at=now,
+            )
+        )
+    return result
+
+
+def _provider_policy_out(row: ProviderPolicy) -> ProviderPolicyOut:
+    return ProviderPolicyOut(
+        id=row.id,
+        provider=row.provider,
+        scope=row.scope,
+        enabled=row.enabled,
+        primary_provider=row.primary_provider,
+        fallback_provider=row.fallback_provider,
+        circuit_state=row.circuit_state,
+        daily_budget_usd=row.daily_budget_usd,
+        monthly_budget_usd=row.monthly_budget_usd,
+        override_expires_at=row.override_expires_at,
+        revision=row.revision,
+        config=dict(row.config or {}),
+        updated_by=row.updated_by,
+        updated_at=row.updated_at,
+    )
+
+
+def _provider_policy_snapshot(row: ProviderPolicy | None) -> dict[str, Any]:
+    if row is None:
+        return {}
+    return {
+        "provider": row.provider,
+        "scope": row.scope,
+        "enabled": row.enabled,
+        "primary_provider": row.primary_provider,
+        "fallback_provider": row.fallback_provider,
+        "circuit_state": row.circuit_state,
+        "daily_budget_usd": row.daily_budget_usd,
+        "monthly_budget_usd": row.monthly_budget_usd,
+        "override_expires_at": (
+            row.override_expires_at.isoformat() if row.override_expires_at else None
+        ),
+        "revision": row.revision,
+        "config": dict(row.config or {}),
+    }
+
+
+def _default_policy_snapshot(provider: str, scope: str) -> dict[str, Any]:
+    default = DEFAULT_PROVIDER_POLICIES.get(
+        (provider, scope), DEFAULT_PROVIDER_POLICIES.get((provider, "*"), {})
+    )
+    return {
+        "provider": provider,
+        "scope": scope,
+        "enabled": bool(default.get("enabled", True)),
+        "primary_provider": str(default.get("primary_provider", provider)),
+        "fallback_provider": default.get("fallback_provider"),
+        "circuit_state": str(default.get("circuit_state", "closed")),
+        "daily_budget_usd": None,
+        "monthly_budget_usd": None,
+        "override_expires_at": None,
+        "revision": 0,
+        "config": {},
+    }
+
+
+def _apply_policy_snapshot(row: ProviderPolicy, snapshot: dict[str, Any]) -> None:
+    row.enabled = bool(snapshot.get("enabled", True))
+    row.primary_provider = str(snapshot.get("primary_provider", row.provider))
+    fallback = snapshot.get("fallback_provider")
+    row.fallback_provider = str(fallback) if fallback is not None else None
+    row.circuit_state = str(snapshot.get("circuit_state", "closed"))
+    row.daily_budget_usd = snapshot.get("daily_budget_usd")
+    row.monthly_budget_usd = snapshot.get("monthly_budget_usd")
+    raw_expiry = snapshot.get("override_expires_at")
+    if isinstance(raw_expiry, str) and raw_expiry:
+        row.override_expires_at = datetime.fromisoformat(raw_expiry)
+    else:
+        row.override_expires_at = None
+    row.config = dict(snapshot.get("config") or {})
+
+
+def _validate_policy_path(provider: str, scope: str) -> None:
+    if not provider or len(provider) > 80 or not scope or len(scope) > 80:
+        raise HTTPException(status_code=422, detail="Provider and scope are required and bounded")
+
+
+def _validated_expiry(value: datetime | None, *, now: datetime) -> datetime | None:
+    if value is None:
+        return None
+    if value.tzinfo is None:
+        value = value.replace(tzinfo=UTC)
+    if value <= now:
+        raise HTTPException(status_code=400, detail="Override expiry must be in the future")
+    if value > now + timedelta(hours=24):
+        raise HTTPException(status_code=400, detail="Override expiry cannot exceed 24 hours")
+    return value
 
 
 def _float_or_none(value: object) -> float | None:

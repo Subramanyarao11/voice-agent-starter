@@ -149,6 +149,12 @@ class UserSession(SQLModel, table=True):
 
     id: str = Field(primary_key=True)
     phone_or_session_id: str = Field(index=True, unique=True)
+    # Browser sessions use a one-time opaque bearer token whose hash is stored
+    # here. Legacy telephony rows may leave this null until that channel gets
+    # its own verified webhook identity.
+    access_token_hash: str | None = Field(default=None, index=True, unique=True)
+    auth_mode: str = Field(default="guest", index=True)  # guest | telephony | legacy
+    expires_at: datetime | None = Field(default=None, index=True)
     state_code: str = Field(foreign_key="state.code")
     language_code: str = Field(foreign_key="language.code")
 
@@ -241,6 +247,8 @@ class TelemetryEvent(SQLModel, table=True):
     id: str = Field(primary_key=True)
     event_type: str = Field(index=True)  # http | turn | provider | system
     request_id: str | None = Field(default=None, index=True)
+    trace_id: str | None = Field(default=None, index=True)
+    trace_url: str | None = None
     route: str = Field(default="", index=True)
     method: str = ""
     status_code: int | None = Field(default=None, index=True)
@@ -270,4 +278,46 @@ class AuditEvent(SQLModel, table=True):
     safe_before: dict = Field(default_factory=dict, sa_column=json_dict())
     safe_after: dict = Field(default_factory=dict, sa_column=json_dict())
     request_id: str | None = Field(default=None, index=True)
+    created_at: datetime = Field(default_factory=_utcnow, index=True)
+
+
+class ProviderPolicy(SQLModel, table=True):
+    """Current provider routing/circuit policy for one bounded scope."""
+
+    __tablename__ = "provider_policy"
+    __table_args__ = (
+        Index("ix_provider_policy_provider_scope", "provider", "scope", unique=True),
+    )
+
+    id: str = Field(primary_key=True)
+    provider: str = Field(index=True)  # tts | stt | rag | reasoning
+    scope: str = Field(default="*", index=True)  # locale, state, or *
+    enabled: bool = True
+    primary_provider: str = ""
+    fallback_provider: str | None = None
+    circuit_state: str = "closed"  # closed | open | half_open
+    daily_budget_usd: float | None = None
+    monthly_budget_usd: float | None = None
+    override_expires_at: datetime | None = None
+    revision: int = 0
+    config: dict = Field(default_factory=dict, sa_column=json_dict())
+    updated_by: str = "system"
+    updated_at: datetime = Field(default_factory=_utcnow)
+    created_at: datetime = Field(default_factory=_utcnow)
+
+
+class ProviderPolicyRevision(SQLModel, table=True):
+    """Append-only before/after snapshots supporting audited rollback."""
+
+    __tablename__ = "provider_policy_revision"
+
+    id: str = Field(primary_key=True)
+    policy_id: str = Field(index=True, foreign_key="provider_policy.id")
+    revision: int = Field(index=True)
+    action: str = Field(index=True)  # update | rollback | expire
+    actor_id: str = Field(index=True)
+    actor_role: str = ""
+    reason: str = ""
+    before: dict = Field(default_factory=dict, sa_column=json_dict())
+    after: dict = Field(default_factory=dict, sa_column=json_dict())
     created_at: datetime = Field(default_factory=_utcnow, index=True)

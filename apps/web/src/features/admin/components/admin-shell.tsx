@@ -65,7 +65,7 @@ export function AdminShell({ activeView, children }: AdminShellProps) {
           <div className="flex items-center gap-3">
             <Badge variant="outline" className="border-acid/30 text-acid">
               <ShieldCheck className="size-3" aria-hidden="true" />
-              {meQuery.data.role}
+              {meQuery.data.role} · {meQuery.data.auth_source === "oidc" && meQuery.data.mfa_verified ? "MFA" : "local"}
             </Badge>
             <Button variant="ghost" size="sm" onClick={clearToken} aria-label="End admin session">
               <LogOut className="size-3.5" aria-hidden="true" />

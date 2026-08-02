@@ -6,6 +6,7 @@ from collections.abc import Mapping
 from datetime import UTC, datetime
 from typing import Any
 
+from sahaayak_agent.tracing import current_langfuse_trace, current_otel_trace_id
 from sahaayak_api.admin_auth import AdminPrincipal
 from sahaayak_common import (
     AuditEvent,
@@ -40,6 +41,8 @@ def record_telemetry(
     route: str = "",
     method: str = "",
     status_code: int | None = None,
+    trace_id: str | None = None,
+    trace_url: str | None = None,
     duration_ms: float | None = None,
     surface: str = "system",
     language_code: str | None = None,
@@ -56,12 +59,15 @@ def record_telemetry(
     no body, transcript, audio, or profile data is accepted here.
     """
     try:
+        langfuse_trace_id, langfuse_trace_url = current_langfuse_trace()
         with session_scope() as db:
             db.add(
                 TelemetryEvent(
                     id=new_id("tel"),
                     event_type=event_type,
                     request_id=request_id_var.get(),
+                    trace_id=trace_id or current_otel_trace_id() or langfuse_trace_id,
+                    trace_url=trace_url or langfuse_trace_url,
                     route=route[:240],
                     method=method[:16],
                     status_code=status_code,

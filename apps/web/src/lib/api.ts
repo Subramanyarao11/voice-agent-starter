@@ -42,6 +42,14 @@ export const healthSchema = z.object({
   languages: z.array(z.string()),
 });
 
+export const browserSessionSchema = z.object({
+  session_id: z.string(),
+  access_token: z.string(),
+  language_code: z.string(),
+  state_code: z.string(),
+  expires_at: z.string(),
+});
+
 const retrievedSourceSchema = z.object({
   source_id: z.string(),
   filename: z.string(),
@@ -132,6 +140,7 @@ export type Language = z.infer<typeof languageSchema>;
 export type State = z.infer<typeof stateSchema>;
 export type Coverage = z.infer<typeof coverageSchema>;
 export type Health = z.infer<typeof healthSchema>;
+export type BrowserSession = z.infer<typeof browserSessionSchema>;
 export type TurnResponse = z.infer<typeof turnResponseSchema>;
 export type MatchSummary = z.infer<typeof matchSchema>;
 export type BenefitDetail = z.infer<typeof benefitDetailSchema>;
@@ -213,6 +222,16 @@ export function getHealth(): Promise<Health> {
   return request("/health", healthSchema);
 }
 
+export function createBrowserSession(payload: {
+  language_code?: string;
+  state_code?: string;
+}): Promise<BrowserSession> {
+  return request("/api/browser-sessions", browserSessionSchema, {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
 export async function getCatalog(): Promise<Catalog> {
   const [languages, states, coverage] = await Promise.all([
     request("/api/languages", z.array(languageSchema)),
@@ -222,10 +241,11 @@ export async function getCatalog(): Promise<Catalog> {
   return { languages, states, coverage };
 }
 
-export function sendTextTurn(payload: TurnRequest): Promise<TurnResponse> {
+export function sendTextTurn(payload: TurnRequest, accessToken: string): Promise<TurnResponse> {
   return request("/api/turns", turnResponseSchema, {
     method: "POST",
     body: JSON.stringify(payload),
+    headers: { Authorization: `Bearer ${accessToken}` },
   });
 }
 
@@ -243,27 +263,28 @@ function extensionForMimeType(mimeType: string): string {
 export function sendVoiceTurn(
   audio: Blob,
   fields: {
-    caller_id: string;
     language_code: string;
     state_code: string;
     speak: boolean;
   },
+  accessToken: string,
 ): Promise<TurnResponse> {
   const form = new FormData();
   form.append("audio", audio, `sahaayak-turn.${extensionForMimeType(audio.type)}`);
-  form.append("caller_id", fields.caller_id);
   form.append("language_code", fields.language_code);
   form.append("state_code", fields.state_code);
   form.append("speak", String(fields.speak));
   return request("/api/voice/turns", turnResponseSchema, {
     method: "POST",
     body: form,
+    headers: { Authorization: `Bearer ${accessToken}` },
   });
 }
 
-export function resetSession(callerId: string): Promise<void> {
-  return request(`/api/sessions/${encodeURIComponent(callerId)}`, z.undefined(), {
+export function resetSession(sessionId: string, accessToken: string): Promise<void> {
+  return request(`/api/sessions/${encodeURIComponent(sessionId)}`, z.undefined(), {
     method: "DELETE",
+    headers: { Authorization: `Bearer ${accessToken}` },
   });
 }
 
@@ -274,6 +295,12 @@ export function toUserMessage(error: unknown): string {
     }
     if (error.status === 503) {
       return "Voice is not configured on the API yet. Text chat is still available.";
+    }
+    if (error.status === 401) {
+      return "Your guest session has expired. Starting a fresh session is required.";
+    }
+    if (error.status === 429) {
+      return "You are sending requests too quickly. Please wait a moment and try again.";
     }
     return error.message;
   }

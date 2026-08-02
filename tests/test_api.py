@@ -48,15 +48,16 @@ def test_benefit_detail_exposes_provenance(client):
     assert client.get("/api/benefits/does-not-exist").status_code == 404
 
 
-def test_a_text_turn_returns_a_question(client):
+def test_a_text_turn_returns_a_question(client, guest_session):
+    session = guest_session()
     response = client.post(
         "/api/turns",
         json={
-            "caller_id": "+919000000001",
             "text": "I need a scholarship",
             "language_code": "en",
             "state_code": "KA",
         },
+        headers=session["headers"],
     )
     assert response.status_code == 200
     body = response.json()
@@ -65,20 +66,58 @@ def test_a_text_turn_returns_a_question(client):
     assert response.headers["X-Request-ID"]
 
 
-def test_match_response_carries_verification_status_and_source(client):
+def test_guest_session_token_is_required_and_cannot_cross_session(client, guest_session):
+    from sahaayak_api.browser_auth import token_digest
+    from sahaayak_common import UserSession, session_scope
+
+    first = guest_session()
+    second = guest_session()
+    body = {"text": "I need a scholarship", "language_code": "en", "state_code": "KA"}
+
+    assert client.post("/api/turns", json=body).status_code == 401
+    assert client.post("/api/turns", json=body, headers=first["headers"]).status_code == 200
+    assert client.get(
+        f"/api/sessions/{first['session_id']}", headers=second["headers"]
+    ).status_code == 404
+    assert first["access_token"] not in client.get(
+        f"/api/sessions/{first['session_id']}", headers=first["headers"]
+    ).text
+    with session_scope() as db:
+        row = db.get(UserSession, first["session_id"])
+        assert row is not None
+        assert row.access_token_hash == token_digest(first["access_token"])
+        assert first["access_token"] not in row.phone_or_session_id
+
+
+def test_text_turn_rate_limit_returns_retry_headers(client, guest_session, monkeypatch):
+    from sahaayak_common import settings
+
+    monkeypatch.setattr(settings, "rate_limit_text_per_session", 1)
+    session = guest_session()
+    body = {"text": "I need a scholarship", "language_code": "en", "state_code": "KA"}
+    assert client.post("/api/turns", json=body, headers=session["headers"]).status_code == 200
+    limited = client.post("/api/turns", json=body, headers=session["headers"])
+    assert limited.status_code == 429
+    assert limited.headers["Retry-After"]
+    assert limited.headers["X-RateLimit-Limit"] == "1"
+
+
+def test_match_response_carries_verification_status_and_source(client, guest_session):
+    session = guest_session()
     payload = {
-        "caller_id": "+919000000010",
         "language_code": "en",
         "state_code": "KA",
     }
     client.post(
         "/api/turns",
         json={**payload, "text": "I need a scholarship"},
+        headers=session["headers"],
     )
-    client.post("/api/turns", json={**payload, "text": "22"})
+    client.post("/api/turns", json={**payload, "text": "22"}, headers=session["headers"])
     response = client.post(
         "/api/turns",
         json={**payload, "text": "2 lakh and regular degree college"},
+        headers=session["headers"],
     )
     assert response.status_code == 200
     matches = response.json()["matches"]
@@ -93,45 +132,59 @@ def test_an_inbound_request_id_is_echoed_back(client):
     assert response.headers["X-Request-ID"] == "trace-me"
 
 
-def test_session_and_transcript_are_retrievable(client):
-    caller = "+919000000002"
+def test_session_and_transcript_are_retrievable(client, guest_session):
+    session = guest_session()
     client.post(
         "/api/turns",
-        json={"caller_id": caller, "text": "I need a scholarship", "language_code": "en"},
+        json={"text": "I need a scholarship", "language_code": "en"},
+        headers=session["headers"],
     )
-    client.post("/api/turns", json={"caller_id": caller, "text": "22"})
+    client.post("/api/turns", json={"text": "22"}, headers=session["headers"])
 
-    session = client.get(f"/api/sessions/{caller}").json()
-    assert session["turn_count"] == 2
-    assert session["profile"]["age"] == 22
-    assert session["conversation_state"]["domain"] == "scholarship"
+    session_body = client.get(
+        f"/api/sessions/{session['session_id']}", headers=session["headers"]
+    ).json()
+    assert session_body["turn_count"] == 2
+    assert session_body["profile"]["age"] == 22
+    assert session_body["conversation_state"]["domain"] == "scholarship"
 
-    transcript = client.get(f"/api/sessions/{caller}/transcript").json()
+    transcript = client.get(
+        f"/api/sessions/{session['session_id']}/transcript", headers=session["headers"]
+    ).json()
     assert [turn["role"] for turn in transcript[:2]] == ["caller", "agent"]
 
 
-def test_unknown_caller_is_a_404_not_an_empty_session(client):
-    assert client.get("/api/sessions/+910000000000").status_code == 404
+def test_unknown_caller_is_a_404_not_an_empty_session(client, guest_session):
+    session = guest_session()
+    assert client.get(
+        "/api/sessions/ses_unknown", headers=session["headers"]
+    ).status_code == 404
 
 
-def test_a_caller_can_have_their_record_deleted(client):
-    caller = "+919000000003"
+def test_a_caller_can_have_their_record_deleted(client, guest_session):
+    session = guest_session()
     client.post(
         "/api/turns",
-        json={"caller_id": caller, "text": "I need a scholarship", "language_code": "en"},
+        json={"text": "I need a scholarship", "language_code": "en"},
+        headers=session["headers"],
     )
-    assert client.delete(f"/api/sessions/{caller}").status_code == 204
-    assert client.get(f"/api/sessions/{caller}").status_code == 404
+    assert client.delete(
+        f"/api/sessions/{session['session_id']}", headers=session["headers"]
+    ).status_code == 204
+    assert client.get(
+        f"/api/sessions/{session['session_id']}", headers=session["headers"]
+    ).status_code == 401
 
 
-def test_escalations_are_recorded_as_tickets(client):
+def test_escalations_are_recorded_as_tickets(client, guest_session):
+    session = guest_session()
     client.post(
         "/api/turns",
         json={
-            "caller_id": "+919000000004",
             "text": "I want to talk to a person",
             "language_code": "en",
         },
+        headers=session["headers"],
     )
     tickets = client.get("/api/escalations").json()
     assert any(ticket["reason"] == "caller_requested" for ticket in tickets)
@@ -141,21 +194,25 @@ def test_escalations_are_recorded_as_tickets(client):
     assert resolved["status"] == "resolved"
 
 
-def test_voice_turn_reports_unavailable_rather_than_erroring(client):
+def test_voice_turn_reports_unavailable_rather_than_erroring(client, guest_session):
+    session = guest_session()
     """With no key configured this is a deployment state, not a server fault."""
     response = client.post(
         "/api/voice/turns",
         files={"audio": ("turn.wav", b"not-real-audio", "audio/wav")},
-        data={"caller_id": "+919000000005", "language_code": "en"},
+        data={"language_code": "en"},
+        headers=session["headers"],
     )
     assert response.status_code == 503
 
 
-def test_empty_audio_is_rejected(client):
+def test_empty_audio_is_rejected(client, guest_session):
+    session = guest_session()
     response = client.post(
         "/api/voice/turns",
         files={"audio": ("turn.wav", b"", "audio/wav")},
-        data={"caller_id": "+919000000006"},
+        data={},
+        headers=session["headers"],
     )
     assert response.status_code == 400
 
@@ -165,15 +222,17 @@ def test_openapi_schema_is_generated(client):
     assert "/api/turns" in schema["paths"]
 
 
-def test_rag_route_fails_closed_when_hosted_store_is_not_configured(client):
+def test_rag_route_fails_closed_when_hosted_store_is_not_configured(client, guest_session):
+    session = guest_session()
     response = client.post(
         "/api/rag/answer",
         json={"query": "How do I apply?", "language_code": "kn"},
+        headers=session["headers"],
     )
     assert response.status_code == 503
 
 
-def test_voice_turn_routes_transcription_through_the_shared_rag_graph(client):
+def test_voice_turn_routes_transcription_through_the_shared_rag_graph(client, guest_session):
     from sahaayak_agent import AgentRuntime, GraphDeps, Understanding
     from sahaayak_api.deps import get_runtime, get_voice
     from sahaayak_api.main import app
@@ -213,11 +272,13 @@ def test_voice_turn_routes_transcription_through_the_shared_rag_graph(client):
         deps=GraphDeps(understanding=Understanding(), retrieval=FakeRetrieval())
     )
     app.dependency_overrides[get_voice] = lambda: FakeVoice()
+    session = guest_session(language_code="kn")
     try:
         response = client.post(
             "/api/voice/turns",
             files={"audio": ("turn.wav", b"fake-audio", "audio/wav")},
-            data={"caller_id": "+919000000007", "language_code": "kn", "speak": "false"},
+            data={"language_code": "kn", "speak": "false"},
+            headers=session["headers"],
         )
     finally:
         app.dependency_overrides.pop(get_runtime, None)

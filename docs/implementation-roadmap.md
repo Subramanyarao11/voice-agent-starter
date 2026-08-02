@@ -9,6 +9,13 @@ local demo database
 **Purpose:** define what must be built next, what can wait, and what “done” means
 at product, frontend, backend/AI, data, infrastructure, security, and QA levels.
 
+> **Implementation update (2026-08-02):** Server-owned anonymous browser
+> sessions, Redis sliding-window limits, OIDC/MFA validation, redacted
+> Langfuse/OpenTelemetry instrumentation, audited provider-policy expiry, and
+> rollback are now implemented in the working tree. The remaining production
+> evidence is a real managed-IdP/collector/Langfuse deployment smoke and full
+> browser QA; static admin tokens are retained only as a local/test seam.
+
 > The Aug 10 submission date below comes from `spec-v2.md`. The contest page was
 > unavailable while this roadmap was prepared, so verify the final submission
 > rules and deadline in the contest portal before recording or submitting.
@@ -90,7 +97,7 @@ product target is now broader and more explicit:
 | Voice code | OpenAI transcription, Sarvam synthesis, WAV chunk merge, and Redis/in-memory TTS caching exist | `services/agent/.../voice` |
 | Persistence | SQLite fallback and Postgres-compatible SQLModel tables for benefits, sessions, transcripts, and escalation tickets | `packages/common` |
 | Types | OpenAPI and generated TypeScript declarations are committed and consumed by the web app | `packages/api-types` |
-| Verification | Ruff passes, 124 Python tests pass, TypeScript builds, and the primary browser text flow has been smoke-tested | `make check` + browser smoke |
+| Verification | Ruff passes, 130 Python tests pass, TypeScript typechecks, and the primary browser text flow has been smoke-tested | `make check` + browser smoke |
 
 ### 2.2 What is still demonstration-only or unverified
 
@@ -98,15 +105,19 @@ product target is now broader and more explicit:
   corpus.
 - Live OpenAI STT and Sarvam TTS have code and offline tests, but no committed
   evidence of a complete Kannada/Hindi real-key conversation.
-- Langfuse is wired conditionally, but a live trace and PII-redaction policy have
-  not been verified.
+- Langfuse/OpenTelemetry export is wired conditionally with an explicit
+  redaction layer; a real external collector/Langfuse trace still needs a
+  deployment smoke and screenshot/evidence artifact.
 - The web match cards do not expose application steps, documents, caveats, source
   links, or verification freshness.
 - Browser history is not rehydrated from the durable transcript after reload.
-- Session/transcript/reset endpoints trust a caller ID supplied by the client;
-  escalation endpoints have no operator authentication.
-- There is no rate limit around paid STT/TTS/model calls.
-- Tables are created with `create_all`; there is no migration history.
+- Browser session, turn, RAG, transcript, and reset ownership now use a
+  server-issued bearer token; telephony identity and operator escalation
+  workflow still need their separate production integration.
+- Redis-backed per-session/per-IP limits now protect text, voice, RAG, and guest
+  session creation; a real multi-instance load test remains.
+- Alembic migration history now includes the security/observability schema;
+  Postgres migration and restore verification remain deployment work.
 - Docker Compose is development-oriented (`--reload`, bind mounts) and there is
   no production deployment manifest or CI workflow.
 - There are no frontend unit, accessibility, or Playwright E2E tests.
@@ -118,10 +129,13 @@ product target is now broader and more explicit:
 - The current dark green/lime visual system and Manrope/DM Mono font setup do not
   yet follow the proposed UX4G/GIGW-informed public-service direction or provide
   deliberate font loading for all target Indic scripts.
-- There is no citizen account system, managed workforce identity, MFA/RBAC admin
-  shell, immutable audit log, or operational control center.
-- Sarvam TTS does not yet have a budget-aware, per-locale OpenAI/text fallback
-  policy with native-speaker quality gates and operator controls.
+- Citizen account linking remains out of scope for the guest-first beta. The
+  admin shell, RBAC boundary, OIDC/MFA claim validation, immutable audit log,
+  and operational control center are implemented; managed IdP provisioning and
+  browser redirect UX remain deployment-specific.
+- Provider routing policies now have admin-only, audited, expiring overrides
+  and rollback. Native-speaker quality gates and a separately tested OpenAI
+  audio fallback remain required before advertising voice fallback coverage.
 
 ### 2.3 Product definition of done
 
@@ -469,10 +483,12 @@ paid endpoints cannot be abused anonymously.
 
 ### Current risk
 
-`caller_id` is client-controlled and is used directly to access sessions and
-transcripts. Income, social category, disability, and conversation text are
-sensitive. Operator escalation endpoints are also public. This must be treated
-as a P0 production risk, not an admin polish item.
+At the roadmap baseline, `caller_id` was client-controlled and operator
+escalation endpoints were public. The browser path now uses a server-issued
+hashed bearer token, and escalation reads/resolution require an authorized
+workforce role. Income, social category, disability, and conversation text
+remain sensitive; telephony webhook identity, retention/deletion jobs, and a
+multi-instance abuse/load test remain production gates.
 
 ### Recommended browser session design
 

@@ -8,10 +8,17 @@ age again.
 
 from __future__ import annotations
 
+import time
 from datetime import UTC, datetime
 
 from sahaayak_agent.graph import build_graph
 from sahaayak_agent.nodes import GraphDeps
+from sahaayak_agent.tracing import (
+    langfuse_turn,
+    record_turn_metric,
+    start_span,
+    update_langfuse_observation,
+)
 from sahaayak_common import (
     ConversationTurnLog,
     UserSession,
@@ -146,11 +153,65 @@ class AgentRuntime:
             turn_index=session.turn_count,
         )
 
-        raw = await self.graph.ainvoke(initial)
-        final = AgentState.model_validate(raw)
+        started = time.perf_counter()
+        with start_span(
+            "conversation.turn",
+            {
+                "conversation.session_id": session.id,
+                "conversation.language": session.language_code,
+                "conversation.state": session.state_code,
+                "conversation.turn_index": session.turn_count,
+            },
+        ) as otel_span:
+            with langfuse_turn(
+                session_id=session.id,
+                metadata={
+                    "language": session.language_code,
+                    "state": session.state_code,
+                    "turn_index": session.turn_count,
+                },
+            ) as langfuse_observation:
+                try:
+                    raw = await self.graph.ainvoke(initial)
+                    final = AgentState.model_validate(raw)
+                    self._persist(session, final)
+                except Exception as exc:
+                    if otel_span is not None:
+                        otel_span.record_exception(exc)
+                        otel_span.set_attribute("error.type", exc.__class__.__name__)
+                    raise
 
-        self._persist(session, final)
-        return session, final
+                duration_ms = (time.perf_counter() - started) * 1000
+                outcome = (
+                    "escalated"
+                    if final.needs_escalation
+                    else "follow_up"
+                    if final.pending_slot
+                    else "no_match"
+                    if not final.matches and not final.knowledge_answer
+                    else "success"
+                )
+                safe_metadata = {
+                    "language": final.language_code,
+                    "state": final.state_code,
+                    "intent": final.intent.value,
+                    "outcome": outcome,
+                    "match_count": len(final.matches),
+                    "source_count": len(final.knowledge_sources),
+                    "slot_names": ",".join(sorted(slot.value for slot in final.slots)),
+                    "duration_ms": round(duration_ms, 2),
+                }
+                if otel_span is not None:
+                    for key, value in safe_metadata.items():
+                        otel_span.set_attribute(f"conversation.{key}", value)
+                update_langfuse_observation(langfuse_observation, safe_metadata)
+                record_turn_metric(
+                    duration_ms,
+                    surface="conversation",
+                    language_code=final.language_code,
+                    outcome=outcome,
+                )
+                return session, final
 
     def _persist(self, session: UserSession, state: AgentState) -> None:
         confirmed = [

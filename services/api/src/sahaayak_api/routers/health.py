@@ -50,6 +50,6 @@ async def health() -> HealthReport:
         speech_to_text=settings.llm_enabled,
         text_to_speech=settings.tts_enabled,
         reasoning_model=settings.llm_enabled,
-        tracing=settings.tracing_enabled,
+        tracing=settings.tracing_enabled or settings.otel_enabled,
         languages=supported_languages(),
     )

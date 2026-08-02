@@ -16,6 +16,7 @@ import wave
 
 import httpx
 
+from sahaayak_agent.tracing import start_span
 from sahaayak_agent.voice.base import TTSProvider, VoiceUnavailable
 from sahaayak_common import get_logger, settings
 from sahaayak_contracts import LanguageProfile, SynthesisResult
@@ -119,17 +120,32 @@ class SarvamBulbulTTS(TTSProvider):
         audio_parts: list[bytes] = []
         async with httpx.AsyncClient(timeout=self._timeout) as client:
             for chunk in chunks:
-                response = await client.post(
-                    self.BASE_URL,
-                    headers={"api-subscription-key": self._api_key},
-                    json={
-                        "text": chunk,
-                        "target_language_code": profile.resolved_tts_locale(),
-                        "speaker": profile.tts_voice_id,
-                        "model": self.MODEL,
+                with start_span(
+                    "provider.sarvam.tts",
+                    {
+                        "provider": self.name,
+                        "provider.model": self.MODEL,
+                        "provider.language": profile.code,
+                        "provider.input_characters": len(chunk),
                     },
-                )
-                response.raise_for_status()
+                ) as span:
+                    try:
+                        response = await client.post(
+                            self.BASE_URL,
+                            headers={"api-subscription-key": self._api_key},
+                            json={
+                                "text": chunk,
+                                "target_language_code": profile.resolved_tts_locale(),
+                                "speaker": profile.tts_voice_id,
+                                "model": self.MODEL,
+                            },
+                        )
+                        response.raise_for_status()
+                    except Exception as exc:
+                        if span is not None:
+                            span.record_exception(exc)
+                            span.set_attribute("error.type", exc.__class__.__name__)
+                        raise
                 payload = response.json()
                 encoded = (payload.get("audios") or [None])[0]
                 if not encoded:

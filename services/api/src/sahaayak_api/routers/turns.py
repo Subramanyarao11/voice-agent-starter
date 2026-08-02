@@ -9,13 +9,15 @@ from __future__ import annotations
 
 import base64
 
-from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
+from fastapi import APIRouter, Depends, File, Form, HTTPException, Request, Response, UploadFile
 
 from sahaayak_agent import AgentRuntime, to_response
 from sahaayak_agent.voice import VoiceService, VoiceUnavailable
+from sahaayak_api.browser_auth import BrowserSessionPrincipal, require_browser_session
 from sahaayak_api.deps import get_runtime, get_voice
+from sahaayak_api.rate_limit import apply_rate_limit_headers, enforce_rate_limit
 from sahaayak_api.telemetry import record_telemetry
-from sahaayak_common import get_logger, settings
+from sahaayak_common import get_logger
 from sahaayak_contracts import TurnRequest, TurnResponse
 
 log = get_logger(__name__)
@@ -30,14 +32,19 @@ MAX_AUDIO_BYTES = 10 * 1024 * 1024
 @router.post("/turns", response_model=TurnResponse)
 async def take_text_turn(
     payload: TurnRequest,
+    request: Request,
+    http_response: Response,
     runtime: AgentRuntime = Depends(get_runtime),
+    principal: BrowserSessionPrincipal = Depends(require_browser_session),
 ) -> TurnResponse:
     """One text turn. The fastest way to exercise the dialogue during a build."""
+    decision = await enforce_rate_limit(request, session_id=principal.session_id, bucket="text")
+    apply_rate_limit_headers(http_response, decision)
     session, state = await runtime.run_turn(
-        caller_id=payload.caller_id,
+        caller_id=principal.caller_id,
         transcript=payload.text,
-        language_code=payload.language_code,
-        state_code=payload.state_code,
+        language_code=payload.language_code or principal.language_code,
+        state_code=payload.state_code or principal.state_code,
     )
     response = to_response(session, state)
     record_telemetry(
@@ -55,22 +62,26 @@ async def take_text_turn(
 
 @router.post("/voice/turns", response_model=TurnResponse)
 async def take_voice_turn(
+    request: Request,
+    http_response: Response,
     audio: UploadFile = File(...),
-    caller_id: str = Form(...),
     language_code: str | None = Form(None),
     state_code: str | None = Form(None),
     speak: bool = Form(True),
     runtime: AgentRuntime = Depends(get_runtime),
     voice: VoiceService = Depends(get_voice),
+    principal: BrowserSessionPrincipal = Depends(require_browser_session),
 ) -> TurnResponse:
     """Audio in, audio out. Shared by the browser demo and any telephony webhook."""
+    decision = await enforce_rate_limit(request, session_id=principal.session_id, bucket="voice")
+    apply_rate_limit_headers(http_response, decision)
     audio_bytes = await audio.read()
     if not audio_bytes:
         raise HTTPException(status_code=400, detail="Empty audio upload")
     if len(audio_bytes) > MAX_AUDIO_BYTES:
         raise HTTPException(status_code=413, detail="Audio too large")
 
-    language = language_code or settings.default_language
+    language = language_code or principal.language_code
 
     try:
         transcription = await voice.transcribe(
@@ -82,10 +93,10 @@ async def take_voice_turn(
         raise HTTPException(status_code=503, detail=str(exc)) from exc
 
     session, state = await runtime.run_turn(
-        caller_id=caller_id,
+        caller_id=principal.caller_id,
         transcript=transcription.text,
         language_code=language,
-        state_code=state_code,
+        state_code=state_code or principal.state_code,
     )
     response = to_response(session, state)
 

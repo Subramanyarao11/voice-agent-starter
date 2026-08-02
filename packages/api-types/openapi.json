@@ -307,21 +307,62 @@
         }
       }
     },
-    "/api/sessions/{caller_id}": {
+    "/api/browser-sessions": {
+      "post": {
+        "tags": [
+          "browser sessions"
+        ],
+        "summary": "Create Browser Session",
+        "operationId": "create_browser_session_api_browser_sessions_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BrowserSessionRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BrowserSessionOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/sessions/{session_id}": {
       "get": {
         "tags": [
           "sessions"
         ],
         "summary": "Get Session For Caller",
-        "operationId": "get_session_for_caller_api_sessions__caller_id__get",
+        "operationId": "get_session_for_caller_api_sessions__session_id__get",
         "parameters": [
           {
-            "name": "caller_id",
+            "name": "session_id",
             "in": "path",
             "required": true,
             "schema": {
               "type": "string",
-              "title": "Caller Id"
+              "title": "Session Id"
             }
           }
         ],
@@ -354,15 +395,15 @@
         ],
         "summary": "Reset Session",
         "description": "Clear a caller's memory.\n\nNeeded for demos and re-testing, and it is also the honest answer to\n\"delete what you know about me\" for a service holding income and caste.",
-        "operationId": "reset_session_api_sessions__caller_id__delete",
+        "operationId": "reset_session_api_sessions__session_id__delete",
         "parameters": [
           {
-            "name": "caller_id",
+            "name": "session_id",
             "in": "path",
             "required": true,
             "schema": {
               "type": "string",
-              "title": "Caller Id"
+              "title": "Session Id"
             }
           }
         ],
@@ -383,21 +424,21 @@
         }
       }
     },
-    "/api/sessions/{caller_id}/transcript": {
+    "/api/sessions/{session_id}/transcript": {
       "get": {
         "tags": [
           "sessions"
         ],
         "summary": "Get Transcript",
-        "operationId": "get_transcript_api_sessions__caller_id__transcript_get",
+        "operationId": "get_transcript_api_sessions__session_id__transcript_get",
         "parameters": [
           {
-            "name": "caller_id",
+            "name": "session_id",
             "in": "path",
             "required": true,
             "schema": {
               "type": "string",
-              "title": "Caller Id"
+              "title": "Session Id"
             }
           },
           {
@@ -406,6 +447,8 @@
             "required": false,
             "schema": {
               "type": "integer",
+              "maximum": 500,
+              "minimum": 1,
               "default": 100,
               "title": "Limit"
             }
@@ -421,7 +464,7 @@
                   "items": {
                     "$ref": "#/components/schemas/TurnOut"
                   },
-                  "title": "Response Get Transcript Api Sessions  Caller Id  Transcript Get"
+                  "title": "Response Get Transcript Api Sessions  Session Id  Transcript Get"
                 }
               }
             }
@@ -989,6 +1032,149 @@
         }
       }
     },
+    "/api/admin/provider-policies": {
+      "get": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "Admin Provider Policies",
+        "operationId": "admin_provider_policies_api_admin_provider_policies_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProviderPolicyListOut"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/admin/provider-policies/{provider}/{scope}": {
+      "put": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "Update Provider Policy",
+        "operationId": "update_provider_policy_api_admin_provider_policies__provider___scope__put",
+        "parameters": [
+          {
+            "name": "provider",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Provider"
+            }
+          },
+          {
+            "name": "scope",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Scope"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ProviderPolicyUpdateRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProviderPolicyOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/admin/provider-policies/{provider}/{scope}/rollback": {
+      "post": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "Rollback Provider Policy",
+        "operationId": "rollback_provider_policy_api_admin_provider_policies__provider___scope__rollback_post",
+        "parameters": [
+          {
+            "name": "provider",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Provider"
+            }
+          },
+          {
+            "name": "scope",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Scope"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ProviderPolicyRollbackRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProviderPolicyOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/admin/languages": {
       "get": {
         "tags": [
@@ -1119,13 +1305,23 @@
             },
             "type": "array",
             "title": "Permissions"
+          },
+          "auth_source": {
+            "type": "string",
+            "title": "Auth Source"
+          },
+          "mfa_verified": {
+            "type": "boolean",
+            "title": "Mfa Verified"
           }
         },
         "type": "object",
         "required": [
           "actor_id",
           "role",
-          "permissions"
+          "permissions",
+          "auth_source",
+          "mfa_verified"
         ],
         "title": "AdminMeOut"
       },
@@ -1588,10 +1784,6 @@
             "contentMediaType": "application/octet-stream",
             "title": "Audio"
           },
-          "caller_id": {
-            "type": "string",
-            "title": "Caller Id"
-          },
           "language_code": {
             "anyOf": [
               {
@@ -1622,10 +1814,75 @@
         },
         "type": "object",
         "required": [
-          "audio",
-          "caller_id"
+          "audio"
         ],
         "title": "Body_take_voice_turn_api_voice_turns_post"
+      },
+      "BrowserSessionOut": {
+        "properties": {
+          "session_id": {
+            "type": "string",
+            "title": "Session Id"
+          },
+          "access_token": {
+            "type": "string",
+            "title": "Access Token"
+          },
+          "language_code": {
+            "type": "string",
+            "title": "Language Code"
+          },
+          "state_code": {
+            "type": "string",
+            "title": "State Code"
+          },
+          "expires_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Expires At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "session_id",
+          "access_token",
+          "language_code",
+          "state_code",
+          "expires_at"
+        ],
+        "title": "BrowserSessionOut"
+      },
+      "BrowserSessionRequest": {
+        "properties": {
+          "language_code": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 16,
+                "minLength": 2
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Language Code"
+          },
+          "state_code": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 16,
+                "minLength": 2
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "State Code"
+          }
+        },
+        "type": "object",
+        "title": "BrowserSessionRequest"
       },
       "ConversationListOut": {
         "properties": {
@@ -2203,6 +2460,13 @@
             "type": "array",
             "title": "Providers"
           },
+          "policies": {
+            "items": {
+              "$ref": "#/components/schemas/ProviderPolicyOut"
+            },
+            "type": "array",
+            "title": "Policies"
+          },
           "controls_note": {
             "type": "string",
             "title": "Controls Note"
@@ -2215,6 +2479,325 @@
           "controls_note"
         ],
         "title": "ProviderListOut"
+      },
+      "ProviderPolicyListOut": {
+        "properties": {
+          "generated_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Generated At"
+          },
+          "policies": {
+            "items": {
+              "$ref": "#/components/schemas/ProviderPolicyOut"
+            },
+            "type": "array",
+            "title": "Policies"
+          },
+          "revisions": {
+            "items": {
+              "$ref": "#/components/schemas/ProviderPolicyRevisionOut"
+            },
+            "type": "array",
+            "title": "Revisions"
+          },
+          "controls_note": {
+            "type": "string",
+            "title": "Controls Note"
+          }
+        },
+        "type": "object",
+        "required": [
+          "generated_at",
+          "policies",
+          "revisions",
+          "controls_note"
+        ],
+        "title": "ProviderPolicyListOut"
+      },
+      "ProviderPolicyOut": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "provider": {
+            "type": "string",
+            "title": "Provider"
+          },
+          "scope": {
+            "type": "string",
+            "title": "Scope"
+          },
+          "enabled": {
+            "type": "boolean",
+            "title": "Enabled"
+          },
+          "primary_provider": {
+            "type": "string",
+            "title": "Primary Provider"
+          },
+          "fallback_provider": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Fallback Provider"
+          },
+          "circuit_state": {
+            "type": "string",
+            "title": "Circuit State"
+          },
+          "daily_budget_usd": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Daily Budget Usd"
+          },
+          "monthly_budget_usd": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Monthly Budget Usd"
+          },
+          "override_expires_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Override Expires At"
+          },
+          "revision": {
+            "type": "integer",
+            "title": "Revision"
+          },
+          "config": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Config"
+          },
+          "updated_by": {
+            "type": "string",
+            "title": "Updated By"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Updated At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "provider",
+          "scope",
+          "enabled",
+          "primary_provider",
+          "fallback_provider",
+          "circuit_state",
+          "daily_budget_usd",
+          "monthly_budget_usd",
+          "override_expires_at",
+          "revision",
+          "config",
+          "updated_by",
+          "updated_at"
+        ],
+        "title": "ProviderPolicyOut"
+      },
+      "ProviderPolicyRevisionOut": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "policy_id": {
+            "type": "string",
+            "title": "Policy Id"
+          },
+          "revision": {
+            "type": "integer",
+            "title": "Revision"
+          },
+          "action": {
+            "type": "string",
+            "title": "Action"
+          },
+          "actor_id": {
+            "type": "string",
+            "title": "Actor Id"
+          },
+          "actor_role": {
+            "type": "string",
+            "title": "Actor Role"
+          },
+          "reason": {
+            "type": "string",
+            "title": "Reason"
+          },
+          "before": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Before"
+          },
+          "after": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "After"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "policy_id",
+          "revision",
+          "action",
+          "actor_id",
+          "actor_role",
+          "reason",
+          "before",
+          "after",
+          "created_at"
+        ],
+        "title": "ProviderPolicyRevisionOut"
+      },
+      "ProviderPolicyRollbackRequest": {
+        "properties": {
+          "reason": {
+            "type": "string",
+            "maxLength": 500,
+            "minLength": 3,
+            "title": "Reason"
+          },
+          "revision_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 160
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Revision Id"
+          }
+        },
+        "type": "object",
+        "required": [
+          "reason"
+        ],
+        "title": "ProviderPolicyRollbackRequest"
+      },
+      "ProviderPolicyUpdateRequest": {
+        "properties": {
+          "enabled": {
+            "type": "boolean",
+            "title": "Enabled",
+            "default": true
+          },
+          "primary_provider": {
+            "type": "string",
+            "maxLength": 80,
+            "minLength": 2,
+            "title": "Primary Provider"
+          },
+          "fallback_provider": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 80
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Fallback Provider"
+          },
+          "circuit_state": {
+            "type": "string",
+            "enum": [
+              "closed",
+              "open",
+              "half_open"
+            ],
+            "title": "Circuit State",
+            "default": "closed"
+          },
+          "daily_budget_usd": {
+            "anyOf": [
+              {
+                "type": "number",
+                "maximum": 15.0,
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Daily Budget Usd"
+          },
+          "monthly_budget_usd": {
+            "anyOf": [
+              {
+                "type": "number",
+                "maximum": 15.0,
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Monthly Budget Usd"
+          },
+          "override_expires_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Override Expires At"
+          },
+          "reason": {
+            "type": "string",
+            "maxLength": 500,
+            "minLength": 3,
+            "title": "Reason"
+          }
+        },
+        "type": "object",
+        "required": [
+          "primary_provider",
+          "reason"
+        ],
+        "title": "ProviderPolicyUpdateRequest"
       },
       "ProviderStatusOut": {
         "properties": {
@@ -2635,10 +3218,6 @@
             "type": "string",
             "title": "Id"
           },
-          "phone_or_session_id": {
-            "type": "string",
-            "title": "Phone Or Session Id"
-          },
           "state_code": {
             "type": "string",
             "title": "State Code"
@@ -2682,7 +3261,6 @@
         "type": "object",
         "required": [
           "id",
-          "phone_or_session_id",
           "state_code",
           "language_code",
           "turn_count",
@@ -2820,6 +3398,28 @@
             ],
             "title": "Request Id"
           },
+          "trace_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Trace Id"
+          },
+          "trace_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Trace Url"
+          },
           "route": {
             "type": "string",
             "title": "Route"
@@ -2918,6 +3518,8 @@
           "id",
           "event_type",
           "request_id",
+          "trace_id",
+          "trace_url",
           "route",
           "method",
           "status_code",
@@ -3071,12 +3673,10 @@
       },
       "TurnRequest": {
         "properties": {
-          "caller_id": {
-            "type": "string",
-            "title": "Caller Id"
-          },
           "text": {
             "type": "string",
+            "maxLength": 2000,
+            "minLength": 1,
             "title": "Text"
           },
           "language_code": {
@@ -3104,7 +3704,6 @@
         },
         "type": "object",
         "required": [
-          "caller_id",
           "text"
         ],
         "title": "TurnRequest",

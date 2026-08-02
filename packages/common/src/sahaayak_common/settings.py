@@ -80,6 +80,45 @@ class Settings(BaseSettings):
     # multiple token-to-role entries for local/staging operator separation.
     admin_api_token: str = ""
     admin_tokens_json: str = ""
+    admin_static_tokens_enabled: bool = True
+    admin_oidc_enabled: bool = False
+    admin_oidc_issuer_url: str = ""
+    admin_oidc_audience: str = ""
+    admin_oidc_jwks_url: str = ""
+    admin_oidc_allowed_algorithms: str = "RS256"
+    admin_oidc_required_amr: str = "mfa"
+    admin_oidc_required_acr: str = ""
+    admin_oidc_roles_claim: str = "roles"
+    admin_oidc_actor_claim: str = "sub"
+    admin_oidc_clock_skew_seconds: int = 60
+    admin_oidc_jwks_cache_seconds: int = 3600
+
+    # Guest browser sessions stay login-free, but are still server-owned and
+    # bounded. The access token is issued once and stored only in the browser
+    # session; no user-supplied caller identifier authorizes a request.
+    guest_session_ttl_hours: int = 24 * 30
+    rate_limit_text_per_session: int = 20
+    rate_limit_text_per_ip: int = 60
+    rate_limit_voice_per_session: int = 3
+    rate_limit_voice_per_ip: int = 10
+    rate_limit_rag_per_session: int = 10
+    rate_limit_rag_per_ip: int = 30
+    rate_limit_session_create_per_ip: int = 10
+    rate_limit_window_seconds: int = 60
+    rate_limit_key_salt: str = ""
+    rate_limit_enabled: bool = True
+    rate_limit_fail_closed: bool = True
+
+    # OpenTelemetry is independently configurable from Langfuse. The endpoint
+    # values follow the standard OTEL environment variable names; the base
+    # endpoint is expanded to /v1/traces and /v1/metrics when used.
+    otel_service_name: str = "sahaayak-api"
+    otel_exporter_otlp_endpoint: str = ""
+    otel_exporter_otlp_traces_endpoint: str = ""
+    otel_exporter_otlp_metrics_endpoint: str = ""
+    otel_exporter_otlp_headers: str = ""
+    otel_console_exporter: bool = False
+    otel_sample_ratio: float = 1.0
 
     # --- Application ---
     env: str = "development"
@@ -147,6 +186,15 @@ class Settings(BaseSettings):
     @property
     def tracing_enabled(self) -> bool:
         return bool(self.langfuse_public_key and self.langfuse_secret_key)
+
+    @property
+    def otel_enabled(self) -> bool:
+        return bool(
+            self.otel_console_exporter
+            or self.otel_exporter_otlp_endpoint
+            or self.otel_exporter_otlp_traces_endpoint
+            or self.otel_exporter_otlp_metrics_endpoint
+        )
 
 
 @lru_cache

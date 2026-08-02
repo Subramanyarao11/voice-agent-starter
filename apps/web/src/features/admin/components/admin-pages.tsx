@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, type FormEvent } from "react";
 
 import { AlertTriangle, CheckCircle2, Clock3, ExternalLink, RefreshCw, ShieldAlert } from "lucide-react";
 
@@ -18,10 +18,13 @@ import {
   useAdminReviewsQuery,
   useAdminSystemQuery,
   useAdminTelemetryQuery,
+  useRollbackAdminProviderPolicyMutation,
   useResolveAdminEscalationMutation,
   useReviewAdminBenefitMutation,
+  useUpdateAdminProviderPolicyMutation,
 } from "@/features/admin/queries";
 import type { AdminView } from "@/features/admin/components/admin-shell";
+import type { ProviderPolicy, ProviderPolicyUpdate } from "@/features/admin/api";
 import { toUserMessage } from "@/lib/api";
 
 export function AdminPage({ view }: { view: AdminView }) {
@@ -40,7 +43,7 @@ export function AdminPage({ view }: { view: AdminView }) {
     case "benefits":
       return <BenefitsPage token={token} role={meQuery.data?.role ?? "observer"} />;
     case "providers":
-      return <ProvidersPage token={token} />;
+      return <ProvidersPage token={token} role={meQuery.data?.role ?? "observer"} />;
     case "languages":
       return <LanguagesPage token={token} />;
     case "audit":
@@ -117,7 +120,7 @@ function TelemetryPage({ token }: { token: string }) {
   return (
     <div className="space-y-6">
       <PageIntro title="Telemetry stream" description="Safe operational events with request correlation. Payloads, transcripts, audio, and sensitive slots are not stored here." />
-      <Card className="border-paper/10 bg-paper/[0.04] text-paper"><CardContent className="overflow-x-auto p-0"><table className="w-full min-w-[960px] text-left text-sm"><caption className="sr-only">Recent telemetry events</caption><thead className="border-b border-paper/10 text-xs uppercase tracking-[0.12em] text-paper/40"><tr><th className="px-5 py-4">Time</th><th className="px-5 py-4">Type</th><th className="px-5 py-4">Route</th><th className="px-5 py-4">Surface</th><th className="px-5 py-4">Outcome</th><th className="px-5 py-4">Duration</th><th className="px-5 py-4">Request</th></tr></thead><tbody>{query.data.map((event) => <tr key={event.id} className="border-b border-paper/5 last:border-0"><td className="px-5 py-4 text-paper/55">{formatTime(event.created_at)}</td><td className="px-5 py-4"><Badge variant="outline" className="border-paper/15 text-paper/60">{event.event_type}</Badge></td><td className="px-5 py-4 font-mono text-xs text-paper/70">{event.route}</td><td className="px-5 py-4">{event.surface}</td><td className="px-5 py-4">{outcomeBadge(event.outcome)}</td><td className="px-5 py-4 text-paper/55">{event.duration_ms == null ? "—" : `${Math.round(event.duration_ms)} ms`}</td><td className="px-5 py-4 font-mono text-xs text-acid">{event.request_id ?? "—"}</td></tr>)}</tbody></table></CardContent></Card>
+      <Card className="border-paper/10 bg-paper/[0.04] text-paper"><CardContent className="overflow-x-auto p-0"><table className="w-full min-w-[1080px] text-left text-sm"><caption className="sr-only">Recent telemetry events</caption><thead className="border-b border-paper/10 text-xs uppercase tracking-[0.12em] text-paper/40"><tr><th className="px-5 py-4">Time</th><th className="px-5 py-4">Type</th><th className="px-5 py-4">Route</th><th className="px-5 py-4">Surface</th><th className="px-5 py-4">Outcome</th><th className="px-5 py-4">Duration</th><th className="px-5 py-4">Request</th><th className="px-5 py-4">Trace</th></tr></thead><tbody>{query.data.map((event) => <tr key={event.id} className="border-b border-paper/5 last:border-0"><td className="px-5 py-4 text-paper/55">{formatTime(event.created_at)}</td><td className="px-5 py-4"><Badge variant="outline" className="border-paper/15 text-paper/60">{event.event_type}</Badge></td><td className="px-5 py-4 font-mono text-xs text-paper/70">{event.route}</td><td className="px-5 py-4">{event.surface}</td><td className="px-5 py-4">{outcomeBadge(event.outcome)}</td><td className="px-5 py-4 text-paper/55">{event.duration_ms == null ? "—" : `${Math.round(event.duration_ms)} ms`}</td><td className="px-5 py-4 font-mono text-xs text-acid">{event.request_id ?? "—"}</td><td className="px-5 py-4 font-mono text-xs">{event.trace_url ? <a className="text-acid underline-offset-4 hover:underline" href={event.trace_url} target="_blank" rel="noreferrer">Open trace</a> : event.trace_id ? <span className="text-paper/50" title={event.trace_id}>{event.trace_id.slice(0, 12)}…</span> : "—"}</td></tr>)}</tbody></table></CardContent></Card>
     </div>
   );
 }
@@ -153,11 +156,14 @@ function BenefitsPage({ token, role }: { token: string; role: string }) {
   );
 }
 
-function ProvidersPage({ token }: { token: string }) {
+function ProvidersPage({ token, role }: { token: string; role: string }) {
   const query = useAdminProvidersQuery(token);
+  const update = useUpdateAdminProviderPolicyMutation(token);
+  const rollback = useRollbackAdminProviderPolicyMutation(token);
   if (query.isPending) return <Loading label="Loading provider posture…" />;
   if (query.isError || !query.data) return <ErrorPanel error={query.error} />;
-  return <div className="space-y-6"><PageIntro title="Providers, spend, and fallback" description="Configuration and request-level posture are visible here. Cost values are estimates where the provider does not expose a reconciliation API." /><div className="grid gap-4 lg:grid-cols-2">{query.data.providers.map((provider) => <Card key={provider.name} className="border-paper/10 bg-paper/[0.04] text-paper"><CardHeader className="flex-row items-center justify-between space-y-0"><CardTitle className="text-paper">{provider.name}</CardTitle>{provider.configured ? <Badge variant="success">{provider.health}</Badge> : <Badge variant="warning">not configured</Badge>}</CardHeader><CardContent className="space-y-3"><div className="grid grid-cols-2 gap-3 text-sm"><Stat label="Requests" value={provider.requests} /><Stat label="Failures" value={provider.failures} tone={provider.failures ? "warning" : "default"} />{provider.budget_usd != null && <Stat label="Budget remaining" value={`$${provider.remaining_usd?.toFixed(2) ?? "—"}`} tone="good" />}{provider.cache_hits > 0 && <Stat label="Cache hits" value={provider.cache_hits} tone="good" />}</div><p className="text-xs leading-5 text-paper/45">{provider.note}</p></CardContent></Card>)}</div><p className="rounded-xl border border-orange/20 bg-orange/10 px-4 py-3 text-sm leading-6 text-orange">{query.data.controls_note}</p></div>;
+  const canManage = role === "admin";
+  return <div className="space-y-6"><PageIntro title="Providers, spend, and fallback" description="Configuration and request-level posture are visible here. Cost values are estimates where the provider does not expose a reconciliation API." /><div className="grid gap-4 lg:grid-cols-2">{query.data.providers.map((provider) => <Card key={provider.name} className="border-paper/10 bg-paper/[0.04] text-paper"><CardHeader className="flex-row items-center justify-between space-y-0"><CardTitle className="text-paper">{provider.name}</CardTitle>{provider.configured ? <Badge variant="success">{provider.health}</Badge> : <Badge variant="warning">not configured</Badge>}</CardHeader><CardContent className="space-y-3"><div className="grid grid-cols-2 gap-3 text-sm"><Stat label="Requests" value={provider.requests} /><Stat label="Failures" value={provider.failures} tone={provider.failures ? "warning" : "default"} />{provider.budget_usd != null && <Stat label="Budget remaining" value={`$${provider.remaining_usd?.toFixed(2) ?? "—"}`} tone="good" />}{provider.cache_hits > 0 && <Stat label="Cache hits" value={provider.cache_hits} tone="good" />}</div><p className="text-xs leading-5 text-paper/45">{provider.note}</p></CardContent></Card>)}</div><Card className="border-paper/10 bg-paper/[0.04] text-paper"><CardHeader><CardTitle className="text-paper">Audited provider policies</CardTitle><p className="text-sm leading-6 text-paper/50">{query.data.controls_note}</p></CardHeader><CardContent className="grid gap-4">{query.data.policies.map((policy) => <ProviderPolicyCard key={`${policy.id}-${policy.revision}`} policy={policy} canManage={canManage} onUpdate={(input) => update.mutate(input)} onRollback={(input) => rollback.mutate(input)} pending={update.isPending || rollback.isPending} />)}</CardContent></Card>{!canManage && <p className="rounded-xl border border-paper/10 bg-paper/[0.03] px-4 py-3 text-sm leading-6 text-paper/50">Your role can inspect effective policy posture, but only an admin can change or roll back provider routing.</p>}</div>;
 }
 
 function LanguagesPage({ token }: { token: string }) {
@@ -199,6 +205,75 @@ function MetricCard({ label, value, detail, tone = "default" }: { label: string;
 function Stat({ label, value, tone = "default" }: { label: string; value: string | number; tone?: "default" | "good" | "warning" | "muted" }) {
   const text = tone === "good" ? "text-blue" : tone === "warning" ? "text-orange" : tone === "muted" ? "text-paper/45" : "text-paper";
   return <div className="rounded-xl border border-paper/10 bg-ink/20 px-3 py-3"><p className="text-xs capitalize text-paper/45">{label}</p><p className={`mt-1 font-mono text-lg ${text}`}>{value}</p></div>;
+}
+
+function ProviderPolicyCard({
+  policy,
+  canManage,
+  onUpdate,
+  onRollback,
+  pending,
+}: {
+  policy: ProviderPolicy;
+  canManage: boolean;
+  onUpdate: (input: { provider: string; scope: string; payload: ProviderPolicyUpdate }) => void;
+  onRollback: (input: { provider: string; scope: string; reason: string }) => void;
+  pending: boolean;
+}) {
+  const [enabled, setEnabled] = useState(policy.enabled);
+  const [primaryProvider, setPrimaryProvider] = useState(policy.primary_provider);
+  const [fallbackProvider, setFallbackProvider] = useState(policy.fallback_provider ?? "");
+  const [circuitState, setCircuitState] = useState<ProviderPolicyUpdate["circuit_state"]>(
+    policy.circuit_state as ProviderPolicyUpdate["circuit_state"],
+  );
+  const [dailyBudget, setDailyBudget] = useState(formatBudget(policy.daily_budget_usd));
+  const [monthlyBudget, setMonthlyBudget] = useState(formatBudget(policy.monthly_budget_usd));
+  const [expiresAt, setExpiresAt] = useState(toDateTimeInput(policy.override_expires_at));
+  const [reason, setReason] = useState("Reviewed provider posture");
+  const requiresExpiry = !enabled || circuitState !== "closed";
+  const canRollback = !policy.id.startsWith("default:");
+  const expiredOverride = Boolean(
+    policy.override_expires_at && new Date(policy.override_expires_at).getTime() <= Date.now(),
+  );
+
+  const submit = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (!canManage || !reason.trim() || (requiresExpiry && !expiresAt)) return;
+    onUpdate({
+      provider: policy.provider,
+      scope: policy.scope,
+      payload: {
+        enabled,
+        primary_provider: primaryProvider.trim(),
+        fallback_provider: fallbackProvider.trim() || null,
+        circuit_state: circuitState,
+        daily_budget_usd: parseBudget(dailyBudget),
+        monthly_budget_usd: parseBudget(monthlyBudget),
+        override_expires_at: expiresAt ? new Date(expiresAt).toISOString() : null,
+        reason: reason.trim(),
+      },
+    });
+  };
+
+  return <article className="rounded-xl border border-paper/10 bg-ink/20 p-4"><div className="flex flex-wrap items-start justify-between gap-3"><div><div className="flex flex-wrap items-center gap-2"><Badge variant={expiredOverride ? "outline" : policy.enabled && policy.circuit_state === "closed" ? "success" : "warning"}>{expiredOverride ? "expired → default" : policy.enabled ? policy.circuit_state : "disabled"}</Badge><span className="font-semibold">{policy.provider} / {policy.scope}</span><span className="font-mono text-xs text-paper/40">revision {policy.revision}</span></div><p className="mt-2 text-xs leading-5 text-paper/50">Primary {policy.primary_provider} → fallback {policy.fallback_provider ?? "none"}. {expiredOverride ? "This override is expired; the built-in policy is active." : policy.override_expires_at ? `Override expires ${formatTime(policy.override_expires_at)}.` : "No temporary override."}</p></div>{canRollback && <Button type="button" size="sm" variant="outline" disabled={!canManage || pending || !reason.trim()} onClick={() => onRollback({provider: policy.provider, scope: policy.scope, reason: reason.trim()})}>Rollback latest</Button>}</div>{canManage ? <form className="mt-4 grid gap-3 border-t border-paper/10 pt-4 lg:grid-cols-2" onSubmit={submit}><label className="flex items-center gap-2 text-sm font-semibold"><input type="checkbox" checked={enabled} onChange={(event) => setEnabled(event.target.checked)} /> Policy enabled</label><label className="grid gap-1 text-xs font-semibold text-paper/60">Circuit state<select value={circuitState} onChange={(event) => setCircuitState(event.target.value as ProviderPolicyUpdate["circuit_state"])} className="h-10 rounded-lg border border-paper/15 bg-ink px-2 text-sm text-paper"><option value="closed">Closed</option><option value="half_open">Half-open</option><option value="open">Open</option></select></label><label className="grid gap-1 text-xs font-semibold text-paper/60">Primary provider<input value={primaryProvider} onChange={(event) => setPrimaryProvider(event.target.value)} className="h-10 rounded-lg border border-paper/15 bg-ink px-3 text-sm text-paper" maxLength={80} /></label><label className="grid gap-1 text-xs font-semibold text-paper/60">Fallback provider<input value={fallbackProvider} onChange={(event) => setFallbackProvider(event.target.value)} className="h-10 rounded-lg border border-paper/15 bg-ink px-3 text-sm text-paper" maxLength={80} placeholder="none" /></label><label className="grid gap-1 text-xs font-semibold text-paper/60">Daily budget (USD)<input type="number" min="0" max="15" step="0.01" value={dailyBudget} onChange={(event) => setDailyBudget(event.target.value)} className="h-10 rounded-lg border border-paper/15 bg-ink px-3 text-sm text-paper" placeholder="unset" /></label><label className="grid gap-1 text-xs font-semibold text-paper/60">Monthly budget (USD)<input type="number" min="0" max="15" step="0.01" value={monthlyBudget} onChange={(event) => setMonthlyBudget(event.target.value)} className="h-10 rounded-lg border border-paper/15 bg-ink px-3 text-sm text-paper" placeholder="unset" /></label><label className="grid gap-1 text-xs font-semibold text-paper/60">Temporary override expiry<input type="datetime-local" value={expiresAt} onChange={(event) => setExpiresAt(event.target.value)} className="h-10 rounded-lg border border-paper/15 bg-ink px-3 text-sm text-paper" />{requiresExpiry && <span className="text-[0.7rem] font-normal text-orange">Required when disabled or circuit is not closed; maximum 24 hours.</span>}</label><label className="grid gap-1 text-xs font-semibold text-paper/60">Reason<input required minLength={3} maxLength={500} value={reason} onChange={(event) => setReason(event.target.value)} className="h-10 rounded-lg border border-paper/15 bg-ink px-3 text-sm text-paper" /></label><div className="flex items-center justify-between gap-3 lg:col-span-2"><p className="text-xs leading-5 text-paper/40">Every save is written to the audit log with a before/after snapshot.</p><Button type="submit" size="sm" disabled={pending || !reason.trim() || !primaryProvider.trim() || (requiresExpiry && !expiresAt)}>{pending ? "Saving…" : "Save policy"}</Button></div></form> : <p className="mt-4 border-t border-paper/10 pt-4 text-xs leading-5 text-paper/45">Read-only effective policy snapshot. Temporary overrides expire automatically; rollback is admin-only.</p>}</article>;
+}
+
+function formatBudget(value: number | null) {
+  return value == null ? "" : String(value);
+}
+
+function parseBudget(value: string): number | null {
+  if (!value.trim()) return null;
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : null;
+}
+
+function toDateTimeInput(value: string | null) {
+  if (!value) return "";
+  const date = new Date(value);
+  if (Number.isNaN(date.valueOf())) return "";
+  const local = new Date(date.getTime() - date.getTimezoneOffset() * 60_000);
+  return local.toISOString().slice(0, 16);
 }
 
 function ProviderRow({ provider }: { provider: import("@/features/admin/api").AdminOverview["providers"][number] }) {

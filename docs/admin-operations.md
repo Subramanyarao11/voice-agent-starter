@@ -26,11 +26,9 @@ For multiple least-privilege local/staging identities, use JSON configuration:
 export ADMIN_TOKENS_JSON='{"read-only":{"role":"observer","actor_id":"ops-readonly"},"reviewer-secret":{"role":"reviewer","actor_id":"content-reviewer"}}'
 ```
 
-Roles are `observer`, `operator`, `reviewer`, and `admin`. Tokens are static
-deployment secrets in this first slice; rotate them through the deployment
-secret manager. The current token boundary is deliberately small. Production
-must replace it with managed OIDC plus MFA/passkeys before exposing the console
-publicly.
+Roles are `observer`, `operator`, `reviewer`, and `admin`. Static tokens are a
+local/test seam. Production should use the managed OIDC path below before
+exposing the console publicly.
 
 ## Privacy boundary
 
@@ -56,7 +54,65 @@ transaction as the state change.
 - Audit log: workforce actions and safe before/after state.
 - System: migration, commit, environment, and redacted configuration posture.
 
-Provider policy mutation is intentionally read-only in this first slice. A safe
-emergency switch needs managed workforce identity, MFA, an audited policy store,
-expiry/rollback, and provider-specific budget controls; those are the next
-security-hardening step rather than a hidden toggle in the dashboard.
+## Managed workforce authentication
+
+For production, configure a managed OIDC application and set
+`ADMIN_OIDC_ENABLED=true`. The API validates the JWT issuer, audience, expiry,
+signature, and JWKS key; it also requires the configured MFA assurance in
+`amr` or `acr`. The role claim must contain one of `observer`, `operator`,
+`reviewer`, or `admin`; missing/unknown roles are reduced to read-only
+`observer`. The actor ID is derived from the configured subject claim, never an
+email address or a browser-provided value.
+
+When OIDC is enabled, static admin tokens are rejected. Keep
+`ADMIN_STATIC_TOKENS_ENABLED=true` only for local/test deployments. The browser
+console accepts the short-lived OIDC bearer token issued by the identity
+provider; the identity provider remains responsible for login, recovery,
+device policy, and MFA enrollment.
+
+## Guest sessions and rate limits
+
+The citizen flow does not require a login. `POST /api/browser-sessions` issues
+an opaque session ID and a one-time bearer token; only the token hash is stored.
+Turn, RAG, transcript, and reset routes derive ownership from that server-side
+token, so changing a session ID cannot cross the authorization boundary.
+
+Redis provides an atomic sliding-window limiter in deployed environments. The
+default one-minute limits are 20 text turns and 3 voice turns per session, 10
+RAG requests per session, plus IP ceilings of 60/10/30 respectively and 10
+guest-session creations per IP. A 429 includes `Retry-After` and bounded
+`X-RateLimit-*` headers. Production fails closed with 503 if the shared Redis
+limiter is unavailable; the in-process limiter is for development/test only.
+Keep `RATE_LIMIT_KEY_SALT` secret because raw IP addresses are never used as
+Redis keys.
+
+## Langfuse and OpenTelemetry
+
+Langfuse receives a redacted conversation root and graph-node spans only when
+both Langfuse keys are configured. OpenTelemetry exports HTTP, provider, SQL,
+Redis, turn, and bounded metric signals through OTLP HTTP when an endpoint is
+configured. Inputs, outputs, audio, transcripts, and sensitive slot values are
+not passed to either exporter by the application tracing helpers. Admin
+telemetry stores only the trace ID and an optional provider trace URL, allowing
+an authorized operator to pivot from a request ID without embedding vendor
+credentials in the web client.
+
+Configure `OTEL_EXPORTER_OTLP_ENDPOINT` (or explicit trace/metric endpoints),
+`OTEL_EXPORTER_OTLP_HEADERS`, and `OTEL_SAMPLE_RATIO` for a collector. Verify a
+real trace in the Langfuse project and collector before calling deployment
+observability complete; local tests intentionally run with exporters disabled.
+
+## Provider policy controls
+
+`/admin/providers` displays provider health, spend posture, current routing
+policies, circuit state, and effective scope. Only the `admin` role can save a
+policy. Every change requires a reason and writes the current/next snapshot to
+the append-only revision and audit tables. Disabling a provider or opening a
+circuit requires an expiry no more than 24 hours in the future. A rollback
+creates another audited revision; it never edits history. Expired overrides
+fall back to the built-in safe policy in the runtime.
+
+The policy store controls routing and availability; it does not create a
+provider implementation or claim that an unconfigured provider is healthy. If
+the primary provider is unavailable, the existing text/rules fallback remains
+the only safe fallback until a separately tested provider adapter is enabled.

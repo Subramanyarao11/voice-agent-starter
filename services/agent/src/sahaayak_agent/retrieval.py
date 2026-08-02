@@ -13,10 +13,12 @@ from typing import Any
 
 from openai import AsyncOpenAI
 
+from sahaayak_agent.tracing import start_span
 from sahaayak_common import (
     BudgetError,
     BudgetReservation,
     OpenAIBudgetLedger,
+    get_effective_provider_policy,
     settings,
 )
 from sahaayak_contracts import RagAnswerResponse, RetrievedSource
@@ -165,6 +167,11 @@ class OpenAIRetrieval:
         query = query.strip()
         if not query:
             return []
+        policy = get_effective_provider_policy("rag")
+        if not policy["enabled"] or policy["circuit_state"] == "open":
+            raise RagUnavailable("RAG is temporarily paused by operations")
+        if policy["primary_provider"] != "openai_vector_store":
+            raise RagUnavailable("the selected RAG provider is not available")
         result_limit = (
             settings.openai_rag_max_results if max_results is None else max_results
         )
@@ -178,12 +185,26 @@ class OpenAIRetrieval:
                 cost_usd=settings.openai_rag_search_reservation_usd,
                 operation="rag:search",
             )
-            page = await self._client.vector_stores.search(
-                vector_store_id=self._vector_store_id,
-                query=query,
-                max_num_results=min(50, result_limit * 2),
-                rewrite_query=True,
-            )
+            with start_span(
+                "provider.openai.vector_search",
+                {
+                    "provider": "openai",
+                    "provider.operation": "vector_search",
+                    "provider.result_limit": result_limit,
+                },
+            ) as span:
+                try:
+                    page = await self._client.vector_stores.search(
+                        vector_store_id=self._vector_store_id,
+                        query=query,
+                        max_num_results=min(50, result_limit * 2),
+                        rewrite_query=True,
+                    )
+                except Exception as exc:
+                    if span is not None:
+                        span.record_exception(exc)
+                        span.set_attribute("error.type", exc.__class__.__name__)
+                    raise
             sources = deduplicate_sources(
                 [parse_search_result(item) async for item in _as_async_iter(page)]
             )[:result_limit]
@@ -228,16 +249,30 @@ class OpenAIRetrieval:
                 max_output_tokens=settings.openai_rag_max_output_tokens,
                 operation="rag:answer",
             )
-            response = await self._client.chat.completions.create(
-                model=settings.openai_rag_answer_model,
-                temperature=0,
-                max_completion_tokens=settings.openai_rag_max_output_tokens,
-                n=1,
-                messages=[
-                    {"role": "system", "content": RAG_SYSTEM_PROMPT},
-                    {"role": "user", "content": user_content},
-                ],
-            )
+            with start_span(
+                "provider.openai.rag_answer",
+                {
+                    "provider": "openai",
+                    "provider.model": settings.openai_rag_answer_model,
+                    "provider.source_count": len(sources),
+                },
+            ) as span:
+                try:
+                    response = await self._client.chat.completions.create(
+                        model=settings.openai_rag_answer_model,
+                        temperature=0,
+                        max_completion_tokens=settings.openai_rag_max_output_tokens,
+                        n=1,
+                        messages=[
+                            {"role": "system", "content": RAG_SYSTEM_PROMPT},
+                            {"role": "user", "content": user_content},
+                        ],
+                    )
+                except Exception as exc:
+                    if span is not None:
+                        span.record_exception(exc)
+                        span.set_attribute("error.type", exc.__class__.__name__)
+                    raise
             self._budget.record_chat_response(reservation, response)
         except BudgetError:
             raise

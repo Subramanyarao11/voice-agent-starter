@@ -12,8 +12,10 @@ import {
   getAdminReviews,
   getAdminSystem,
   getAdminTelemetry,
+  rollbackAdminProviderPolicy,
   resolveAdminEscalation,
   reviewAdminBenefit,
+  updateAdminProviderPolicy,
 } from "@/features/admin/api";
 
 export function useAdminMeQuery(token: string) {
@@ -71,6 +73,36 @@ export function useAdminProvidersQuery(token: string) {
     queryKey: ["admin", "providers"],
     queryFn: () => getAdminProviders(token),
     enabled: Boolean(token),
+    refetchInterval: 30_000,
+  });
+}
+
+export function useUpdateAdminProviderPolicyMutation(token: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (input: {
+      provider: string;
+      scope: string;
+      payload: Parameters<typeof updateAdminProviderPolicy>[3];
+    }) => updateAdminProviderPolicy(token, input.provider, input.scope, input.payload),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({queryKey: ["admin", "providers"]});
+      void queryClient.invalidateQueries({queryKey: ["admin", "audit"]});
+      void queryClient.invalidateQueries({queryKey: ["admin", "overview"]});
+    },
+  });
+}
+
+export function useRollbackAdminProviderPolicyMutation(token: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (input: { provider: string; scope: string; reason: string }) =>
+      rollbackAdminProviderPolicy(token, input.provider, input.scope, input.reason),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({queryKey: ["admin", "providers"]});
+      void queryClient.invalidateQueries({queryKey: ["admin", "audit"]});
+      void queryClient.invalidateQueries({queryKey: ["admin", "overview"]});
+    },
   });
 }
 

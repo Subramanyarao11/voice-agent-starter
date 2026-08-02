@@ -6,6 +6,8 @@ const adminMeSchema = z.object({
   actor_id: z.string(),
   role: z.string(),
   permissions: z.array(z.string()),
+  auth_source: z.string(),
+  mfa_verified: z.boolean(),
 });
 
 const providerStatusSchema = z.object({
@@ -87,6 +89,8 @@ const telemetryEventSchema = z.object({
   id: z.string(),
   event_type: z.string(),
   request_id: z.string().nullable(),
+  trace_id: z.string().nullable(),
+  trace_url: z.string().nullable(),
   route: z.string(),
   method: z.string(),
   status_code: z.number().nullable(),
@@ -137,9 +141,27 @@ const ticketSchema = z.object({
   resolved_at: z.string().nullable(),
 });
 
+const providerPolicySchema = z.object({
+  id: z.string(),
+  provider: z.string(),
+  scope: z.string(),
+  enabled: z.boolean(),
+  primary_provider: z.string(),
+  fallback_provider: z.string().nullable(),
+  circuit_state: z.string(),
+  daily_budget_usd: z.number().nullable(),
+  monthly_budget_usd: z.number().nullable(),
+  override_expires_at: z.string().nullable(),
+  revision: z.number(),
+  config: z.record(z.string(), z.unknown()),
+  updated_by: z.string(),
+  updated_at: z.string(),
+});
+
 const providerListSchema = z.object({
   generated_at: z.string(),
   providers: z.array(providerStatusSchema),
+  policies: z.array(providerPolicySchema),
   controls_note: z.string(),
 });
 
@@ -211,6 +233,7 @@ export type LanguageReadiness = z.infer<typeof languageReadinessSchema>;
 export type AuditEvent = z.infer<typeof auditEventSchema>;
 export type ImportRun = z.infer<typeof importRunSchema>;
 export type AdminSystem = z.infer<typeof systemSchema>;
+export type ProviderPolicy = ProviderList["policies"][number];
 
 function adminInit(token: string, init?: RequestInit): RequestInit {
   return {
@@ -267,6 +290,43 @@ export function resolveAdminEscalation(token: string, ticketId: string): Promise
 
 export function getAdminProviders(token: string): Promise<ProviderList> {
   return request("/api/admin/providers", providerListSchema, adminInit(token));
+}
+
+export type ProviderPolicyUpdate = {
+  enabled: boolean;
+  primary_provider: string;
+  fallback_provider: string | null;
+  circuit_state: "closed" | "open" | "half_open";
+  daily_budget_usd?: number | null;
+  monthly_budget_usd?: number | null;
+  override_expires_at: string | null;
+  reason: string;
+};
+
+export function updateAdminProviderPolicy(
+  token: string,
+  provider: string,
+  scope: string,
+  payload: ProviderPolicyUpdate,
+): Promise<ProviderPolicy> {
+  return request(
+    `/api/admin/provider-policies/${encodeURIComponent(provider)}/${encodeURIComponent(scope)}`,
+    providerPolicySchema,
+    adminInit(token, {method: "PUT", body: JSON.stringify(payload)}),
+  );
+}
+
+export function rollbackAdminProviderPolicy(
+  token: string,
+  provider: string,
+  scope: string,
+  reason: string,
+): Promise<ProviderPolicy> {
+  return request(
+    `/api/admin/provider-policies/${encodeURIComponent(provider)}/${encodeURIComponent(scope)}/rollback`,
+    providerPolicySchema,
+    adminInit(token, {method: "POST", body: JSON.stringify({reason})}),
+  );
 }
 
 export function getAdminLanguages(token: string): Promise<LanguageReadiness[]> {

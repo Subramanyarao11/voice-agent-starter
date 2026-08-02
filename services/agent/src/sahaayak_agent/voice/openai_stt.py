@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from sahaayak_agent.tracing import start_span
 from sahaayak_agent.voice.base import STTProvider, VoiceUnavailable
 from sahaayak_common import (
     BudgetError,
@@ -48,15 +49,27 @@ class OpenAIWhisperSTT(STTProvider):
                 "speech-to-text is unavailable because the OpenAI test budget "
                 "has been exhausted or its ledger is unsafe"
             ) from exc
-        try:
-            response = await self._client.audio.transcriptions.create(
-                model=self._model,
-                file=(filename, audio),
-                language=profile.resolved_stt_locale(),
-            )
-        except Exception as exc:
-            self._budget.record_failure(reservation, exc)
-            raise
+        with start_span(
+            "provider.openai.transcription",
+            {
+                "provider": self.name,
+                "provider.model": self._model,
+                "provider.language": profile.code,
+                "provider.audio_bytes": len(audio),
+            },
+        ) as span:
+            try:
+                response = await self._client.audio.transcriptions.create(
+                    model=self._model,
+                    file=(filename, audio),
+                    language=profile.resolved_stt_locale(),
+                )
+            except Exception as exc:
+                self._budget.record_failure(reservation, exc)
+                if span is not None:
+                    span.record_exception(exc)
+                    span.set_attribute("error.type", exc.__class__.__name__)
+                raise
         self._budget.record_chat_response(reservation, response)
         text = (response.text or "").strip()
         log.info(

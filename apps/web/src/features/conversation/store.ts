@@ -1,7 +1,6 @@
 import { create } from "zustand";
 import { createJSONStorage, persist } from "zustand/middleware";
 
-import { newCallerId } from "@/lib/utils";
 import type { TurnResponse } from "@/lib/api";
 
 export type ConversationMessage = {
@@ -11,7 +10,6 @@ export type ConversationMessage = {
 };
 
 type ConversationStore = {
-  callerId: string;
   languageCode: string;
   stateCode: string;
   draft: string;
@@ -33,7 +31,6 @@ function messageId(): string {
 export const useConversationStore = create<ConversationStore>()(
   persist(
     (set) => ({
-      callerId: newCallerId(),
       languageCode: "kn",
       stateCode: "KA",
       draft: "",
@@ -58,7 +55,6 @@ export const useConversationStore = create<ConversationStore>()(
       name: "sahaayak-conversation",
       storage: createJSONStorage(() => localStorage),
       partialize: (state) => ({
-        callerId: state.callerId,
         languageCode: state.languageCode,
         stateCode: state.stateCode,
       }),
