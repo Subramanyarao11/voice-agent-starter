@@ -226,3 +226,48 @@ class DataImportRun(SQLModel, table=True):
     failed_count: int = 0
     review_sample_size: int = 0
     manifest_json: dict = Field(default_factory=dict, sa_column=json_dict())
+
+
+class TelemetryEvent(SQLModel, table=True):
+    """Bounded, redacted operational event used by the admin console.
+
+    This intentionally stores request shape and safe dimensions, never request
+    bodies, audio, transcripts, or profile values. Raw detail belongs in a
+    separately governed trace system, not in the dashboard's metric store.
+    """
+
+    __tablename__ = "telemetry_event"
+
+    id: str = Field(primary_key=True)
+    event_type: str = Field(index=True)  # http | turn | provider | system
+    request_id: str | None = Field(default=None, index=True)
+    route: str = Field(default="", index=True)
+    method: str = ""
+    status_code: int | None = Field(default=None, index=True)
+    duration_ms: float | None = None
+    surface: str = ""  # text | voice | admin | system
+    language_code: str | None = Field(default=None, index=True)
+    state_code: str | None = Field(default=None, index=True)
+    provider: str | None = Field(default=None, index=True)
+    outcome: str = ""  # success | error | no_match | escalated | fallback
+    error_code: str | None = None
+    safe_metadata: dict = Field(default_factory=dict, sa_column=json_dict())
+    created_at: datetime = Field(default_factory=_utcnow, index=True)
+
+
+class AuditEvent(SQLModel, table=True):
+    """Append-only record of workforce access and state changes."""
+
+    __tablename__ = "audit_event"
+
+    id: str = Field(primary_key=True)
+    actor_id: str = Field(index=True)
+    actor_role: str = Field(index=True)
+    action: str = Field(index=True)
+    target_type: str = Field(index=True)
+    target_id: str = ""
+    reason: str = ""
+    safe_before: dict = Field(default_factory=dict, sa_column=json_dict())
+    safe_after: dict = Field(default_factory=dict, sa_column=json_dict())
+    request_id: str | None = Field(default=None, index=True)
+    created_at: datetime = Field(default_factory=_utcnow, index=True)

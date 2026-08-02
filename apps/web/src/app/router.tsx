@@ -1,6 +1,7 @@
 import { createRootRoute, createRoute, createRouter, Outlet } from "@tanstack/react-router";
 
 import { HomePage } from "@/routes/home";
+import { AdminRoutePage } from "@/routes/admin";
 
 function RootLayout() {
   return <Outlet />;
@@ -27,7 +28,79 @@ const indexRoute = createRoute({
   component: HomePage,
 });
 
-const routeTree = rootRoute.addChildren([indexRoute]);
+const adminRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/admin",
+  component: () => <AdminRoutePage view="overview" />,
+});
+
+const adminOverviewRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/admin/overview",
+  component: () => <AdminRoutePage view="overview" />,
+});
+
+const adminConversationsRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/admin/conversations",
+  component: () => <AdminRoutePage view="conversations" />,
+});
+
+const adminTelemetryRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/admin/telemetry",
+  component: () => <AdminRoutePage view="telemetry" />,
+});
+
+const adminEscalationsRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/admin/escalations",
+  component: () => <AdminRoutePage view="escalations" />,
+});
+
+const adminBenefitsRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/admin/benefits",
+  component: () => <AdminRoutePage view="benefits" />,
+});
+
+const adminProvidersRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/admin/providers",
+  component: () => <AdminRoutePage view="providers" />,
+});
+
+const adminLanguagesRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/admin/languages",
+  component: () => <AdminRoutePage view="languages" />,
+});
+
+const adminAuditRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/admin/audit-log",
+  component: () => <AdminRoutePage view="audit" />,
+});
+
+const adminSystemRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/admin/system",
+  component: () => <AdminRoutePage view="system" />,
+});
+
+const routeTree = rootRoute.addChildren([
+  indexRoute,
+  adminRoute,
+  adminOverviewRoute,
+  adminConversationsRoute,
+  adminTelemetryRoute,
+  adminEscalationsRoute,
+  adminBenefitsRoute,
+  adminProvidersRoute,
+  adminLanguagesRoute,
+  adminAuditRoute,
+  adminSystemRoute,
+]);
 
 export const router = createRouter({
   routeTree,

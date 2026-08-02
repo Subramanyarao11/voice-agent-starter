@@ -19,6 +19,7 @@ os.environ["OPENAI_API_KEY"] = ""
 os.environ["SARVAM_API_KEY"] = ""
 os.environ["LANGFUSE_PUBLIC_KEY"] = ""
 os.environ["LANGFUSE_SECRET_KEY"] = ""
+os.environ["ADMIN_API_TOKEN"] = "test-admin-token"
 os.environ["ENV"] = "test"
 
 import pytest  # noqa: E402
@@ -66,7 +67,7 @@ def client(seeded):
 
     from sahaayak_api.main import app
 
-    with TestClient(app) as test_client:
+    with TestClient(app, headers={"X-Admin-Token": "test-admin-token"}) as test_client:
         yield test_client
 
 

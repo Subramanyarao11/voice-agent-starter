@@ -537,10 +537,736 @@
           }
         }
       }
+    },
+    "/api/admin/me": {
+      "get": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "Admin Me",
+        "operationId": "admin_me_api_admin_me_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminMeOut"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/admin/overview": {
+      "get": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "Admin Overview",
+        "operationId": "admin_overview_api_admin_overview_get",
+        "parameters": [
+          {
+            "name": "hours",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 168,
+              "minimum": 1,
+              "default": 24,
+              "title": "Hours"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminOverviewOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/admin/conversations": {
+      "get": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "Admin Conversations",
+        "operationId": "admin_conversations_api_admin_conversations_get",
+        "parameters": [
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 100,
+              "minimum": 1,
+              "default": 50,
+              "title": "Limit"
+            }
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 10000,
+              "minimum": 0,
+              "default": 0,
+              "title": "Offset"
+            }
+          },
+          {
+            "name": "state_code",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "State Code"
+            }
+          },
+          {
+            "name": "language_code",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Language Code"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConversationListOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/admin/telemetry/events": {
+      "get": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "Admin Telemetry Events",
+        "operationId": "admin_telemetry_events_api_admin_telemetry_events_get",
+        "parameters": [
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 500,
+              "minimum": 1,
+              "default": 100,
+              "title": "Limit"
+            }
+          },
+          {
+            "name": "event_type",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Event Type"
+            }
+          },
+          {
+            "name": "surface",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Surface"
+            }
+          },
+          {
+            "name": "route",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Route"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/TelemetryEventOut"
+                  },
+                  "title": "Response Admin Telemetry Events Api Admin Telemetry Events Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/admin/benefits/review": {
+      "get": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "Admin Benefit Reviews",
+        "operationId": "admin_benefit_reviews_api_admin_benefits_review_get",
+        "parameters": [
+          {
+            "name": "status",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Status"
+            }
+          },
+          {
+            "name": "active",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "boolean"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Active"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 500,
+              "minimum": 1,
+              "default": 100,
+              "title": "Limit"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReviewQueueOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/admin/benefits/{benefit_id}/review": {
+      "post": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "Review Benefit",
+        "operationId": "review_benefit_api_admin_benefits__benefit_id__review_post",
+        "parameters": [
+          {
+            "name": "benefit_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Benefit Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BenefitReviewRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BenefitReviewOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/admin/imports": {
+      "get": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "Admin Imports",
+        "operationId": "admin_imports_api_admin_imports_get",
+        "parameters": [
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 100,
+              "minimum": 1,
+              "default": 50,
+              "title": "Limit"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ImportRunOut"
+                  },
+                  "title": "Response Admin Imports Api Admin Imports Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/admin/providers": {
+      "get": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "Admin Providers",
+        "operationId": "admin_providers_api_admin_providers_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProviderListOut"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/admin/languages": {
+      "get": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "Admin Languages",
+        "operationId": "admin_languages_api_admin_languages_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/LanguageReadinessOut"
+                  },
+                  "type": "array",
+                  "title": "Response Admin Languages Api Admin Languages Get"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/admin/audit-events": {
+      "get": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "Admin Audit Events",
+        "operationId": "admin_audit_events_api_admin_audit_events_get",
+        "parameters": [
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 500,
+              "minimum": 1,
+              "default": 100,
+              "title": "Limit"
+            }
+          },
+          {
+            "name": "action",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Action"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/AuditEventOut"
+                  },
+                  "title": "Response Admin Audit Events Api Admin Audit Events Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/admin/system": {
+      "get": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "Admin System",
+        "operationId": "admin_system_api_admin_system_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SystemOut"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
     "schemas": {
+      "AdminMeOut": {
+        "properties": {
+          "actor_id": {
+            "type": "string",
+            "title": "Actor Id"
+          },
+          "role": {
+            "type": "string",
+            "title": "Role"
+          },
+          "permissions": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Permissions"
+          }
+        },
+        "type": "object",
+        "required": [
+          "actor_id",
+          "role",
+          "permissions"
+        ],
+        "title": "AdminMeOut"
+      },
+      "AdminOverviewOut": {
+        "properties": {
+          "generated_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Generated At"
+          },
+          "data_fresh_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Data Fresh At"
+          },
+          "partial_data": {
+            "type": "boolean",
+            "title": "Partial Data"
+          },
+          "window_hours": {
+            "type": "integer",
+            "title": "Window Hours"
+          },
+          "health": {
+            "$ref": "#/components/schemas/HealthOut"
+          },
+          "traffic": {
+            "$ref": "#/components/schemas/TrafficOut"
+          },
+          "quality": {
+            "$ref": "#/components/schemas/QualityOut"
+          },
+          "providers": {
+            "items": {
+              "$ref": "#/components/schemas/ProviderStatusOut"
+            },
+            "type": "array",
+            "title": "Providers"
+          },
+          "recent_errors": {
+            "items": {
+              "$ref": "#/components/schemas/RecentErrorOut"
+            },
+            "type": "array",
+            "title": "Recent Errors"
+          }
+        },
+        "type": "object",
+        "required": [
+          "generated_at",
+          "data_fresh_at",
+          "partial_data",
+          "window_hours",
+          "health",
+          "traffic",
+          "quality",
+          "providers",
+          "recent_errors"
+        ],
+        "title": "AdminOverviewOut"
+      },
+      "AuditEventOut": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "actor_id": {
+            "type": "string",
+            "title": "Actor Id"
+          },
+          "actor_role": {
+            "type": "string",
+            "title": "Actor Role"
+          },
+          "action": {
+            "type": "string",
+            "title": "Action"
+          },
+          "target_type": {
+            "type": "string",
+            "title": "Target Type"
+          },
+          "target_id": {
+            "type": "string",
+            "title": "Target Id"
+          },
+          "reason": {
+            "type": "string",
+            "title": "Reason"
+          },
+          "safe_before": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Safe Before"
+          },
+          "safe_after": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Safe After"
+          },
+          "request_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Request Id"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "actor_id",
+          "actor_role",
+          "action",
+          "target_type",
+          "target_id",
+          "reason",
+          "safe_before",
+          "safe_after",
+          "request_id",
+          "created_at"
+        ],
+        "title": "AuditEventOut"
+      },
       "BenefitDetailOut": {
         "properties": {
           "id": {
@@ -688,6 +1414,173 @@
         "title": "BenefitDetailOut",
         "description": "Public benefit details with enough provenance to make trust inspectable."
       },
+      "BenefitReviewOut": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "domain": {
+            "type": "string",
+            "title": "Domain"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "state_code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "State Code"
+          },
+          "verification_status": {
+            "type": "string",
+            "title": "Verification Status"
+          },
+          "is_active": {
+            "type": "boolean",
+            "title": "Is Active"
+          },
+          "source_title": {
+            "type": "string",
+            "title": "Source Title"
+          },
+          "source_document_url": {
+            "type": "string",
+            "title": "Source Document Url"
+          },
+          "source_excerpt": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Excerpt"
+          },
+          "automated_review": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Automated Review"
+          },
+          "verified_by": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Verified By"
+          },
+          "verified_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Verified At"
+          },
+          "last_verified_date": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Verified Date"
+          },
+          "valid_from": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Valid From"
+          },
+          "valid_until": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Valid Until"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "domain",
+          "name",
+          "state_code",
+          "verification_status",
+          "is_active",
+          "source_title",
+          "source_document_url",
+          "source_excerpt",
+          "automated_review",
+          "verified_by",
+          "verified_at",
+          "last_verified_date",
+          "valid_from",
+          "valid_until"
+        ],
+        "title": "BenefitReviewOut"
+      },
+      "BenefitReviewRequest": {
+        "properties": {
+          "verification_status": {
+            "$ref": "#/components/schemas/VerificationStatus"
+          },
+          "reason": {
+            "type": "string",
+            "maxLength": 500,
+            "minLength": 3,
+            "title": "Reason"
+          },
+          "activate": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Activate"
+          }
+        },
+        "type": "object",
+        "required": [
+          "verification_status",
+          "reason"
+        ],
+        "title": "BenefitReviewRequest"
+      },
       "Body_take_voice_turn_api_voice_turns_post": {
         "properties": {
           "audio": {
@@ -733,6 +1626,92 @@
           "caller_id"
         ],
         "title": "Body_take_voice_turn_api_voice_turns_post"
+      },
+      "ConversationListOut": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/ConversationSummaryOut"
+            },
+            "type": "array",
+            "title": "Items"
+          },
+          "total": {
+            "type": "integer",
+            "title": "Total"
+          },
+          "data_fresh_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Data Fresh At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "items",
+          "total",
+          "data_fresh_at"
+        ],
+        "title": "ConversationListOut"
+      },
+      "ConversationSummaryOut": {
+        "properties": {
+          "session_key": {
+            "type": "string",
+            "title": "Session Key"
+          },
+          "state_code": {
+            "type": "string",
+            "title": "State Code"
+          },
+          "language_code": {
+            "type": "string",
+            "title": "Language Code"
+          },
+          "turn_count": {
+            "type": "integer",
+            "title": "Turn Count"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "last_contact_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Last Contact At"
+          },
+          "last_intent": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Intent"
+          }
+        },
+        "type": "object",
+        "required": [
+          "session_key",
+          "state_code",
+          "language_code",
+          "turn_count",
+          "created_at",
+          "last_contact_at",
+          "last_intent"
+        ],
+        "title": "ConversationSummaryOut"
       },
       "CoverageOut": {
         "properties": {
@@ -818,6 +1797,62 @@
         "type": "object",
         "title": "HTTPValidationError"
       },
+      "HealthOut": {
+        "properties": {
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "environment": {
+            "type": "string",
+            "title": "Environment"
+          },
+          "database": {
+            "type": "string",
+            "title": "Database"
+          },
+          "cache": {
+            "type": "string",
+            "title": "Cache"
+          },
+          "speech_to_text": {
+            "type": "boolean",
+            "title": "Speech To Text"
+          },
+          "text_to_speech": {
+            "type": "boolean",
+            "title": "Text To Speech"
+          },
+          "reasoning_model": {
+            "type": "boolean",
+            "title": "Reasoning Model"
+          },
+          "tracing": {
+            "type": "boolean",
+            "title": "Tracing"
+          },
+          "languages": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Languages"
+          }
+        },
+        "type": "object",
+        "required": [
+          "status",
+          "environment",
+          "database",
+          "cache",
+          "speech_to_text",
+          "text_to_speech",
+          "reasoning_model",
+          "tracing",
+          "languages"
+        ],
+        "title": "HealthOut"
+      },
       "HealthReport": {
         "properties": {
           "status": {
@@ -874,6 +1909,91 @@
         ],
         "title": "HealthReport"
       },
+      "ImportRunOut": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "source_name": {
+            "type": "string",
+            "title": "Source Name"
+          },
+          "state_code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "State Code"
+          },
+          "started_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Started At"
+          },
+          "completed_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Completed At"
+          },
+          "model_name": {
+            "type": "string",
+            "title": "Model Name"
+          },
+          "prompt_version": {
+            "type": "string",
+            "title": "Prompt Version"
+          },
+          "input_count": {
+            "type": "integer",
+            "title": "Input Count"
+          },
+          "accepted_count": {
+            "type": "integer",
+            "title": "Accepted Count"
+          },
+          "failed_count": {
+            "type": "integer",
+            "title": "Failed Count"
+          },
+          "review_sample_size": {
+            "type": "integer",
+            "title": "Review Sample Size"
+          },
+          "manifest_json": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Manifest Json"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "source_name",
+          "state_code",
+          "started_at",
+          "completed_at",
+          "model_name",
+          "prompt_version",
+          "input_count",
+          "accepted_count",
+          "failed_count",
+          "review_sample_size",
+          "manifest_json"
+        ],
+        "title": "ImportRunOut"
+      },
       "Intent": {
         "type": "string",
         "enum": [
@@ -917,6 +2037,79 @@
           "is_active"
         ],
         "title": "LanguageOut"
+      },
+      "LanguageReadinessOut": {
+        "properties": {
+          "code": {
+            "type": "string",
+            "title": "Code"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "native_name": {
+            "type": "string",
+            "title": "Native Name"
+          },
+          "active": {
+            "type": "boolean",
+            "title": "Active"
+          },
+          "prompt_ready": {
+            "type": "boolean",
+            "title": "Prompt Ready"
+          },
+          "interface_status": {
+            "type": "string",
+            "title": "Interface Status"
+          },
+          "data_status": {
+            "type": "string",
+            "title": "Data Status"
+          },
+          "localized_benefits": {
+            "type": "integer",
+            "title": "Localized Benefits"
+          },
+          "active_benefits": {
+            "type": "integer",
+            "title": "Active Benefits"
+          },
+          "stt_provider": {
+            "type": "string",
+            "title": "Stt Provider"
+          },
+          "tts_provider": {
+            "type": "string",
+            "title": "Tts Provider"
+          },
+          "voice_status": {
+            "type": "string",
+            "title": "Voice Status"
+          },
+          "rollout_status": {
+            "type": "string",
+            "title": "Rollout Status"
+          }
+        },
+        "type": "object",
+        "required": [
+          "code",
+          "name",
+          "native_name",
+          "active",
+          "prompt_ready",
+          "interface_status",
+          "data_status",
+          "localized_benefits",
+          "active_benefits",
+          "stt_provider",
+          "tts_provider",
+          "voice_status",
+          "rollout_status"
+        ],
+        "title": "LanguageReadinessOut"
       },
       "MatchSummary": {
         "properties": {
@@ -995,6 +2188,201 @@
         ],
         "title": "MatchSummary",
         "description": "A match flattened for the API, without the full criterion trace."
+      },
+      "ProviderListOut": {
+        "properties": {
+          "generated_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Generated At"
+          },
+          "providers": {
+            "items": {
+              "$ref": "#/components/schemas/ProviderStatusOut"
+            },
+            "type": "array",
+            "title": "Providers"
+          },
+          "controls_note": {
+            "type": "string",
+            "title": "Controls Note"
+          }
+        },
+        "type": "object",
+        "required": [
+          "generated_at",
+          "providers",
+          "controls_note"
+        ],
+        "title": "ProviderListOut"
+      },
+      "ProviderStatusOut": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "configured": {
+            "type": "boolean",
+            "title": "Configured"
+          },
+          "health": {
+            "type": "string",
+            "title": "Health"
+          },
+          "requests": {
+            "type": "integer",
+            "title": "Requests"
+          },
+          "failures": {
+            "type": "integer",
+            "title": "Failures"
+          },
+          "cache_hits": {
+            "type": "integer",
+            "title": "Cache Hits",
+            "default": 0
+          },
+          "cache_misses": {
+            "type": "integer",
+            "title": "Cache Misses",
+            "default": 0
+          },
+          "budget_usd": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Budget Usd"
+          },
+          "reserved_usd": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reserved Usd"
+          },
+          "observed_usd": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Observed Usd"
+          },
+          "remaining_usd": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Remaining Usd"
+          },
+          "controls_available": {
+            "type": "boolean",
+            "title": "Controls Available",
+            "default": false
+          },
+          "note": {
+            "type": "string",
+            "title": "Note",
+            "default": ""
+          }
+        },
+        "type": "object",
+        "required": [
+          "name",
+          "configured",
+          "health",
+          "requests",
+          "failures"
+        ],
+        "title": "ProviderStatusOut"
+      },
+      "QualityOut": {
+        "properties": {
+          "escalations": {
+            "type": "integer",
+            "title": "Escalations"
+          },
+          "open_escalations": {
+            "type": "integer",
+            "title": "Open Escalations"
+          },
+          "escalation_rate": {
+            "type": "number",
+            "title": "Escalation Rate"
+          },
+          "no_match_turns": {
+            "type": "integer",
+            "title": "No Match Turns"
+          },
+          "active_benefits": {
+            "type": "integer",
+            "title": "Active Benefits"
+          },
+          "verified_benefits": {
+            "type": "integer",
+            "title": "Verified Benefits"
+          },
+          "machine_reviewed_benefits": {
+            "type": "integer",
+            "title": "Machine Reviewed Benefits"
+          },
+          "needs_review_benefits": {
+            "type": "integer",
+            "title": "Needs Review Benefits"
+          },
+          "stale_benefits": {
+            "type": "integer",
+            "title": "Stale Benefits"
+          },
+          "illustrative_benefits": {
+            "type": "integer",
+            "title": "Illustrative Benefits"
+          },
+          "latest_import_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Latest Import At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "escalations",
+          "open_escalations",
+          "escalation_rate",
+          "no_match_turns",
+          "active_benefits",
+          "verified_benefits",
+          "machine_reviewed_benefits",
+          "needs_review_benefits",
+          "stale_benefits",
+          "illustrative_benefits",
+          "latest_import_at"
+        ],
+        "title": "QualityOut"
       },
       "RagAnswerResponse": {
         "properties": {
@@ -1076,6 +2464,78 @@
         ],
         "title": "RagSearchResponse"
       },
+      "RecentErrorOut": {
+        "properties": {
+          "request_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Request Id"
+          },
+          "route": {
+            "type": "string",
+            "title": "Route"
+          },
+          "method": {
+            "type": "string",
+            "title": "Method"
+          },
+          "status_code": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Status Code"
+          },
+          "error_code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error Code"
+          },
+          "duration_ms": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Duration Ms"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "request_id",
+          "route",
+          "method",
+          "status_code",
+          "error_code",
+          "duration_ms",
+          "created_at"
+        ],
+        "title": "RecentErrorOut"
+      },
       "RetrievedSource": {
         "properties": {
           "source_id": {
@@ -1126,6 +2586,48 @@
           "excerpt"
         ],
         "title": "RetrievedSource"
+      },
+      "ReviewQueueOut": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/BenefitReviewOut"
+            },
+            "type": "array",
+            "title": "Items"
+          },
+          "total": {
+            "type": "integer",
+            "title": "Total"
+          },
+          "status_counts": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "type": "object",
+            "title": "Status Counts"
+          },
+          "data_fresh_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Data Fresh At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "items",
+          "total",
+          "status_counts",
+          "data_fresh_at"
+        ],
+        "title": "ReviewQueueOut"
       },
       "SessionOut": {
         "properties": {
@@ -1234,6 +2736,203 @@
         ],
         "title": "StateOut"
       },
+      "SystemOut": {
+        "properties": {
+          "environment": {
+            "type": "string",
+            "title": "Environment"
+          },
+          "process_started_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Process Started At"
+          },
+          "generated_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Generated At"
+          },
+          "git_commit_sha": {
+            "type": "string",
+            "title": "Git Commit Sha"
+          },
+          "migration_revision": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Migration Revision"
+          },
+          "database_mode": {
+            "type": "string",
+            "title": "Database Mode"
+          },
+          "configuration": {
+            "additionalProperties": {
+              "type": "boolean"
+            },
+            "type": "object",
+            "title": "Configuration"
+          },
+          "deployment_notes": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Deployment Notes"
+          }
+        },
+        "type": "object",
+        "required": [
+          "environment",
+          "process_started_at",
+          "generated_at",
+          "git_commit_sha",
+          "migration_revision",
+          "database_mode",
+          "configuration",
+          "deployment_notes"
+        ],
+        "title": "SystemOut"
+      },
+      "TelemetryEventOut": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "event_type": {
+            "type": "string",
+            "title": "Event Type"
+          },
+          "request_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Request Id"
+          },
+          "route": {
+            "type": "string",
+            "title": "Route"
+          },
+          "method": {
+            "type": "string",
+            "title": "Method"
+          },
+          "status_code": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Status Code"
+          },
+          "duration_ms": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Duration Ms"
+          },
+          "surface": {
+            "type": "string",
+            "title": "Surface"
+          },
+          "language_code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Language Code"
+          },
+          "state_code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "State Code"
+          },
+          "provider": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Provider"
+          },
+          "outcome": {
+            "type": "string",
+            "title": "Outcome"
+          },
+          "error_code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error Code"
+          },
+          "safe_metadata": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Safe Metadata"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "event_type",
+          "request_id",
+          "route",
+          "method",
+          "status_code",
+          "duration_ms",
+          "surface",
+          "language_code",
+          "state_code",
+          "provider",
+          "outcome",
+          "error_code",
+          "safe_metadata",
+          "created_at"
+        ],
+        "title": "TelemetryEventOut"
+      },
       "TicketOut": {
         "properties": {
           "id": {
@@ -1289,6 +2988,57 @@
           "created_at"
         ],
         "title": "TicketOut"
+      },
+      "TrafficOut": {
+        "properties": {
+          "requests": {
+            "type": "integer",
+            "title": "Requests"
+          },
+          "errors": {
+            "type": "integer",
+            "title": "Errors"
+          },
+          "error_rate": {
+            "type": "number",
+            "title": "Error Rate"
+          },
+          "p50_latency_ms": {
+            "type": "number",
+            "title": "P50 Latency Ms"
+          },
+          "p95_latency_ms": {
+            "type": "number",
+            "title": "P95 Latency Ms"
+          },
+          "active_sessions": {
+            "type": "integer",
+            "title": "Active Sessions"
+          },
+          "turns": {
+            "type": "integer",
+            "title": "Turns"
+          },
+          "language_mix": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "type": "object",
+            "title": "Language Mix"
+          }
+        },
+        "type": "object",
+        "required": [
+          "requests",
+          "errors",
+          "error_rate",
+          "p50_latency_ms",
+          "p95_latency_ms",
+          "active_sessions",
+          "turns",
+          "language_mix"
+        ],
+        "title": "TrafficOut"
       },
       "TurnOut": {
         "properties": {

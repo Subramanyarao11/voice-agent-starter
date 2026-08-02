@@ -75,6 +75,12 @@ class Settings(BaseSettings):
     langfuse_secret_key: str = ""
     langfuse_host: str = "https://cloud.langfuse.com"
 
+    # Workforce access is deliberately opt-in. The API never falls back to an
+    # open admin surface when this is empty. `ADMIN_TOKENS_JSON` can hold
+    # multiple token-to-role entries for local/staging operator separation.
+    admin_api_token: str = ""
+    admin_tokens_json: str = ""
+
     # --- Application ---
     env: str = "development"
     log_json: bool = False

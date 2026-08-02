@@ -241,10 +241,259 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/admin/me": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Admin Me */
+        get: operations["admin_me_api_admin_me_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/admin/overview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Admin Overview */
+        get: operations["admin_overview_api_admin_overview_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/admin/conversations": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Admin Conversations */
+        get: operations["admin_conversations_api_admin_conversations_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/admin/telemetry/events": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Admin Telemetry Events */
+        get: operations["admin_telemetry_events_api_admin_telemetry_events_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/admin/benefits/review": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Admin Benefit Reviews */
+        get: operations["admin_benefit_reviews_api_admin_benefits_review_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/admin/benefits/{benefit_id}/review": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Review Benefit */
+        post: operations["review_benefit_api_admin_benefits__benefit_id__review_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/admin/imports": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Admin Imports */
+        get: operations["admin_imports_api_admin_imports_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/admin/providers": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Admin Providers */
+        get: operations["admin_providers_api_admin_providers_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/admin/languages": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Admin Languages */
+        get: operations["admin_languages_api_admin_languages_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/admin/audit-events": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Admin Audit Events */
+        get: operations["admin_audit_events_api_admin_audit_events_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/admin/system": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Admin System */
+        get: operations["admin_system_api_admin_system_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        /** AdminMeOut */
+        AdminMeOut: {
+            /** Actor Id */
+            actor_id: string;
+            /** Role */
+            role: string;
+            /** Permissions */
+            permissions: string[];
+        };
+        /** AdminOverviewOut */
+        AdminOverviewOut: {
+            /**
+             * Generated At
+             * Format: date-time
+             */
+            generated_at: string;
+            /** Data Fresh At */
+            data_fresh_at: string | null;
+            /** Partial Data */
+            partial_data: boolean;
+            /** Window Hours */
+            window_hours: number;
+            health: components["schemas"]["HealthOut"];
+            traffic: components["schemas"]["TrafficOut"];
+            quality: components["schemas"]["QualityOut"];
+            /** Providers */
+            providers: components["schemas"]["ProviderStatusOut"][];
+            /** Recent Errors */
+            recent_errors: components["schemas"]["RecentErrorOut"][];
+        };
+        /** AuditEventOut */
+        AuditEventOut: {
+            /** Id */
+            id: string;
+            /** Actor Id */
+            actor_id: string;
+            /** Actor Role */
+            actor_role: string;
+            /** Action */
+            action: string;
+            /** Target Type */
+            target_type: string;
+            /** Target Id */
+            target_id: string;
+            /** Reason */
+            reason: string;
+            /** Safe Before */
+            safe_before: {
+                [key: string]: unknown;
+            };
+            /** Safe After */
+            safe_after: {
+                [key: string]: unknown;
+            };
+            /** Request Id */
+            request_id: string | null;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+        };
         /**
          * BenefitDetailOut
          * @description Public benefit details with enough provenance to make trust inspectable.
@@ -287,6 +536,49 @@ export interface components {
             /** Valid Until */
             valid_until: string | null;
         };
+        /** BenefitReviewOut */
+        BenefitReviewOut: {
+            /** Id */
+            id: string;
+            /** Domain */
+            domain: string;
+            /** Name */
+            name: string;
+            /** State Code */
+            state_code: string | null;
+            /** Verification Status */
+            verification_status: string;
+            /** Is Active */
+            is_active: boolean;
+            /** Source Title */
+            source_title: string;
+            /** Source Document Url */
+            source_document_url: string;
+            /** Source Excerpt */
+            source_excerpt: string | null;
+            /** Automated Review */
+            automated_review: {
+                [key: string]: unknown;
+            };
+            /** Verified By */
+            verified_by: string | null;
+            /** Verified At */
+            verified_at: string | null;
+            /** Last Verified Date */
+            last_verified_date: string | null;
+            /** Valid From */
+            valid_from: string | null;
+            /** Valid Until */
+            valid_until: string | null;
+        };
+        /** BenefitReviewRequest */
+        BenefitReviewRequest: {
+            verification_status: components["schemas"]["VerificationStatus"];
+            /** Reason */
+            reason: string;
+            /** Activate */
+            activate?: boolean | null;
+        };
         /** Body_take_voice_turn_api_voice_turns_post */
         Body_take_voice_turn_api_voice_turns_post: {
             /** Audio */
@@ -302,6 +594,38 @@ export interface components {
              * @default true
              */
             speak: boolean;
+        };
+        /** ConversationListOut */
+        ConversationListOut: {
+            /** Items */
+            items: components["schemas"]["ConversationSummaryOut"][];
+            /** Total */
+            total: number;
+            /** Data Fresh At */
+            data_fresh_at: string | null;
+        };
+        /** ConversationSummaryOut */
+        ConversationSummaryOut: {
+            /** Session Key */
+            session_key: string;
+            /** State Code */
+            state_code: string;
+            /** Language Code */
+            language_code: string;
+            /** Turn Count */
+            turn_count: number;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /**
+             * Last Contact At
+             * Format: date-time
+             */
+            last_contact_at: string;
+            /** Last Intent */
+            last_intent: string | null;
         };
         /**
          * CoverageOut
@@ -343,6 +667,27 @@ export interface components {
             /** Detail */
             detail?: components["schemas"]["ValidationError"][];
         };
+        /** HealthOut */
+        HealthOut: {
+            /** Status */
+            status: string;
+            /** Environment */
+            environment: string;
+            /** Database */
+            database: string;
+            /** Cache */
+            cache: string;
+            /** Speech To Text */
+            speech_to_text: boolean;
+            /** Text To Speech */
+            text_to_speech: boolean;
+            /** Reasoning Model */
+            reasoning_model: boolean;
+            /** Tracing */
+            tracing: boolean;
+            /** Languages */
+            languages: string[];
+        };
         /** HealthReport */
         HealthReport: {
             /** Status */
@@ -364,6 +709,38 @@ export interface components {
             /** Languages */
             languages: string[];
         };
+        /** ImportRunOut */
+        ImportRunOut: {
+            /** Id */
+            id: string;
+            /** Source Name */
+            source_name: string;
+            /** State Code */
+            state_code: string | null;
+            /**
+             * Started At
+             * Format: date-time
+             */
+            started_at: string;
+            /** Completed At */
+            completed_at: string | null;
+            /** Model Name */
+            model_name: string;
+            /** Prompt Version */
+            prompt_version: string;
+            /** Input Count */
+            input_count: number;
+            /** Accepted Count */
+            accepted_count: number;
+            /** Failed Count */
+            failed_count: number;
+            /** Review Sample Size */
+            review_sample_size: number;
+            /** Manifest Json */
+            manifest_json: {
+                [key: string]: unknown;
+            };
+        };
         /**
          * Intent
          * @description What the caller wants on this turn.
@@ -383,6 +760,35 @@ export interface components {
             native_name: string;
             /** Is Active */
             is_active: boolean;
+        };
+        /** LanguageReadinessOut */
+        LanguageReadinessOut: {
+            /** Code */
+            code: string;
+            /** Name */
+            name: string;
+            /** Native Name */
+            native_name: string;
+            /** Active */
+            active: boolean;
+            /** Prompt Ready */
+            prompt_ready: boolean;
+            /** Interface Status */
+            interface_status: string;
+            /** Data Status */
+            data_status: string;
+            /** Localized Benefits */
+            localized_benefits: number;
+            /** Active Benefits */
+            active_benefits: number;
+            /** Stt Provider */
+            stt_provider: string;
+            /** Tts Provider */
+            tts_provider: string;
+            /** Voice Status */
+            voice_status: string;
+            /** Rollout Status */
+            rollout_status: string;
         };
         /**
          * MatchSummary
@@ -417,6 +823,84 @@ export interface components {
             /** Last Verified Date */
             last_verified_date?: string | null;
         };
+        /** ProviderListOut */
+        ProviderListOut: {
+            /**
+             * Generated At
+             * Format: date-time
+             */
+            generated_at: string;
+            /** Providers */
+            providers: components["schemas"]["ProviderStatusOut"][];
+            /** Controls Note */
+            controls_note: string;
+        };
+        /** ProviderStatusOut */
+        ProviderStatusOut: {
+            /** Name */
+            name: string;
+            /** Configured */
+            configured: boolean;
+            /** Health */
+            health: string;
+            /** Requests */
+            requests: number;
+            /** Failures */
+            failures: number;
+            /**
+             * Cache Hits
+             * @default 0
+             */
+            cache_hits: number;
+            /**
+             * Cache Misses
+             * @default 0
+             */
+            cache_misses: number;
+            /** Budget Usd */
+            budget_usd?: number | null;
+            /** Reserved Usd */
+            reserved_usd?: number | null;
+            /** Observed Usd */
+            observed_usd?: number | null;
+            /** Remaining Usd */
+            remaining_usd?: number | null;
+            /**
+             * Controls Available
+             * @default false
+             */
+            controls_available: boolean;
+            /**
+             * Note
+             * @default
+             */
+            note: string;
+        };
+        /** QualityOut */
+        QualityOut: {
+            /** Escalations */
+            escalations: number;
+            /** Open Escalations */
+            open_escalations: number;
+            /** Escalation Rate */
+            escalation_rate: number;
+            /** No Match Turns */
+            no_match_turns: number;
+            /** Active Benefits */
+            active_benefits: number;
+            /** Verified Benefits */
+            verified_benefits: number;
+            /** Machine Reviewed Benefits */
+            machine_reviewed_benefits: number;
+            /** Needs Review Benefits */
+            needs_review_benefits: number;
+            /** Stale Benefits */
+            stale_benefits: number;
+            /** Illustrative Benefits */
+            illustrative_benefits: number;
+            /** Latest Import At */
+            latest_import_at: string | null;
+        };
         /** RagAnswerResponse */
         RagAnswerResponse: {
             /** Query */
@@ -445,6 +929,26 @@ export interface components {
             /** Sources */
             sources?: components["schemas"]["RetrievedSource"][];
         };
+        /** RecentErrorOut */
+        RecentErrorOut: {
+            /** Request Id */
+            request_id: string | null;
+            /** Route */
+            route: string;
+            /** Method */
+            method: string;
+            /** Status Code */
+            status_code: number | null;
+            /** Error Code */
+            error_code: string | null;
+            /** Duration Ms */
+            duration_ms: number | null;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+        };
         /** RetrievedSource */
         RetrievedSource: {
             /** Source Id */
@@ -464,6 +968,19 @@ export interface components {
             attributes?: {
                 [key: string]: string | number | boolean;
             };
+        };
+        /** ReviewQueueOut */
+        ReviewQueueOut: {
+            /** Items */
+            items: components["schemas"]["BenefitReviewOut"][];
+            /** Total */
+            total: number;
+            /** Status Counts */
+            status_counts: {
+                [key: string]: number;
+            };
+            /** Data Fresh At */
+            data_fresh_at: string | null;
         };
         /** SessionOut */
         SessionOut: {
@@ -514,6 +1031,71 @@ export interface components {
             /** Is Active */
             is_active: boolean;
         };
+        /** SystemOut */
+        SystemOut: {
+            /** Environment */
+            environment: string;
+            /**
+             * Process Started At
+             * Format: date-time
+             */
+            process_started_at: string;
+            /**
+             * Generated At
+             * Format: date-time
+             */
+            generated_at: string;
+            /** Git Commit Sha */
+            git_commit_sha: string;
+            /** Migration Revision */
+            migration_revision: string | null;
+            /** Database Mode */
+            database_mode: string;
+            /** Configuration */
+            configuration: {
+                [key: string]: boolean;
+            };
+            /** Deployment Notes */
+            deployment_notes: string[];
+        };
+        /** TelemetryEventOut */
+        TelemetryEventOut: {
+            /** Id */
+            id: string;
+            /** Event Type */
+            event_type: string;
+            /** Request Id */
+            request_id: string | null;
+            /** Route */
+            route: string;
+            /** Method */
+            method: string;
+            /** Status Code */
+            status_code: number | null;
+            /** Duration Ms */
+            duration_ms: number | null;
+            /** Surface */
+            surface: string;
+            /** Language Code */
+            language_code: string | null;
+            /** State Code */
+            state_code: string | null;
+            /** Provider */
+            provider: string | null;
+            /** Outcome */
+            outcome: string;
+            /** Error Code */
+            error_code: string | null;
+            /** Safe Metadata */
+            safe_metadata: {
+                [key: string]: unknown;
+            };
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+        };
         /** TicketOut */
         TicketOut: {
             /** Id */
@@ -537,6 +1119,27 @@ export interface components {
             created_at: string;
             /** Resolved At */
             resolved_at?: string | null;
+        };
+        /** TrafficOut */
+        TrafficOut: {
+            /** Requests */
+            requests: number;
+            /** Errors */
+            errors: number;
+            /** Error Rate */
+            error_rate: number;
+            /** P50 Latency Ms */
+            p50_latency_ms: number;
+            /** P95 Latency Ms */
+            p95_latency_ms: number;
+            /** Active Sessions */
+            active_sessions: number;
+            /** Turns */
+            turns: number;
+            /** Language Mix */
+            language_mix: {
+                [key: string]: number;
+            };
         };
         /** TurnOut */
         TurnOut: {
@@ -1024,6 +1627,316 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    admin_me_api_admin_me_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminMeOut"];
+                };
+            };
+        };
+    };
+    admin_overview_api_admin_overview_get: {
+        parameters: {
+            query?: {
+                hours?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminOverviewOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    admin_conversations_api_admin_conversations_get: {
+        parameters: {
+            query?: {
+                limit?: number;
+                offset?: number;
+                state_code?: string | null;
+                language_code?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ConversationListOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    admin_telemetry_events_api_admin_telemetry_events_get: {
+        parameters: {
+            query?: {
+                limit?: number;
+                event_type?: string | null;
+                surface?: string | null;
+                route?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TelemetryEventOut"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    admin_benefit_reviews_api_admin_benefits_review_get: {
+        parameters: {
+            query?: {
+                status?: string | null;
+                active?: boolean | null;
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReviewQueueOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    review_benefit_api_admin_benefits__benefit_id__review_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                benefit_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["BenefitReviewRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BenefitReviewOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    admin_imports_api_admin_imports_get: {
+        parameters: {
+            query?: {
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ImportRunOut"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    admin_providers_api_admin_providers_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProviderListOut"];
+                };
+            };
+        };
+    };
+    admin_languages_api_admin_languages_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LanguageReadinessOut"][];
+                };
+            };
+        };
+    };
+    admin_audit_events_api_admin_audit_events_get: {
+        parameters: {
+            query?: {
+                limit?: number;
+                action?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AuditEventOut"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    admin_system_api_admin_system_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SystemOut"];
                 };
             };
         };

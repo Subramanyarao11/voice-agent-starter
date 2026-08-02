@@ -5,12 +5,14 @@ from sahaayak_common.db import engine, get_session, init_db, run_migrations, ses
 from sahaayak_common.ids import new_id, session_id, slugify, ticket_id, turn_id
 from sahaayak_common.logging import configure_logging, get_logger, request_id_var
 from sahaayak_common.models import (
+    AuditEvent,
     Benefit,
     ConversationTurnLog,
     DataImportRun,
     EscalationTicket,
     Language,
     State,
+    TelemetryEvent,
     UserSession,
 )
 from sahaayak_common.openai_budget import (
@@ -23,6 +25,7 @@ from sahaayak_common.settings import REPO_ROOT, Settings, get_settings, settings
 
 __all__ = [
     "REPO_ROOT",
+    "AuditEvent",
     "Benefit",
     "BudgetError",
     "BudgetExceeded",
@@ -37,6 +40,7 @@ __all__ = [
     "RedisCache",
     "Settings",
     "State",
+    "TelemetryEvent",
     "UserSession",
     "configure_logging",
     "engine",

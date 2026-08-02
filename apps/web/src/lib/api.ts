@@ -173,7 +173,7 @@ function detailFromBody(body: unknown): string | null {
   return detail == null ? null : String(detail);
 }
 
-async function request<T>(path: string, schema: z.ZodType<T>, init?: RequestInit): Promise<T> {
+export async function request<T>(path: string, schema: z.ZodType<T>, init?: RequestInit): Promise<T> {
   let response: Response;
   try {
     response = await fetch(`${API_ROOT}${path}`, {
