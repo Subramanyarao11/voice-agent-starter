@@ -1,0 +1,34 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+htmlcov/
+.coverage
+
+# Node
+node_modules/
+dist/
+.vite/
+*.tsbuildinfo
+
+# Environment — never commit populated env files
+.env
+.env.*
+!.env.example
+
+# Data pipeline artifacts: large, regenerable, and PDF-derived.
+# The pipeline is the deliverable, not its output.
+data/raw_pdfs/
+data/raw_pdfs_hf_cache/
+data/structured/
+media/
+
+# OS / editor
+.DS_Store
+.idea/
+*.swp
