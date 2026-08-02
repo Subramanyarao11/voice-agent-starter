@@ -19,6 +19,7 @@ from langgraph.graph import END, StateGraph
 
 from sahaayak_agent.nodes import (
     GraphDeps,
+    answer_from_knowledge,
     assess_escalation,
     choose_followup,
     compose,
@@ -41,11 +42,34 @@ def route_after_gather(state: AgentState) -> str:
     return "match"
 
 
+def route_after_understand(state: AgentState) -> str:
+    """Send informational questions to RAG before eligibility gathering.
+
+    A turn that answers a pending slot remains in the structured dialogue even
+    if the model labels it ``provide_info``. This prevents a caller's answer
+    such as "two lakh" from being sent to the knowledge base, while allowing a
+    new question to mention facts such as a category without leaving the RAG
+    lane.
+    """
+    knowledge_intents = {
+        Intent.ASK_ABOUT_BENEFIT,
+        Intent.ASK_HOW_TO_APPLY,
+        Intent.PROVIDE_INFO,
+    }
+    if state.intent in knowledge_intents and not state.answered_pending_slot:
+        return "answer_from_knowledge"
+    return "gather"
+
+
 def build_graph(deps: GraphDeps | None = None):
     deps = deps or GraphDeps.build()
 
     graph = StateGraph(AgentState)
     graph.add_node("understand", traced("understand")(partial(understand, deps=deps)))
+    graph.add_node(
+        "answer_from_knowledge",
+        traced("answer_from_knowledge")(partial(answer_from_knowledge, deps=deps)),
+    )
     graph.add_node("gather", traced("gather")(partial(gather, deps=deps)))
     graph.add_node("match", traced("match")(partial(match, deps=deps)))
     graph.add_node(
@@ -57,7 +81,12 @@ def build_graph(deps: GraphDeps | None = None):
     graph.add_node("compose", traced("compose")(partial(compose, deps=deps)))
 
     graph.set_entry_point("understand")
-    graph.add_edge("understand", "gather")
+    graph.add_conditional_edges(
+        "understand",
+        route_after_understand,
+        {"answer_from_knowledge": "answer_from_knowledge", "gather": "gather"},
+    )
+    graph.add_edge("answer_from_knowledge", "compose")
     graph.add_conditional_edges(
         "gather",
         route_after_gather,

@@ -10,11 +10,13 @@ from sahaayak_agent.nodes.deps import GraphDeps
 from sahaayak_agent.nodes.escalate import assess_escalation
 from sahaayak_agent.nodes.gather import gather
 from sahaayak_agent.nodes.match import choose_followup, match
+from sahaayak_agent.nodes.retrieve import answer_from_knowledge
 from sahaayak_agent.nodes.understand import understand
 
 __all__ = [
     "GraphDeps",
     "assess_escalation",
+    "answer_from_knowledge",
     "choose_followup",
     "compose",
     "gather",

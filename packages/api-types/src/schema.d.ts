@@ -132,6 +132,40 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/rag/answer": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Answer From Sources */
+        post: operations["answer_from_sources_api_rag_answer_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/rag/search": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Search Sources */
+        post: operations["search_sources_api_rag_search_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/sessions/{caller_id}": {
         parameters: {
             query?: never;
@@ -383,6 +417,54 @@ export interface components {
             /** Last Verified Date */
             last_verified_date?: string | null;
         };
+        /** RagAnswerResponse */
+        RagAnswerResponse: {
+            /** Query */
+            query: string;
+            /** Answer */
+            answer: string;
+            /** Sources */
+            sources?: components["schemas"]["RetrievedSource"][];
+        };
+        /** RagSearchRequest */
+        RagSearchRequest: {
+            /** Query */
+            query: string;
+            /**
+             * Max Results
+             * @default 5
+             */
+            max_results: number;
+            /** Language Code */
+            language_code?: string | null;
+        };
+        /** RagSearchResponse */
+        RagSearchResponse: {
+            /** Query */
+            query: string;
+            /** Sources */
+            sources?: components["schemas"]["RetrievedSource"][];
+        };
+        /** RetrievedSource */
+        RetrievedSource: {
+            /** Source Id */
+            source_id: string;
+            /** Filename */
+            filename: string;
+            /** Score */
+            score: number;
+            /** Excerpt */
+            excerpt: string;
+            /**
+             * Source Url
+             * @default
+             */
+            source_url: string;
+            /** Attributes */
+            attributes?: {
+                [key: string]: string | number | boolean;
+            };
+        };
         /** SessionOut */
         SessionOut: {
             /** Id */
@@ -492,6 +574,10 @@ export interface components {
             transcript: string;
             /** Response Text */
             response_text: string;
+            /** Grounded Answer */
+            grounded_answer?: string | null;
+            /** Sources */
+            sources?: components["schemas"]["RetrievedSource"][];
             intent: components["schemas"]["Intent"];
             /** Slots */
             slots?: {
@@ -533,7 +619,7 @@ export interface components {
          *     logic. Only ``human_verified`` rows are production-ready.
          * @enum {string}
          */
-        VerificationStatus: "illustrative" | "machine_structured" | "needs_review" | "human_verified" | "stale";
+        VerificationStatus: "illustrative" | "machine_structured" | "machine_reviewed" | "needs_review" | "human_verified" | "stale";
     };
     responses: never;
     parameters: never;
@@ -707,6 +793,72 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["TurnResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    answer_from_sources_api_rag_answer_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RagSearchRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RagAnswerResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    search_sources_api_rag_search_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RagSearchRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RagSearchResponse"];
                 };
             };
             /** @description Validation Error */

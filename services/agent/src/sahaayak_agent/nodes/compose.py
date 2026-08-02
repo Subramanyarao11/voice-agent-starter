@@ -9,6 +9,8 @@ opportunity to contradict it.
 
 from __future__ import annotations
 
+import re
+
 from sahaayak_agent.nodes.deps import GraphDeps
 from sahaayak_agent.prompts import get_catalog
 from sahaayak_agent.repository import load_briefs
@@ -27,6 +29,7 @@ log = get_logger(__name__)
 
 # Three is about as many options as a listener retains from speech alone.
 MAX_SPOKEN_RESULTS = 3
+_SOURCE_MARKER = re.compile(r"\s*\[Source\s+\d+\]", re.IGNORECASE)
 
 
 def _join(parts: list[str]) -> str:
@@ -36,6 +39,17 @@ def _join(parts: list[str]) -> str:
 async def compose(state: AgentState, deps: GraphDeps) -> dict:
     catalog = get_catalog(state.language_code)
     parts: list[str] = []
+
+    if state.knowledge_answer:
+        # Source markers are preserved in ``grounded_answer`` for visual
+        # clients, but should not be read aloud by Sarvam or another TTS.
+        return _finish(
+            state,
+            [_SOURCE_MARKER.sub("", state.knowledge_answer).strip()],
+        )
+
+    if state.knowledge_error:
+        return _finish(state, [catalog.render("knowledge_unavailable")])
 
     if state.turn_index <= 1 and state.intent is Intent.GREETING:
         parts.append(catalog.render("greeting"))

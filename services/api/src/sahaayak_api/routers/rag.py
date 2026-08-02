@@ -15,10 +15,16 @@ router = APIRouter(prefix="/api/rag", tags=["retrieval"])
 @router.post("/answer", response_model=RagAnswerResponse)
 async def answer_from_sources(
     payload: RagSearchRequest,
-    rag: OpenAIRetrieval = Depends(get_rag),
+    rag: OpenAIRetrieval | None = Depends(get_rag),
 ) -> RagAnswerResponse:
+    if rag is None:
+        raise HTTPException(status_code=503, detail="RAG is not configured")
     try:
-        return await rag.answer(payload.query, max_results=payload.max_results)
+        return await rag.answer(
+            payload.query,
+            max_results=payload.max_results,
+            language_code=payload.language_code,
+        )
     except RagUnavailable as exc:
         raise HTTPException(status_code=503, detail=str(exc)) from exc
     except BudgetError as exc:
@@ -28,8 +34,10 @@ async def answer_from_sources(
 @router.post("/search", response_model=RagSearchResponse)
 async def search_sources(
     payload: RagSearchRequest,
-    rag: OpenAIRetrieval = Depends(get_rag),
+    rag: OpenAIRetrieval | None = Depends(get_rag),
 ) -> RagSearchResponse:
+    if rag is None:
+        raise HTTPException(status_code=503, detail="RAG is not configured")
     try:
         sources = await rag.search(payload.query, max_results=payload.max_results)
         return RagSearchResponse(query=payload.query, sources=sources)

@@ -95,6 +95,8 @@ def test_negation_wins_over_a_stray_affirmative():
         ("koi sarkari yojana batao", Intent.FIND_SCHEME),
         ("कोई सरकारी योजना बताइए", Intent.FIND_SCHEME),
         ("let me talk to a person", Intent.REQUEST_HUMAN),
+        ("tell me about this benefit", Intent.ASK_ABOUT_BENEFIT),
+        ("how do I apply for this scheme", Intent.ASK_HOW_TO_APPLY),
         ("namaste", Intent.GREETING),
     ],
 )

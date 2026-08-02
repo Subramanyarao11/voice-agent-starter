@@ -206,6 +206,8 @@ def to_response(session: UserSession, state: AgentState) -> TurnResponse:
         session_id=session.id,
         transcript=state.transcript,
         response_text=state.response_text,
+        grounded_answer=state.knowledge_answer or None,
+        sources=state.knowledge_sources,
         intent=state.intent or Intent.UNKNOWN,
         slots=state.slots,
         pending_slot=state.pending_slot,

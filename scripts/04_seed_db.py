@@ -84,6 +84,7 @@ def build_benefit(row: dict) -> Benefit:
         source_document_url=source_document_url,
         source_excerpt=row.get("source_excerpt"),
         source_content_hash=row.get("source_content_hash"),
+        automated_review=dict(row.get("automated_review") or {}),
         verified_by=row.get("verified_by"),
         verified_at=parse_datetime(row.get("verified_at")),
         valid_from=parse_date(row["valid_from"]) if row.get("valid_from") else None,

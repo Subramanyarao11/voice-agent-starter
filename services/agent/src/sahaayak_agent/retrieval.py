@@ -36,7 +36,23 @@ dates, amounts, locations, or application steps.
 
 The corpus is machine-extracted and not necessarily human-verified. Never call
 the result an official eligibility determination. Use [Source N] citations in
-the answer and keep the response concise and easy to read aloud."""
+the answer and keep the response concise and easy to read aloud. If a response
+language is provided, answer in that language while preserving the source
+meaning and the [Source N] markers."""
+
+_LANGUAGE_NAMES = {
+    "en": "English",
+    "hi": "Hindi",
+    "kn": "Kannada",
+    "ta": "Tamil",
+    "te": "Telugu",
+    "mr": "Marathi",
+    "bn": "Bengali",
+    "gu": "Gujarati",
+    "ml": "Malayalam",
+    "pa": "Punjabi",
+    "or": "Odia",
+}
 
 
 def _value(item: object, key: str, default: Any = None) -> Any:
@@ -181,7 +197,11 @@ class OpenAIRetrieval:
             raise RagUnavailable("OpenAI Vector Store search failed") from exc
 
     async def answer(
-        self, query: str, *, max_results: int | None = None
+        self,
+        query: str,
+        *,
+        max_results: int | None = None,
+        language_code: str | None = None,
     ) -> RagAnswerResponse:
         sources = await self.search(query, max_results=max_results)
         if not sources:
@@ -192,7 +212,14 @@ class OpenAIRetrieval:
             )
 
         context = format_sources(sources)
-        user_content = f"Question:\n{query.strip()}\n\nRetrieved sources:\n{context}"
+        language_instruction = ""
+        if language_code:
+            language_name = _LANGUAGE_NAMES.get(language_code, language_code)
+            language_instruction = f"\n\nResponse language: {language_name} ({language_code})"
+        user_content = (
+            f"Question:\n{query.strip()}"
+            f"{language_instruction}\n\nRetrieved sources:\n{context}"
+        )
         reservation: BudgetReservation | None = None
         try:
             reservation = self._budget.reserve_chat(

@@ -52,6 +52,7 @@ const matchSchema = z.object({
   verification_status: z.enum([
     "illustrative",
     "machine_structured",
+    "machine_reviewed",
     "needs_review",
     "human_verified",
     "stale",
@@ -76,6 +77,7 @@ export const benefitDetailSchema = z.object({
   verification_status: z.enum([
     "illustrative",
     "machine_structured",
+    "machine_reviewed",
     "needs_review",
     "human_verified",
     "stale",
@@ -93,6 +95,20 @@ export const turnResponseSchema = z.object({
   session_id: z.string(),
   transcript: z.string(),
   response_text: z.string(),
+  grounded_answer: z.string().nullable().optional(),
+  sources: z.array(
+    z.object({
+      source_id: z.string(),
+      filename: z.string(),
+      score: z.number(),
+      excerpt: z.string(),
+      source_url: z.string().default(""),
+      attributes: z.record(
+        z.string(),
+        z.union([z.string(), z.number(), z.boolean()]),
+      ).default({}),
+    }),
+  ).default([]),
   intent: z.enum([
     "find_scheme",
     "find_scholarship",

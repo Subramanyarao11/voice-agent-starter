@@ -18,6 +18,9 @@ before the paid structuring pilot was started.
 | Structuring failures | 0 |
 | Structuring model | `gpt-4o` |
 | Prompt version | `structured-benefit-v1` |
+| Automated source-grounded review | 20/20 rows completed |
+| Review model | `gpt-4o-mini` |
+| Review prompt version | `benefit-review-v1` |
 
 The raw PDFs, extracted text, candidate JSONL, pilot JSONL, SQLite database,
 and usage ledger are local regenerable artifacts and are intentionally ignored
@@ -39,18 +42,51 @@ The 20-row pilot recorded:
 All OpenAI call sites currently share this ledger: structuring, localization,
 agent understanding, transcription, and the hosted RAG sync/query path. The
 RAG sync completed with 2,066 file uploads and 10 fixed-cost indexing attempts.
-After the live retrieval/answer smoke tests, the ledger reports `$2.276385`
-reserved, `$0.242533` observed, and 2,100 calls (one failed initial
-batch-shape request is retained as a failed reservation). Vector-store
+After the live retrieval/answer smoke tests and the automated benefit review,
+the ledger reports `$2.348641` reserved, `$0.260720` observed, and 2,121 calls
+(2,120 completed provider calls and one failed initial batch-shape request).
+The review used 21 requests: 20 accepted outputs and one invalid output that
+was safely rerun after tightening the validator. Vector-store
 operations expose no token usage to this ledger, so the fixed reservations
 remain intentionally conservative.
 
 ## Review status
 
-All 20 pilot rows are `machine_structured` and inactive. None is presented as a
-production-ready benefit until a human reviewer checks the source document.
-The local database therefore contains the existing eight illustrative active
-rows plus the 20 inactive machine-structured pilot rows.
+The automated review completed all 20 rows, but it is not human approval:
+
+| Result | Rows |
+| --- | ---: |
+| `machine_reviewed` (model pass, still inactive) | 8 |
+| `needs_review` (policy or evidence concern, inactive) | 12 |
+| Active machine-reviewed or machine-structured rows | 0 |
+
+The raw model decisions were 8 `pass`, 6 `needs_review`, and 6 `reject`.
+Audiences were 12 individual, 2 mixed, and 6 institutional. Institutional
+audiences were forced to `reject`; mixed/unclear audiences were forced to
+`needs_review`; noisy or insufficient source text was never machine-approved.
+Every row has `verified_by` and `verified_at` unset and remains inactive. The
+local database therefore contains the existing eight illustrative active rows
+plus 20 inactive, machine-reviewed rows.
+
+The review is reproducible without downloading or re-structuring data:
+
+```bash
+uv run python scripts/09_review_structured_benefits.py --dry-run
+uv run python scripts/09_review_structured_benefits.py
+```
+
+The script matches each structured row to its exact extracted source record,
+passes only bounded source text to the model as untrusted evidence, stores
+field-level findings in `automated_review`, and never sets `is_active` or human
+verification fields. An automated pass is a queue-prioritisation signal for a
+future admin review, not a release decision.
+
+The future admin action should read this JSON field as the review queue's
+evidence, then require an authorised reviewer to confirm the source, record
+their identity and timestamp, and only then transition the row to
+`human_verified` with `is_active=true`. A reviewer may instead keep or move a
+row to `needs_review`; no public endpoint should allow a caller to perform
+either transition.
 
 Spot-checks found plausible extractions, but also the expected risks from
 scraped government-page PDFs:

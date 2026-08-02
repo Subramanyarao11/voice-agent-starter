@@ -163,3 +163,68 @@ def test_empty_audio_is_rejected(client):
 def test_openapi_schema_is_generated(client):
     schema = client.get("/api/openapi.json").json()
     assert "/api/turns" in schema["paths"]
+
+
+def test_rag_route_fails_closed_when_hosted_store_is_not_configured(client):
+    response = client.post(
+        "/api/rag/answer",
+        json={"query": "How do I apply?", "language_code": "kn"},
+    )
+    assert response.status_code == 503
+
+
+def test_voice_turn_routes_transcription_through_the_shared_rag_graph(client):
+    from sahaayak_agent import AgentRuntime, GraphDeps, Understanding
+    from sahaayak_api.deps import get_runtime, get_voice
+    from sahaayak_api.main import app
+    from sahaayak_contracts import RagAnswerResponse, RetrievedSource, TranscriptionResult
+
+    class FakeRetrieval:
+        async def answer(self, query, *, language_code=None, **_):
+            assert query == "tell me about this benefit"
+            assert language_code == "kn"
+            return RagAnswerResponse(
+                query=query,
+                answer="Kannada source answer [Source 1].",
+                sources=[
+                    RetrievedSource(
+                        source_id="voice-source",
+                        filename="voice-source.txt",
+                        score=0.8,
+                        excerpt="A voice source excerpt.",
+                        source_url="https://example.test/voice-source",
+                    )
+                ],
+            )
+
+    class FakeVoice:
+        tts_available = False
+
+        async def transcribe(self, audio, *, language_code, filename):
+            assert audio == b"fake-audio"
+            assert language_code == "kn"
+            return TranscriptionResult(
+                text="tell me about this benefit",
+                language_code=language_code,
+                provider="fake",
+            )
+
+    app.dependency_overrides[get_runtime] = lambda: AgentRuntime(
+        deps=GraphDeps(understanding=Understanding(), retrieval=FakeRetrieval())
+    )
+    app.dependency_overrides[get_voice] = lambda: FakeVoice()
+    try:
+        response = client.post(
+            "/api/voice/turns",
+            files={"audio": ("turn.wav", b"fake-audio", "audio/wav")},
+            data={"caller_id": "+919000000007", "language_code": "kn", "speak": "false"},
+        )
+    finally:
+        app.dependency_overrides.pop(get_runtime, None)
+        app.dependency_overrides.pop(get_voice, None)
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["transcript"] == "tell me about this benefit"
+    assert body["response_text"] == "Kannada source answer."
+    assert body["sources"][0]["source_id"] == "voice-source"

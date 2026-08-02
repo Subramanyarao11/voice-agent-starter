@@ -62,6 +62,14 @@ The API exposes the same behavior:
   source IDs, and URLs.
 - `POST /api/rag/answer` — returns a concise answer plus the retrieved sources.
 
+The shared dialogue graph also routes informational intents such as “tell me
+about this benefit” and “how do I apply?” through the same answer path. This
+means `/api/voice/turns` now follows `audio → STT → intent → hosted RAG →
+source-aware response → TTS` when the hosted store is configured. RAG answers
+are requested in the caller's language; citation markers are kept in
+`grounded_answer` and source cards, while `response_text` removes `[Source N]`
+markers before synthesis so they are not read aloud.
+
 Both endpoints fail closed with `503` when the API key/store is unavailable or
 the budget ledger cannot reserve the operation. Set
 `OPENAI_VECTOR_STORE_ID` in deployment environments; the local manifest

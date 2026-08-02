@@ -49,6 +49,9 @@ class Settings(BaseSettings):
     openai_pipeline_max_records: int = 20
     openai_pipeline_max_output_tokens: int = 1200
     openai_agent_max_output_tokens: int = 600
+    openai_review_model: str = "gpt-4o-mini"
+    openai_review_max_output_tokens: int = 900
+    openai_review_max_input_characters: int = 16_000
     # Whisper is billed by audio duration and does not expose text-token usage
     # in the same way as chat completions. Reserve a conservative amount per
     # local transcription request so voice testing shares the same ledger.

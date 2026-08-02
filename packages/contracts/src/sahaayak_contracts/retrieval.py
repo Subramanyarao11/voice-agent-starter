@@ -6,6 +6,7 @@ from pydantic import BaseModel, Field
 class RagSearchRequest(BaseModel):
     query: str = Field(min_length=1, max_length=2_000)
     max_results: int = Field(default=5, ge=1, le=10)
+    language_code: str | None = Field(default=None, min_length=2, max_length=8)
 
 
 class RetrievedSource(BaseModel):

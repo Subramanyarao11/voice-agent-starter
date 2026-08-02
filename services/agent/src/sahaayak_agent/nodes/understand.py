@@ -11,6 +11,7 @@ log = get_logger(__name__)
 
 
 async def understand(state: AgentState, deps: GraphDeps) -> dict:
+    answered_pending_slot = state.pending_slot is not None
     result = await deps.understanding.understand(
         state.transcript,
         language_code=state.language_code,
@@ -45,6 +46,7 @@ async def understand(state: AgentState, deps: GraphDeps) -> dict:
         # Cleared here and re-decided downstream, so a question is never left
         # pending once the caller has answered it.
         "pending_slot": None,
+        "answered_pending_slot": answered_pending_slot,
         "consecutive_misunderstandings": misunderstandings,
         "history": [*state.history, ConversationTurn(role="caller", text=state.transcript)],
         "turn_index": state.turn_index + 1,

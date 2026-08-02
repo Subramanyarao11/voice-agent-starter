@@ -13,6 +13,7 @@ from pydantic import BaseModel, Field
 
 from sahaayak_contracts.domain import Domain, Intent, VerificationStatus
 from sahaayak_contracts.eligibility import EligibilityMatchResult
+from sahaayak_contracts.retrieval import RetrievedSource
 from sahaayak_contracts.slots import SlotName
 
 SlotValue = int | float | str | bool
@@ -47,8 +48,18 @@ class AgentState(BaseModel):
     newly_filled: list[SlotName] = Field(default_factory=list)
     # The slot the agent is asking for on this turn, if any.
     pending_slot: SlotName | None = None
+    # Whether the previous turn had an unanswered slot question. This keeps
+    # an answer such as "22" in the structured lane even if understanding also
+    # labels it as general information.
+    answered_pending_slot: bool = False
 
     matches: list[EligibilityMatchResult] = Field(default_factory=list)
+
+    # Informational questions may be answered from the hosted source corpus.
+    # These fields never participate in eligibility matching.
+    knowledge_answer: str = ""
+    knowledge_sources: list[RetrievedSource] = Field(default_factory=list)
+    knowledge_error: str | None = None
 
     response_text: str = ""
     needs_escalation: bool = False
@@ -92,6 +103,11 @@ class TurnResponse(BaseModel):
     session_id: str
     transcript: str
     response_text: str
+    # The spoken/display answer is citation-marker-free. The grounded answer
+    # preserves the model's [Source N] markers for clients that want to render
+    # inline citations alongside the source cards.
+    grounded_answer: str | None = None
+    sources: list[RetrievedSource] = Field(default_factory=list)
 
     intent: Intent
     slots: dict[SlotName, SlotValue] = Field(default_factory=dict)

@@ -17,6 +17,10 @@ PHRASES: dict[str, str] = {
     "ask_intent": (
         "Are you looking for a government scheme, a scholarship, or a job?"
     ),
+    "knowledge_unavailable": (
+        "I cannot access the source documents right now. I can still help you "
+        "check a scheme if you tell me its name or ask for a benefit search."
+    ),
     # --- Slot questions, keyed by SlotSpec.prompt_key ---
     "ask_age": "How old are you?",
     "ask_income": "What is your family's total yearly income?",

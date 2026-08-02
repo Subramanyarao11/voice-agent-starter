@@ -244,6 +244,10 @@ _INTENT_PATTERNS: list[tuple[Intent, re.Pattern]] = [
         "how to apply", "how do i apply", "apply", "application",
         "कैसे आवेदन", "आवेदन कैसे", "अर्जी", "ಅರ್ಜಿ", "ಹೇಗೆ ಅರ್ಜಿ",
     ])),
+    (Intent.ASK_ABOUT_BENEFIT, _keyword_matcher([
+        "tell me about", "what is", "details about", "explain", "more about",
+        "के बारे में बताइए", "ಮಾಹಿತಿ", "ಬಗ್ಗೆ ಹೇಳಿ",
+    ])),
     (Intent.FIND_SCHEME, _keyword_matcher([
         "scheme", "schemes", "yojana", "benefit", "subsidy", "pension", "government help",
         "योजना", "योजनाएं", "सरकारी", "सब्सिडी", "पेंशन",

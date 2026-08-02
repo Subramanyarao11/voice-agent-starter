@@ -90,7 +90,7 @@ product target is now broader and more explicit:
 | Voice code | OpenAI transcription, Sarvam synthesis, WAV chunk merge, and Redis/in-memory TTS caching exist | `services/agent/.../voice` |
 | Persistence | SQLite fallback and Postgres-compatible SQLModel tables for benefits, sessions, transcripts, and escalation tickets | `packages/common` |
 | Types | OpenAPI and generated TypeScript declarations are committed and consumed by the web app | `packages/api-types` |
-| Verification | Ruff passes, 101 Python tests pass, TypeScript builds, and the primary browser text flow has been smoke-tested | `make check` + browser smoke |
+| Verification | Ruff passes, 124 Python tests pass, TypeScript builds, and the primary browser text flow has been smoke-tested | `make check` + browser smoke |
 
 ### 2.2 What is still demonstration-only or unverified
 
@@ -214,10 +214,13 @@ larger unverified one.
 2. Structure a pilot of 20 candidates before running a larger batch.
 3. Review every extracted numeric limit in the pilot and at least 20% of the
    larger batch against source text.
-4. Mark rows as `human_verified`, `needs_review`, `stale`, or `illustrative`.
-5. Deactivate rows with missing source links, contradictory criteria, empty
+4. Run the source-grounded machine review, recording field-level findings in
+   `automated_review`; this never activates a row.
+5. Mark rows as `human_verified`, `needs_review`, `stale`, or `illustrative`
+   through the future operator review workflow.
+6. Deactivate rows with missing source links, contradictory criteria, empty
    criteria, or unclear state scope.
-6. Record an import manifest containing:
+7. Record an import manifest containing:
    - source collection/date;
    - source document count;
    - candidate and accepted row counts;
@@ -225,7 +228,7 @@ larger unverified one.
    - failures/retries;
    - reviewer and review sample;
    - known limitations.
-7. Preserve source text hashes so a later ingestion can identify changed
+8. Preserve source text hashes so a later ingestion can identify changed
    documents without reprocessing everything.
 
 ### Backend and schema work
@@ -233,7 +236,7 @@ larger unverified one.
 Add these fields to `Benefit` through a migration:
 
 ```text
-verification_status: illustrative | machine_structured | human_verified | stale
+verification_status: illustrative | machine_structured | machine_reviewed | needs_review | human_verified | stale
 source_title: string
 source_document_url: string
 source_excerpt: string | null

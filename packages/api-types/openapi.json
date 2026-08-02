@@ -225,6 +225,88 @@
         }
       }
     },
+    "/api/rag/answer": {
+      "post": {
+        "tags": [
+          "retrieval"
+        ],
+        "summary": "Answer From Sources",
+        "operationId": "answer_from_sources_api_rag_answer_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RagSearchRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RagAnswerResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/rag/search": {
+      "post": {
+        "tags": [
+          "retrieval"
+        ],
+        "summary": "Search Sources",
+        "operationId": "search_sources_api_rag_search_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RagSearchRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RagSearchResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/sessions/{caller_id}": {
       "get": {
         "tags": [
@@ -914,6 +996,137 @@
         "title": "MatchSummary",
         "description": "A match flattened for the API, without the full criterion trace."
       },
+      "RagAnswerResponse": {
+        "properties": {
+          "query": {
+            "type": "string",
+            "title": "Query"
+          },
+          "answer": {
+            "type": "string",
+            "title": "Answer"
+          },
+          "sources": {
+            "items": {
+              "$ref": "#/components/schemas/RetrievedSource"
+            },
+            "type": "array",
+            "title": "Sources"
+          }
+        },
+        "type": "object",
+        "required": [
+          "query",
+          "answer"
+        ],
+        "title": "RagAnswerResponse"
+      },
+      "RagSearchRequest": {
+        "properties": {
+          "query": {
+            "type": "string",
+            "maxLength": 2000,
+            "minLength": 1,
+            "title": "Query"
+          },
+          "max_results": {
+            "type": "integer",
+            "maximum": 10.0,
+            "minimum": 1.0,
+            "title": "Max Results",
+            "default": 5
+          },
+          "language_code": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 8,
+                "minLength": 2
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Language Code"
+          }
+        },
+        "type": "object",
+        "required": [
+          "query"
+        ],
+        "title": "RagSearchRequest"
+      },
+      "RagSearchResponse": {
+        "properties": {
+          "query": {
+            "type": "string",
+            "title": "Query"
+          },
+          "sources": {
+            "items": {
+              "$ref": "#/components/schemas/RetrievedSource"
+            },
+            "type": "array",
+            "title": "Sources"
+          }
+        },
+        "type": "object",
+        "required": [
+          "query"
+        ],
+        "title": "RagSearchResponse"
+      },
+      "RetrievedSource": {
+        "properties": {
+          "source_id": {
+            "type": "string",
+            "title": "Source Id"
+          },
+          "filename": {
+            "type": "string",
+            "title": "Filename"
+          },
+          "score": {
+            "type": "number",
+            "minimum": 0.0,
+            "title": "Score"
+          },
+          "excerpt": {
+            "type": "string",
+            "title": "Excerpt"
+          },
+          "source_url": {
+            "type": "string",
+            "title": "Source Url",
+            "default": ""
+          },
+          "attributes": {
+            "additionalProperties": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "boolean"
+                }
+              ]
+            },
+            "type": "object",
+            "title": "Attributes"
+          }
+        },
+        "type": "object",
+        "required": [
+          "source_id",
+          "filename",
+          "score",
+          "excerpt"
+        ],
+        "title": "RetrievedSource"
+      },
       "SessionOut": {
         "properties": {
           "id": {
@@ -1161,6 +1374,24 @@
             "type": "string",
             "title": "Response Text"
           },
+          "grounded_answer": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Grounded Answer"
+          },
+          "sources": {
+            "items": {
+              "$ref": "#/components/schemas/RetrievedSource"
+            },
+            "type": "array",
+            "title": "Sources"
+          },
           "intent": {
             "$ref": "#/components/schemas/Intent"
           },
@@ -1296,6 +1527,7 @@
         "enum": [
           "illustrative",
           "machine_structured",
+          "machine_reviewed",
           "needs_review",
           "human_verified",
           "stale"

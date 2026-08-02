@@ -24,6 +24,7 @@ class VerificationStatus(str, Enum):
 
     ILLUSTRATIVE = "illustrative"
     MACHINE_STRUCTURED = "machine_structured"
+    MACHINE_REVIEWED = "machine_reviewed"
     NEEDS_REVIEW = "needs_review"
     HUMAN_VERIFIED = "human_verified"
     STALE = "stale"

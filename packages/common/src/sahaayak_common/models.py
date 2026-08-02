@@ -124,6 +124,7 @@ class Benefit(SQLModel, table=True):
     source_document_url: str = ""
     source_excerpt: str | None = None
     source_content_hash: str | None = Field(default=None, index=True)
+    automated_review: dict = Field(default_factory=dict, sa_column=json_dict())
     verified_by: str | None = None
     verified_at: datetime | None = None
     valid_from: date | None = None

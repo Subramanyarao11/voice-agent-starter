@@ -357,14 +357,18 @@ Each package has: goal, prerequisites, concrete tasks, acceptance criteria, and 
 Karnataka education/welfare filter produced 317 matches, reduced to 220 unique
 candidate documents after exact-content deduplication, and a guarded 20-row
 `gpt-4o` structuring pilot completed with zero failed calls. The pilot rows are
-`machine_structured` and inactive pending human review. See
+`machine_reviewed` or `needs_review` and inactive pending human review. The
+automated review stores field-level evidence in `automated_review`; it does not
+set `verified_by`, `verified_at`, or `is_active`. See
 [`docs/data-review-2026-08-02.md`](data-review-2026-08-02.md).
 
 **Hosted RAG addendum (2026-08-02):** the complete extracted corpus is also
 available through a persistent OpenAI Vector Store for source discovery and
-grounded explanations. This evidence path is independent of the Karnataka
-structured-data pilot and must not be used as the final eligibility authority.
-See [`docs/rag-operations.md`](rag-operations.md).
+grounded explanations. Informational turns in both text and voice now use this
+path when configured; the voice response is rendered in the caller's language
+and source markers are returned separately for clients. This evidence path is
+independent of the Karnataka structured-data pilot and must not be used as the
+final eligibility authority. See [`docs/rag-operations.md`](rag-operations.md).
 
 **Do not commit:** `data/raw_pdfs*`, `data/structured/*.jsonl` (large / regenerable). Commit only pipeline code + a short `docs/data-notes.md` with counts, date, and spot-check summary if useful for submission narrative.
 
