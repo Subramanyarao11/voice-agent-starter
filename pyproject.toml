@@ -1,30 +1,57 @@
 [project]
-name = "voice-utility-agent"
+name = "sahaayak"
 version = "0.1.0"
-description = "Local-language voice agent for scheme/scholarship/job eligibility discovery"
-requires-python = ">=3.11"
+description = "Local-language voice utility agent for government scheme, scholarship, and job eligibility"
+requires-python = ">=3.12,<3.13"
 dependencies = [
-    "fastapi>=0.115.0",
-    "uvicorn[standard]>=0.32.0",
-    "sqlmodel>=0.0.22",
-    "psycopg2-binary>=2.9.9",
-    "redis>=5.2.0",
-    "pydantic>=2.9.0",
-    "pydantic-settings>=2.6.0",
-    "langgraph>=0.2.0",
-    "langchain-openai>=0.2.0",
-    "openai>=1.54.0",
+    "sahaayak-contracts",
+    "sahaayak-common",
+    "sahaayak-agent",
+    "sahaayak-api",
+]
+
+[dependency-groups]
+dev = [
+    "pytest>=8.3.0",
+    "pytest-asyncio>=0.24.0",
+    "ruff>=0.8.0",
+    "mypy>=1.13.0",
     "httpx>=0.27.0",
-    "structlog>=24.4.0",
-    "langfuse>=2.53.0",
-    "python-dotenv>=1.0.1",
-    "huggingface_hub>=0.26.0",
+]
+pipeline = [
+    "huggingface-hub>=0.26.0",
     "pdfplumber>=0.11.0",
 ]
 
+[tool.uv]
+package = false
+
+[tool.uv.workspace]
+members = [
+    "packages/contracts",
+    "packages/common",
+    "services/agent",
+    "services/api",
+]
+
+[tool.uv.sources]
+sahaayak-contracts = { workspace = true }
+sahaayak-common = { workspace = true }
+sahaayak-agent = { workspace = true }
+sahaayak-api = { workspace = true }
+
 [tool.ruff]
 line-length = 100
+target-version = "py312"
 
-[build-system]
-requires = ["setuptools>=68.0"]
-build-backend = "setuptools.build_meta"
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+asyncio_mode = "auto"
+filterwarnings = ["ignore::DeprecationWarning"]
+
+[tool.mypy]
+python_version = "3.12"
+ignore_missing_imports = true

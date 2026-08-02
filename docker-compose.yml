@@ -1,19 +1,53 @@
+name: sahaayak
+
 services:
   postgres:
     image: postgres:16
     environment:
-      POSTGRES_USER: voiceagent
-      POSTGRES_PASSWORD: voiceagent
-      POSTGRES_DB: voiceagent
+      POSTGRES_USER: sahaayak
+      POSTGRES_PASSWORD: sahaayak
+      POSTGRES_DB: sahaayak
     ports:
       - "5432:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U sahaayak"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
 
   redis:
     image: redis:7
     ports:
       - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  api:
+    build:
+      context: .
+      dockerfile: infra/python/Dockerfile
+    env_file: .env
+    environment:
+      DATABASE_URL: postgresql+psycopg://sahaayak:sahaayak@postgres:5432/sahaayak
+      REDIS_URL: redis://redis:6379/0
+    ports:
+      - "8000:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    volumes:
+      - ./packages:/app/packages
+      - ./services:/app/services
+      - ./scripts:/app/scripts
+    command: >
+      uvicorn sahaayak_api.main:app --host 0.0.0.0 --port 8000 --reload
 
 volumes:
   pgdata:
