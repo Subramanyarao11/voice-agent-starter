@@ -65,6 +65,9 @@ known-first-party = [
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+# So tests can import the pipeline scripts, which are runnable files at the
+# repo root rather than an installed package.
+pythonpath = ["."]
 asyncio_mode = "auto"
 filterwarnings = ["ignore::DeprecationWarning"]
 

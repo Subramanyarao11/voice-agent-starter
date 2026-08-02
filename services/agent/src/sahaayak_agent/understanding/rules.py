@@ -51,6 +51,7 @@ _MULTIPLIERS: list[tuple[str, int]] = [
 ]
 
 _NUMERIC = re.compile(r"(\d[\d,]*\.?\d*)")
+_TOKEN_SEPARATOR = re.compile(r"[\s,.;:!?।₹]+")
 
 # Devanagari and Kannada digits, which Whisper occasionally emits verbatim.
 _DIGIT_TRANSLATION = str.maketrans("०१२३४५६७८९೦೧೨೩೪೫೬೭೮೯", "01234567890123456789")
@@ -70,8 +71,10 @@ def extract_number(text: str) -> float | None:
         except ValueError:
             return None
 
-    tokens = re.findall(r"[^\W\d_]+", normalised.lower(), flags=re.UNICODE)
-    for token in tokens:
+    # Split on separators rather than matching word characters: Devanagari and
+    # Kannada vowel signs are combining marks, so a \w-based token pattern
+    # shreds "दो" into its constituent code points and never matches.
+    for token in _TOKEN_SEPARATOR.split(normalised.lower()):
         if token in _WORD_NUMBERS:
             return float(_WORD_NUMBERS[token])
     return None

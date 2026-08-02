@@ -11,6 +11,7 @@ from pydantic import BaseModel
 from sqlmodel import Session, func, select
 
 from sahaayak_common import Benefit, Language, State, get_session
+from sahaayak_contracts import Domain
 
 router = APIRouter(prefix="/api", tags=["catalog"])
 
@@ -55,8 +56,10 @@ def list_states(db: Session = Depends(get_session)) -> list[StateOut]:
 
 @router.get("/coverage", response_model=CoverageOut)
 def coverage(db: Session = Depends(get_session)) -> CoverageOut:
+    # `str()` on a str-Enum yields "Domain.SCHOLARSHIP", not the wire value the
+    # client expects, so the value is taken explicitly.
     by_domain = {
-        str(domain): count
+        (domain.value if isinstance(domain, Domain) else str(domain)): count
         for domain, count in db.exec(
             select(Benefit.domain, func.count()).group_by(Benefit.domain)
         ).all()
