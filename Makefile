@@ -1,5 +1,5 @@
 .DEFAULT_GOAL := help
-.PHONY: help setup up down infra api web lint fmt test check types seed \
+.PHONY: help setup up down infra api web lint fmt test check types seed validate-data migrate \
         pipeline extract prefilter structure spotcheck logs-api ps clean
 
 help: ## Show every available target
@@ -47,6 +47,12 @@ types: ## Regenerate TypeScript API types from the running API's OpenAPI schema
 
 seed: ## Load languages, states, and structured benefits into the database
 	uv run python scripts/04_seed_db.py
+
+validate-data: ## Reject active benefit rows without source/review evidence
+	uv run python scripts/validate_benefits.py
+
+migrate: ## Apply all Alembic migrations to the configured database
+	uv run alembic upgrade head
 
 pipeline: extract prefilter structure ## Run the full myScheme ingestion pipeline
 

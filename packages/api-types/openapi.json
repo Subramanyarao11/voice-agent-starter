@@ -98,6 +98,49 @@
         }
       }
     },
+    "/api/benefits/{benefit_id}": {
+      "get": {
+        "tags": [
+          "catalog"
+        ],
+        "summary": "Benefit Detail",
+        "description": "Return one active benefit and its source/review metadata.",
+        "operationId": "benefit_detail_api_benefits__benefit_id__get",
+        "parameters": [
+          {
+            "name": "benefit_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Benefit Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BenefitDetailOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/turns": {
       "post": {
         "tags": [
@@ -416,6 +459,153 @@
   },
   "components": {
     "schemas": {
+      "BenefitDetailOut": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "domain": {
+            "$ref": "#/components/schemas/Domain"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "state_code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "State Code"
+          },
+          "category": {
+            "type": "string",
+            "title": "Category"
+          },
+          "description": {
+            "type": "string",
+            "title": "Description"
+          },
+          "benefits_text": {
+            "type": "string",
+            "title": "Benefits Text"
+          },
+          "documents_required": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Documents Required"
+          },
+          "application_process": {
+            "type": "string",
+            "title": "Application Process"
+          },
+          "eligibility_initial": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Eligibility Initial"
+          },
+          "verification_status": {
+            "$ref": "#/components/schemas/VerificationStatus"
+          },
+          "source_title": {
+            "type": "string",
+            "title": "Source Title"
+          },
+          "source_document_url": {
+            "type": "string",
+            "title": "Source Document Url"
+          },
+          "source_excerpt": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Excerpt"
+          },
+          "verified_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Verified At"
+          },
+          "last_verified_date": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Verified Date"
+          },
+          "valid_from": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Valid From"
+          },
+          "valid_until": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Valid Until"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "domain",
+          "name",
+          "state_code",
+          "category",
+          "description",
+          "benefits_text",
+          "documents_required",
+          "application_process",
+          "eligibility_initial",
+          "verification_status",
+          "source_title",
+          "source_document_url",
+          "source_excerpt",
+          "verified_at",
+          "last_verified_date",
+          "valid_from",
+          "valid_until"
+        ],
+        "title": "BenefitDetailOut",
+        "description": "Public benefit details with enough provenance to make trust inspectable."
+      },
       "Body_take_voice_turn_api_voice_turns_post": {
         "properties": {
           "audio": {
@@ -481,13 +671,35 @@
           "total": {
             "type": "integer",
             "title": "Total"
+          },
+          "verified_total": {
+            "type": "integer",
+            "title": "Verified Total"
+          },
+          "illustrative_total": {
+            "type": "integer",
+            "title": "Illustrative Total"
+          },
+          "last_data_update": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Data Update"
           }
         },
         "type": "object",
         "required": [
           "by_domain",
           "by_state",
-          "total"
+          "total",
+          "verified_total",
+          "illustrative_total"
         ],
         "title": "CoverageOut",
         "description": "Benefit counts per state and domain.\n\nUseful in the demo for showing honestly how much data is loaded, rather\nthan implying nationwide coverage the pipeline has not produced yet."
@@ -651,6 +863,44 @@
             },
             "type": "array",
             "title": "Reasons"
+          },
+          "verification_status": {
+            "$ref": "#/components/schemas/VerificationStatus",
+            "default": "illustrative"
+          },
+          "source_title": {
+            "type": "string",
+            "title": "Source Title",
+            "default": ""
+          },
+          "source_document_url": {
+            "type": "string",
+            "title": "Source Document Url",
+            "default": ""
+          },
+          "verified_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Verified At"
+          },
+          "last_verified_date": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Verified Date"
           }
         },
         "type": "object",
@@ -1040,6 +1290,18 @@
           "type"
         ],
         "title": "ValidationError"
+      },
+      "VerificationStatus": {
+        "type": "string",
+        "enum": [
+          "illustrative",
+          "machine_structured",
+          "needs_review",
+          "human_verified",
+          "stale"
+        ],
+        "title": "VerificationStatus",
+        "description": "How much human review a benefit row has received.\n\nThese values are deliberately data rather than Python branches: a new\nsource row can move through the review lifecycle without changing matcher\nlogic. Only ``human_verified`` rows are production-ready."
       }
     }
   }

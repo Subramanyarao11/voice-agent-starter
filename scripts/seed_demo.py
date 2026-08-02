@@ -20,7 +20,7 @@ from sqlmodel import select
 
 from sahaayak_agent.bootstrap import ensure_reference_data
 from sahaayak_common import Benefit, init_db, session_scope
-from sahaayak_contracts import Domain
+from sahaayak_contracts import Domain, VerificationStatus
 
 DEMO_BENEFITS: list[dict] = [
     {
@@ -202,6 +202,9 @@ def main() -> None:
                     **entry,
                     eligibility_renewal=None,
                     last_verified_date=date.today(),
+                    verification_status=VerificationStatus.ILLUSTRATIVE,
+                    source_title="myScheme reference (illustrative demo)",
+                    source_document_url=entry.get("source_url", ""),
                     is_active=True,
                 )
             )

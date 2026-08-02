@@ -217,6 +217,11 @@ def to_response(session: UserSession, state: AgentState) -> TurnResponse:
                 verdict=m.verdict.value,
                 confidence=m.confidence,
                 reasons=[o.requirement for o in m.passed] or [o.requirement for o in m.failed],
+                verification_status=m.verification_status,
+                source_title=m.source_title,
+                source_document_url=m.source_document_url,
+                verified_at=m.verified_at,
+                last_verified_date=m.last_verified_date,
             )
             for m in state.matches[:10]
         ],

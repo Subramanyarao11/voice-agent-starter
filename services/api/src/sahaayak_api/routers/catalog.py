@@ -6,12 +6,15 @@ language stays a data change end to end.
 
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends
+from datetime import date, datetime
+from typing import Any, cast
+
+from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 from sqlmodel import Session, func, select
 
-from sahaayak_common import Benefit, Language, State, get_session
-from sahaayak_contracts import Domain
+from sahaayak_common import Benefit, DataImportRun, Language, State, get_session
+from sahaayak_contracts import Domain, VerificationStatus
 
 router = APIRouter(prefix="/api", tags=["catalog"])
 
@@ -40,6 +43,32 @@ class CoverageOut(BaseModel):
     by_domain: dict[str, int]
     by_state: dict[str, int]
     total: int
+    verified_total: int
+    illustrative_total: int
+    last_data_update: date | None = None
+
+
+class BenefitDetailOut(BaseModel):
+    """Public benefit details with enough provenance to make trust inspectable."""
+
+    id: str
+    domain: Domain
+    name: str
+    state_code: str | None
+    category: str
+    description: str
+    benefits_text: str
+    documents_required: list[str]
+    application_process: str
+    eligibility_initial: dict
+    verification_status: VerificationStatus
+    source_title: str
+    source_document_url: str
+    source_excerpt: str | None
+    verified_at: datetime | None
+    last_verified_date: date | None
+    valid_from: date | None
+    valid_until: date | None
 
 
 @router.get("/languages", response_model=list[LanguageOut])
@@ -58,18 +87,84 @@ def list_states(db: Session = Depends(get_session)) -> list[StateOut]:
 def coverage(db: Session = Depends(get_session)) -> CoverageOut:
     # `str()` on a str-Enum yields "Domain.SCHOLARSHIP", not the wire value the
     # client expects, so the value is taken explicitly.
+    active_filter = cast(Any, Benefit.is_active).is_(True)
     by_domain = {
         (domain.value if isinstance(domain, Domain) else str(domain)): count
         for domain, count in db.exec(
-            select(Benefit.domain, func.count()).group_by(Benefit.domain)
+            select(Benefit.domain, func.count())
+            .where(active_filter)
+            .group_by(Benefit.domain)
         ).all()
     }
     by_state = {
         (state or "central"): count
         for state, count in db.exec(
-            select(Benefit.state_code, func.count()).group_by(Benefit.state_code)
+            select(Benefit.state_code, func.count())
+            .where(active_filter)
+            .group_by(Benefit.state_code)
         ).all()
     }
+    verified_total = db.exec(
+        select(func.count())
+        .select_from(Benefit)
+        .where(active_filter, Benefit.verification_status == VerificationStatus.HUMAN_VERIFIED)
+    ).one()
+    illustrative_total = db.exec(
+        select(func.count())
+        .select_from(Benefit)
+        .where(active_filter, Benefit.verification_status == VerificationStatus.ILLUSTRATIVE)
+    ).one()
+
+    latest_benefit_date = db.exec(
+        select(func.max(Benefit.last_verified_date)).where(active_filter)
+    ).one()
+    latest_import = db.exec(select(func.max(DataImportRun.completed_at))).one()
+    latest_import_date = latest_import.date() if latest_import else None
+    dates = [value for value in (latest_benefit_date, latest_import_date) if value]
+
     return CoverageOut(
-        by_domain=by_domain, by_state=by_state, total=sum(by_domain.values())
+        by_domain=by_domain,
+        by_state=by_state,
+        total=sum(by_domain.values()),
+        verified_total=int(verified_total or 0),
+        illustrative_total=int(illustrative_total or 0),
+        last_data_update=max(dates) if dates else None,
+    )
+
+
+@router.get("/benefits/{benefit_id}", response_model=BenefitDetailOut)
+def benefit_detail(benefit_id: str, db: Session = Depends(get_session)) -> BenefitDetailOut:
+    """Return one active benefit and its source/review metadata."""
+    benefit = db.exec(
+        select(Benefit).where(
+            Benefit.id == benefit_id,
+            cast(Any, Benefit.is_active).is_(True),
+        )
+    ).first()
+    if benefit is None:
+        raise HTTPException(status_code=404, detail="Benefit not found")
+
+    return BenefitDetailOut(
+        id=benefit.id,
+        domain=benefit.domain,
+        name=benefit.name,
+        state_code=benefit.state_code,
+        category=benefit.category,
+        description=benefit.description,
+        benefits_text=benefit.benefits_text,
+        documents_required=list(benefit.documents_required or []),
+        application_process=benefit.application_process,
+        eligibility_initial=dict(benefit.eligibility_initial or {}),
+        verification_status=benefit.verification_status,
+        source_title=benefit.source_title,
+        source_document_url=benefit.source_document_url or benefit.source_url,
+        source_excerpt=benefit.source_excerpt,
+        verified_at=benefit.verified_at,
+        last_verified_date=(
+            benefit.last_verified_date
+            if benefit.verification_status is VerificationStatus.HUMAN_VERIFIED
+            else None
+        ),
+        valid_from=benefit.valid_from,
+        valid_until=benefit.valid_until,
     )

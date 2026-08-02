@@ -25,6 +25,9 @@ export const coverageSchema = z.object({
   by_domain: z.record(z.string(), z.number()),
   by_state: z.record(z.string(), z.number()),
   total: z.number(),
+  verified_total: z.number(),
+  illustrative_total: z.number(),
+  last_data_update: z.string().nullable().optional(),
 });
 
 export const healthSchema = z.object({
@@ -46,6 +49,44 @@ const matchSchema = z.object({
   verdict: z.string(),
   confidence: z.number(),
   reasons: z.array(z.string()).default([]),
+  verification_status: z.enum([
+    "illustrative",
+    "machine_structured",
+    "needs_review",
+    "human_verified",
+    "stale",
+  ]),
+  source_title: z.string().default(""),
+  source_document_url: z.string().default(""),
+  verified_at: z.string().nullable().optional(),
+  last_verified_date: z.string().nullable().optional(),
+});
+
+export const benefitDetailSchema = z.object({
+  id: z.string(),
+  domain: z.enum(["scheme", "scholarship", "job"]),
+  name: z.string(),
+  state_code: z.string().nullable(),
+  category: z.string(),
+  description: z.string(),
+  benefits_text: z.string(),
+  documents_required: z.array(z.string()),
+  application_process: z.string(),
+  eligibility_initial: z.record(z.string(), z.unknown()),
+  verification_status: z.enum([
+    "illustrative",
+    "machine_structured",
+    "needs_review",
+    "human_verified",
+    "stale",
+  ]),
+  source_title: z.string(),
+  source_document_url: z.string(),
+  source_excerpt: z.string().nullable(),
+  verified_at: z.string().nullable(),
+  last_verified_date: z.string().nullable(),
+  valid_from: z.string().nullable(),
+  valid_until: z.string().nullable(),
 });
 
 export const turnResponseSchema = z.object({
@@ -78,6 +119,7 @@ export type Coverage = z.infer<typeof coverageSchema>;
 export type Health = z.infer<typeof healthSchema>;
 export type TurnResponse = z.infer<typeof turnResponseSchema>;
 export type MatchSummary = z.infer<typeof matchSchema>;
+export type BenefitDetail = z.infer<typeof benefitDetailSchema>;
 
 export type Catalog = {
   languages: Language[];
@@ -169,6 +211,10 @@ export function sendTextTurn(payload: TurnRequest): Promise<TurnResponse> {
     method: "POST",
     body: JSON.stringify(payload),
   });
+}
+
+export function getBenefit(benefitId: string): Promise<BenefitDetail> {
+  return request(`/api/benefits/${encodeURIComponent(benefitId)}`, benefitDetailSchema);
 }
 
 function extensionForMimeType(mimeType: string): string {

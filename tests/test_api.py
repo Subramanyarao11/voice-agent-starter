@@ -33,6 +33,19 @@ def test_coverage_counts_loaded_benefits(client):
     body = client.get("/api/coverage").json()
     assert body["total"] > 0
     assert "scholarship" in body["by_domain"]
+    assert body["verified_total"] == 0
+    assert body["illustrative_total"] == body["total"]
+    assert body["last_data_update"]
+
+
+def test_benefit_detail_exposes_provenance(client):
+    response = client.get("/api/benefits/demo-csss-cus")
+    assert response.status_code == 200
+    body = response.json()
+    assert body["verification_status"] == "illustrative"
+    assert body["source_document_url"].startswith("https://www.myscheme.gov.in/")
+    assert body["verified_at"] is None
+    assert client.get("/api/benefits/does-not-exist").status_code == 404
 
 
 def test_a_text_turn_returns_a_question(client):
@@ -50,6 +63,28 @@ def test_a_text_turn_returns_a_question(client):
     assert body["pending_slot"] == "age"
     assert body["response_text"]
     assert response.headers["X-Request-ID"]
+
+
+def test_match_response_carries_verification_status_and_source(client):
+    payload = {
+        "caller_id": "+919000000010",
+        "language_code": "en",
+        "state_code": "KA",
+    }
+    client.post(
+        "/api/turns",
+        json={**payload, "text": "I need a scholarship"},
+    )
+    client.post("/api/turns", json={**payload, "text": "22"})
+    response = client.post(
+        "/api/turns",
+        json={**payload, "text": "2 lakh and regular degree college"},
+    )
+    assert response.status_code == 200
+    matches = response.json()["matches"]
+    assert matches
+    assert {match["verification_status"] for match in matches} == {"illustrative"}
+    assert all(match["source_document_url"] for match in matches)
 
 
 def test_an_inbound_request_id_is_echoed_back(client):

@@ -36,6 +36,13 @@ function MatchCard({ match }: { match: MatchSummary }) {
   const isEligible = verdict.includes("eligible") && !verdict.includes("not");
   const isNotEligible = verdict.includes("not") || verdict.includes("ineligible");
   const Icon = isEligible ? CheckCircle2 : isNotEligible ? CircleX : CircleAlert;
+  const verificationLabel =
+    match.verification_status === "human_verified"
+      ? "Verified"
+      : match.verification_status === "illustrative"
+        ? "Illustrative demo"
+        : match.verification_status.replaceAll("_", " ");
+  const sourceUrl = match.source_document_url.trim();
 
   return (
     <Card className="border-paper/10 bg-paper/[0.04] text-paper transition-transform hover:-translate-y-1 hover:border-acid/30">
@@ -49,6 +56,25 @@ function MatchCard({ match }: { match: MatchSummary }) {
         </div>
         <h3 className="mt-5 text-lg font-bold leading-snug text-paper">{match.benefit_name}</h3>
         <p className="mt-3 min-h-12 text-sm leading-6 text-paper/60">{match.reasons?.[0] ?? "No additional reason was returned."}</p>
+        <div className="mt-4 flex flex-wrap items-center gap-2 text-xs text-paper/45">
+          <Badge variant={match.verification_status === "human_verified" ? "success" : "warning"}>
+            {verificationLabel}
+          </Badge>
+          {match.source_title && <span>{match.source_title}</span>}
+          {match.verification_status === "human_verified" && match.last_verified_date && (
+            <span>verified {match.last_verified_date}</span>
+          )}
+        </div>
+        {sourceUrl && (
+          <a
+            className="mt-4 inline-flex text-xs font-semibold text-acid underline-offset-4 hover:underline"
+            href={sourceUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            Open source
+          </a>
+        )}
         <p className="mt-5 font-mono text-[0.65rem] uppercase tracking-[0.14em] text-paper/35">
           confidence · {formatConfidence(match.confidence)}
         </p>

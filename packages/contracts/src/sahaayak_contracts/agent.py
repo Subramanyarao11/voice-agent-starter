@@ -5,12 +5,13 @@ match results rather than accumulated prose, which is what lets the same graph
 serve any language.
 """
 
+from datetime import date, datetime
 from enum import Enum
 from typing import Literal
 
 from pydantic import BaseModel, Field
 
-from sahaayak_contracts.domain import Domain, Intent
+from sahaayak_contracts.domain import Domain, Intent, VerificationStatus
 from sahaayak_contracts.eligibility import EligibilityMatchResult
 from sahaayak_contracts.slots import SlotName
 
@@ -80,6 +81,11 @@ class MatchSummary(BaseModel):
     verdict: str
     confidence: float
     reasons: list[str] = Field(default_factory=list)
+    verification_status: VerificationStatus = VerificationStatus.ILLUSTRATIVE
+    source_title: str = ""
+    source_document_url: str = ""
+    verified_at: datetime | None = None
+    last_verified_date: date | None = None
 
 
 class TurnResponse(BaseModel):

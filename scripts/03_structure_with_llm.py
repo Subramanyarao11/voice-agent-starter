@@ -23,6 +23,7 @@ from __future__ import annotations
 
 import argparse
 import asyncio
+import hashlib
 import json
 from datetime import date
 
@@ -167,6 +168,7 @@ async def run(state_code: str, limit: int | None, resume: bool) -> None:
 
     client = AsyncOpenAI(api_key=settings.openai_api_key)
     semaphore = asyncio.Semaphore(CONCURRENCY)
+    source_by_id = {record["id"]: record for record in pending}
     tasks = [structure_one(client, record, semaphore) for record in pending]
 
     OUTPUT_PATH.parent.mkdir(parents=True, exist_ok=True)
@@ -180,6 +182,7 @@ async def run(state_code: str, limit: int | None, resume: bool) -> None:
                 print(f"  [FAIL] {record_id}: {error}")
                 continue
 
+            source_record = source_by_id.get(record_id, {})
             row = {
                 "id": record_id or slugify(structured.name),
                 **structured.model_dump(mode="json"),
@@ -188,6 +191,15 @@ async def run(state_code: str, limit: int | None, resume: bool) -> None:
                 # document left ambiguous.
                 "state_code": structured.state_code or state_code,
                 "source_url": f"https://www.myscheme.gov.in/schemes/{record_id}",
+                "source_title": source_record.get("filename") or record_id,
+                "source_document_url": f"https://www.myscheme.gov.in/schemes/{record_id}",
+                # Review aid only. A human reviewer can replace this with a
+                # tighter excerpt before approving the row.
+                "source_excerpt": source_record.get("raw_text", "")[:4000],
+                "source_content_hash": hashlib.sha256(
+                    source_record.get("raw_text", "").encode("utf-8")
+                ).hexdigest(),
+                "verification_status": "machine_structured",
                 "last_verified_date": date.today().isoformat(),
             }
             out.write(json.dumps(row, ensure_ascii=False) + "\n")

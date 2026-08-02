@@ -73,6 +73,10 @@ class Settings(BaseSettings):
         return self.env == "development"
 
     @property
+    def is_test(self) -> bool:
+        return self.env == "test"
+
+    @property
     def llm_enabled(self) -> bool:
         """Without a key the agent falls back to rule-based understanding."""
         return bool(self.openai_api_key)

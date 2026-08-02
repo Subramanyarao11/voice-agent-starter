@@ -14,6 +14,8 @@ ENV UV_COMPILE_BYTECODE=1 \
 # Dependency layer first: only the manifests are copied, so editing source
 # code does not invalidate the (slow) dependency resolution layer.
 COPY pyproject.toml uv.lock ./
+COPY alembic.ini ./
+COPY migrations/ migrations/
 COPY packages/contracts/pyproject.toml packages/contracts/
 COPY packages/common/pyproject.toml packages/common/
 COPY services/agent/pyproject.toml services/agent/

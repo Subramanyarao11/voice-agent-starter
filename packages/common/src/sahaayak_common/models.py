@@ -13,7 +13,7 @@ from sqlalchemy import Enum as SAEnum
 from sqlalchemy.ext.mutable import MutableDict, MutableList
 from sqlmodel import Field, SQLModel
 
-from sahaayak_contracts import Domain
+from sahaayak_contracts import Domain, VerificationStatus
 
 
 def _utcnow() -> datetime:
@@ -103,6 +103,22 @@ class Benefit(SQLModel, table=True):
     source_url: str = ""
     last_verified_date: date = Field(default_factory=lambda: _utcnow().date())
 
+    # `source_url` and `last_verified_date` are retained for compatibility with
+    # the first ingestion pass. New data should use the explicit provenance
+    # fields below; a date alone never makes a row verified.
+    verification_status: VerificationStatus = Field(
+        default=VerificationStatus.ILLUSTRATIVE,
+        sa_column=enum_column(VerificationStatus, nullable=False, index=True),
+    )
+    source_title: str = ""
+    source_document_url: str = ""
+    source_excerpt: str | None = None
+    source_content_hash: str | None = Field(default=None, index=True)
+    verified_by: str | None = None
+    verified_at: datetime | None = None
+    valid_from: date | None = None
+    valid_until: date | None = None
+
     # Per-language voice-ready summaries, e.g. {"kn": "...", "hi": "..."}.
     # Pre-translated at ingestion so a call never waits on a translation.
     localized_summary: dict = Field(default_factory=dict, sa_column=json_dict())
@@ -175,3 +191,27 @@ class EscalationTicket(SQLModel, table=True):
     status: str = Field(default="open", index=True)  # open | claimed | resolved
     created_at: datetime = Field(default_factory=_utcnow)
     resolved_at: datetime | None = None
+
+
+class DataImportRun(SQLModel, table=True):
+    """Immutable-ish manifest for one structured data import attempt.
+
+    The row is a compact audit record, not a replacement for the source files
+    or human review notes. It lets operations answer which model, prompt, and
+    input batch produced the currently loaded rows.
+    """
+
+    __tablename__ = "data_import_run"
+
+    id: str = Field(primary_key=True)
+    source_name: str = Field(index=True)
+    state_code: str | None = Field(default=None, foreign_key="state.code", index=True)
+    started_at: datetime = Field(default_factory=_utcnow)
+    completed_at: datetime | None = None
+    model_name: str = ""
+    prompt_version: str = ""
+    input_count: int = 0
+    accepted_count: int = 0
+    failed_count: int = 0
+    review_sample_size: int = 0
+    manifest_json: dict = Field(default_factory=dict, sa_column=json_dict())

@@ -5,7 +5,7 @@ from __future__ import annotations
 from sahaayak_agent import matcher, repository
 from sahaayak_agent.nodes.deps import GraphDeps
 from sahaayak_common import get_logger, settings
-from sahaayak_contracts import AgentState, MatchVerdict
+from sahaayak_contracts import AgentState, MatchVerdict, VerificationStatus
 
 log = get_logger(__name__)
 
@@ -34,6 +34,15 @@ async def match(state: AgentState, deps: GraphDeps) -> dict:
                 benefit_name=benefit.name,
                 domain=benefit.domain,
                 benefit_state=benefit.state_code,
+                verification_status=benefit.verification_status,
+                source_title=benefit.source_title,
+                source_document_url=benefit.source_document_url or benefit.source_url,
+                verified_at=benefit.verified_at,
+                last_verified_date=(
+                    benefit.last_verified_date
+                    if benefit.verification_status is VerificationStatus.HUMAN_VERIFIED
+                    else None
+                ),
             )
             for benefit in candidates
         ]

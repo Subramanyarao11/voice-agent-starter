@@ -13,6 +13,8 @@ actually qualifies for a scholarship is the worst failure this system can have.
 
 from __future__ import annotations
 
+from datetime import date, datetime
+
 from sahaayak_contracts import (
     EDUCATION_RANK,
     SLOT_REGISTRY,
@@ -27,6 +29,7 @@ from sahaayak_contracts import (
     SlotName,
     SlotValue,
     SocialCategory,
+    VerificationStatus,
 )
 
 Slots = dict[SlotName, SlotValue]
@@ -284,6 +287,11 @@ def evaluate(
     benefit_name: str,
     domain: Domain,
     benefit_state: str | None = None,
+    verification_status: VerificationStatus = VerificationStatus.ILLUSTRATIVE,
+    source_title: str = "",
+    source_document_url: str = "",
+    verified_at: datetime | None = None,
+    last_verified_date: date | None = None,
 ) -> EligibilityMatchResult:
     """Check one benefit's criteria against one caller's collected slots."""
     checks = [
@@ -327,6 +335,11 @@ def evaluate(
         outcomes=outcomes,
         confidence=confidence,
         caveats=list(criteria.exclusions),
+        verification_status=verification_status,
+        source_title=source_title,
+        source_document_url=source_document_url,
+        verified_at=verified_at,
+        last_verified_date=last_verified_date,
     )
 
 

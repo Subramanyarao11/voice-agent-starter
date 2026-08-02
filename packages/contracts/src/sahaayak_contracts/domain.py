@@ -14,6 +14,21 @@ class Domain(str, Enum):
     JOB = "job"
 
 
+class VerificationStatus(str, Enum):
+    """How much human review a benefit row has received.
+
+    These values are deliberately data rather than Python branches: a new
+    source row can move through the review lifecycle without changing matcher
+    logic. Only ``human_verified`` rows are production-ready.
+    """
+
+    ILLUSTRATIVE = "illustrative"
+    MACHINE_STRUCTURED = "machine_structured"
+    NEEDS_REVIEW = "needs_review"
+    HUMAN_VERIFIED = "human_verified"
+    STALE = "stale"
+
+
 class Intent(str, Enum):
     """What the caller wants on this turn.
 

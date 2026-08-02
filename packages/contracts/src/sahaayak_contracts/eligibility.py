@@ -6,11 +6,18 @@ eligibility is parsed once into typed values at ingestion time and is never
 re-interpreted from prose at conversation time.
 """
 
+from datetime import date, datetime
 from enum import Enum
 
 from pydantic import BaseModel, Field
 
-from sahaayak_contracts.domain import Domain, EducationLevel, Gender, SocialCategory
+from sahaayak_contracts.domain import (
+    Domain,
+    EducationLevel,
+    Gender,
+    SocialCategory,
+    VerificationStatus,
+)
 from sahaayak_contracts.slots import SlotName
 
 
@@ -92,6 +99,14 @@ class EligibilityMatchResult(BaseModel):
     # Caveats copied from `EligibilityCriteria.exclusions` — conditions a
     # machine cannot verify but the caller must know about.
     caveats: list[str] = Field(default_factory=list)
+
+    # Provenance travels with the deterministic decision so every API match can
+    # show whether it came from reviewed data or an illustrative row.
+    verification_status: VerificationStatus = VerificationStatus.ILLUSTRATIVE
+    source_title: str = ""
+    source_document_url: str = ""
+    verified_at: datetime | None = None
+    last_verified_date: date | None = None
 
     @property
     def passed(self) -> list[CriterionOutcome]:

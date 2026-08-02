@@ -22,6 +22,7 @@ from sahaayak_contracts.domain import (
     Gender,
     Intent,
     SocialCategory,
+    VerificationStatus,
 )
 from sahaayak_contracts.eligibility import (
     CriterionOutcome,
@@ -69,6 +70,7 @@ __all__ = [
     "SlotSpec",
     "SlotValue",
     "SocialCategory",
+    "VerificationStatus",
     "SynthesisResult",
     "TranscriptionResult",
     "TurnRequest",

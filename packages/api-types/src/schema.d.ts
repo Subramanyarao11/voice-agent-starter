@@ -72,6 +72,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/benefits/{benefit_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Benefit Detail
+         * @description Return one active benefit and its source/review metadata.
+         */
+        get: operations["benefit_detail_api_benefits__benefit_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/turns": {
         parameters: {
             query?: never;
@@ -191,6 +211,48 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        /**
+         * BenefitDetailOut
+         * @description Public benefit details with enough provenance to make trust inspectable.
+         */
+        BenefitDetailOut: {
+            /** Id */
+            id: string;
+            domain: components["schemas"]["Domain"];
+            /** Name */
+            name: string;
+            /** State Code */
+            state_code: string | null;
+            /** Category */
+            category: string;
+            /** Description */
+            description: string;
+            /** Benefits Text */
+            benefits_text: string;
+            /** Documents Required */
+            documents_required: string[];
+            /** Application Process */
+            application_process: string;
+            /** Eligibility Initial */
+            eligibility_initial: {
+                [key: string]: unknown;
+            };
+            verification_status: components["schemas"]["VerificationStatus"];
+            /** Source Title */
+            source_title: string;
+            /** Source Document Url */
+            source_document_url: string;
+            /** Source Excerpt */
+            source_excerpt: string | null;
+            /** Verified At */
+            verified_at: string | null;
+            /** Last Verified Date */
+            last_verified_date: string | null;
+            /** Valid From */
+            valid_from: string | null;
+            /** Valid Until */
+            valid_until: string | null;
+        };
         /** Body_take_voice_turn_api_voice_turns_post */
         Body_take_voice_turn_api_voice_turns_post: {
             /** Audio */
@@ -225,6 +287,12 @@ export interface components {
             };
             /** Total */
             total: number;
+            /** Verified Total */
+            verified_total: number;
+            /** Illustrative Total */
+            illustrative_total: number;
+            /** Last Data Update */
+            last_data_update?: string | null;
         };
         /**
          * Domain
@@ -298,6 +366,22 @@ export interface components {
             confidence: number;
             /** Reasons */
             reasons?: string[];
+            /** @default illustrative */
+            verification_status: components["schemas"]["VerificationStatus"];
+            /**
+             * Source Title
+             * @default
+             */
+            source_title: string;
+            /**
+             * Source Document Url
+             * @default
+             */
+            source_document_url: string;
+            /** Verified At */
+            verified_at?: string | null;
+            /** Last Verified Date */
+            last_verified_date?: string | null;
         };
         /** SessionOut */
         SessionOut: {
@@ -440,6 +524,16 @@ export interface components {
             /** Context */
             ctx?: Record<string, never>;
         };
+        /**
+         * VerificationStatus
+         * @description How much human review a benefit row has received.
+         *
+         *     These values are deliberately data rather than Python branches: a new
+         *     source row can move through the review lifecycle without changing matcher
+         *     logic. Only ``human_verified`` rows are production-ready.
+         * @enum {string}
+         */
+        VerificationStatus: "illustrative" | "machine_structured" | "needs_review" | "human_verified" | "stale";
     };
     responses: never;
     parameters: never;
@@ -525,6 +619,37 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["CoverageOut"];
+                };
+            };
+        };
+    };
+    benefit_detail_api_benefits__benefit_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                benefit_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BenefitDetailOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };
