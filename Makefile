@@ -8,7 +8,7 @@ help: ## Show every available target
 
 setup: ## Install Python + JS dependencies and create .env from the template
 	uv sync --all-groups
-	@[ -d apps/web ] && npm install || true
+	@if [ -d apps/web ]; then npm install; fi
 	@[ -f .env ] || (cp .env.example .env && echo "Created .env — add OPENAI_API_KEY before running the agent.")
 
 up: ## Start the full Docker stack (Postgres, Redis, API)
@@ -40,7 +40,7 @@ test: ## Run the Python test suite
 check: ## Everything CI runs: lint, tests, and the JS build
 	uv run ruff check .
 	uv run pytest -q
-	@[ -d apps/web ] && npm run build || true
+	@if [ -d apps/web ]; then npm run build; fi
 
 types: ## Regenerate TypeScript API types from the running API's OpenAPI schema
 	uv run python scripts/generate_api_types.py

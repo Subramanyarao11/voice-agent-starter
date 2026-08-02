@@ -1,0 +1,18 @@
+{
+  "name": "sahaayak",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Local-language voice utility agent for government schemes, scholarships, and jobs",
+  "workspaces": [
+    "apps/*",
+    "packages/api-types"
+  ],
+  "scripts": {
+    "dev": "npm run dev --workspace @sahaayak/web",
+    "build": "npm run build --workspaces --if-present",
+    "typecheck": "npm run typecheck --workspaces --if-present"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

@@ -1,99 +1,143 @@
-# Local-Language Voice Utility Agent — Starter
+# Sahaayak
 
-BestPossible.AI Build Season 2026. See `spec-v2.md` for full product/architecture spec.
-This is a working skeleton — routes, models, and the agent graph are wired together,
-but several nodes are stubbed with `# TODO` markers where real logic goes.
+Sahaayak is a local-language utility agent for discovering government schemes,
+scholarships, and a small curated set of jobs, then checking eligibility from
+structured criteria instead of asking a model to guess from prose.
 
-## Setup
+The current demo path is a browser conversation in Kannada, Hindi, or English.
+It supports text immediately and microphone input when the optional OpenAI
+Whisper and Sarvam Bulbul keys are configured.
 
-```bash
-# 1. Start Postgres + Redis
-docker compose up -d
+## Current scope
 
-# 2. Install deps (using uv, or swap for pip/poetry)
-uv venv && source .venv/bin/activate
-uv pip install -e .
+The architecture is designed for five languages and five states. The working
+demo catalog is intentionally narrower:
 
-# 3. Configure environment
-cp .env.example .env
-# fill in OPENAI_API_KEY, SARVAM_API_KEY, LANGFUSE_* keys
+- Languages: Kannada (`kn`), Hindi (`hi`), and English (`en`)
+- Active states in the catalog: Karnataka (`KA`) and Delhi (`DL`)
+- Data: six hand-entered illustrative benefits for local development
+- Voice: OpenAI Whisper for speech-to-text, Sarvam Bulbul for speech output
 
-# 4. Run
-uvicorn app.main:app --reload
-```
+The demo rows are not a claim of verified nationwide eligibility coverage. Run
+the ingestion pipeline in `scripts/01_download_and_extract.py` through
+`scripts/06_localize.py` before presenting sourced scheme data to callers.
 
-Check `http://localhost:8000/health` — should return `{"status": "ok"}`.
-Check `http://localhost:8000/docs` for the auto-generated FastAPI/Swagger UI —
-useful for testing `/sessions/` and `/voice/turn/{session_id}` by hand before
-wiring up real telephony or a browser mic.
+## Repository map
 
-## What's stubbed vs. what's wired
+| Path | Role |
+| --- | --- |
+| `apps/web` | Vite + React browser text/microphone demo |
+| `packages/contracts` | Pydantic contracts for slots, eligibility, and API turns |
+| `packages/common` | Settings, SQLModel tables, database, cache, and logging |
+| `packages/api-types` | OpenAPI JSON and generated TypeScript types |
+| `services/agent` | Language-agnostic LangGraph flow, matcher, prompts, and voice providers |
+| `services/api` | FastAPI routes for catalog, turns, sessions, and escalation |
+| `scripts` | Data ingestion, demo seed, localization, and type generation helpers |
+| `tests` | Offline unit, dialogue, voice, and HTTP contract tests |
+| `docs/spec-v2.md` | Product and architecture specification |
+| `docs/continuation-spec.md` | Build status, acceptance criteria, and remaining work |
 
-**Wired (structure works, ready to build on):**
-- FastAPI app + routers + Postgres/Redis connections
-- `Language` / `State` / `Benefit` / `UserSession` tables (SQLModel)
-- LangGraph graph shape: `detect_intent → slot_filling → eligibility_match → compose_response`
-- Voice provider abstraction (OpenAI STT, Sarvam TTS) with a cache-first `get_or_synthesize`
+## Quick start: text demo
 
-**Stubbed — this is the actual build work (`# TODO` in each file):**
-- `app/agents/graph.py` — the 4 node functions are empty; this is your LangGraph/prompt-engineering work
-- `app/services/voice.py` — `SarvamBulbulTTS.synthesize` response parsing needs confirming against current Sarvam API docs
-- Data pipeline (not scaffolded here) — downloading myScheme, filtering to state #1, running the LLM eligibility-structuring pass into the `EligibilityCriteria` schema, loading into `Benefit` rows
-
-## Data pipeline (scripts/)
-
-The myScheme HF dataset (`shrijayan/gov_myscheme`) is actually **723 raw PDFs**,
-not clean CSV/JSON as its own README claims — confirmed by browsing the repo
-contents directly. There's also no structured "state" field; state applicability
-just appears inside each scheme's text. So the pipeline is 4 steps:
+Prerequisites: Python 3.12 with `uv`, Node 20+ for the web app, and optionally
+Docker for Postgres and Redis.
 
 ```bash
-# 1. Download all 723 PDFs and extract raw text
-python scripts/01_download_and_extract.py
-
-# 2. Cheap keyword pre-filter — narrow ~723 down to a candidate list BEFORE
-#    spending LLM calls (adjust --state / --category to your first scope)
-python scripts/02_prefilter.py --state Karnataka --category education welfare
-
-# 3. LLM structuring pass — the accuracy-critical step. Turns each candidate's
-#    free text into the EligibilityCriteria schema. Uses gpt-4o (not mini) —
-#    this is worth the extra cost given it's the whole product's trust surface.
-python scripts/03_structure_with_llm.py --state-code KA
-
-# 4. Load structured schemes into the Benefit table
-python scripts/04_seed_db.py
-
-# 5. Spot-check N random rows against their source text side-by-side
-python scripts/05_spotcheck.py --n 20
-python scripts/05_spotcheck.py --id csss-cus   # or check one specific scheme
+make setup
+uv run python scripts/seed_demo.py --reset
 ```
 
-**Before trusting the output:** spot-check ~20% of `data/structured/benefits.jsonl`
-against the original PDFs in `data/raw_pdfs_hf_cache/`. This is not optional —
-it's the difference between a demo that gives correct eligibility answers and
-one that quietly doesn't.
+In one terminal, start the API:
 
-## Day 1 checklist
-
-1. `docker compose up -d`, confirm app boots and `/health` responds
-2. Run the 4-step data pipeline above for state #1 + 1-2 categories (start narrow — 80-150 schemes, not all 723)
-3. Spot-check ~20% of the structured output against source PDFs
-4. Fill in `detect_intent` and `slot_filling` in `app/agents/graph.py` — get a **text-only** conversation working via `/docs` before touching voice at all
-5. Once text-only slot-filling + eligibility_match works end-to-end, move to Day 4 in the spec: wire real STT/TTS
-
-## Repo layout
-
+```bash
+make api
 ```
-app/
-├── main.py              # FastAPI app entrypoint
-├── core/
-│   ├── config.py        # env var settings
-│   └── db.py            # Postgres engine/session
-├── models/core.py        # SQLModel tables: Language, State, Benefit, UserSession
-├── schemas/eligibility.py # EligibilityCriteria, EligibilityMatchResult
-├── agents/graph.py        # LangGraph agent (STUBBED nodes)
-├── services/voice.py       # STT/TTS provider abstraction
-└── routers/
-    ├── session.py         # create/resume a UserSession
-    └── voice.py            # main turn endpoint: audio in -> agent -> response out
+
+In another terminal, start the browser demo:
+
+```bash
+make web
 ```
+
+Open [http://localhost:5173](http://localhost:5173). Choose a language and
+state, then try `I need a scholarship` or one of the suggested prompts. The
+browser keeps a stable caller ID in `localStorage`, so the API remembers slots
+between turns. The reset control deletes that caller's stored session.
+
+No model keys are needed for text mode: the rule-based understanding path is
+used when `OPENAI_API_KEY` is empty. `make setup` creates `.env` from
+`.env.example`; leave the optional keys empty for an offline text demo.
+
+## Voice mode
+
+Add these to `.env`, then restart the API:
+
+```dotenv
+OPENAI_API_KEY=...
+SARVAM_API_KEY=...
+```
+
+The web app records a browser microphone clip and sends it to
+`POST /api/voice/turns`. The API uses the same agent graph as text mode and
+returns text every time; when Sarvam is configured, it also returns playable
+audio. TTS responses are cached so repeated canned questions do not spend a
+new credit each time.
+
+The health endpoint and the browser status line expose which optional pieces
+are configured. Without `SARVAM_API_KEY`, text remains usable and the UI says
+that voice output is unavailable.
+
+## Useful commands
+
+```bash
+make test       # 101+ offline Python tests
+make lint       # Ruff; mypy is advisory in the current scaffold
+make check      # Python checks plus the web build when apps/web exists
+make types      # regenerate packages/api-types from FastAPI OpenAPI
+make seed       # load structured JSONL data into the database
+make infra      # start Postgres and Redis with Docker Compose
+make up         # start the complete Docker stack
+make down       # stop the Docker stack
+```
+
+For a clean API type refresh after changing a FastAPI model:
+
+```bash
+make types
+npm run typecheck --workspace @sahaayak/web
+```
+
+The API publishes Swagger at [http://localhost:8000/api/docs](http://localhost:8000/api/docs)
+and its schema at [http://localhost:8000/api/openapi.json](http://localhost:8000/api/openapi.json).
+
+## Data pipeline
+
+The ingestion workflow is deliberately separate from the call-time agent:
+
+```bash
+make extract       # download PDFs and extract raw text
+make prefilter     # narrow the corpus before spending LLM calls
+make structure     # turn source text into EligibilityCriteria JSON
+make spotcheck     # review structured rows against source text
+make seed          # load reviewed rows
+uv run python scripts/06_localize.py --languages kn hi
+```
+
+Pipeline outputs under `data/` are regenerable and ignored by Git. Do not
+commit `.env`, SQLite databases, downloaded PDFs, or unreviewed structured
+rows.
+
+## Design boundaries
+
+- Language, state, and domain are catalog/configuration values, not branches in
+  the graph.
+- Eligibility is evaluated by `services/agent/.../matcher.py` from structured
+  JSON and explained through criterion outcomes.
+- STT and TTS are separate provider interfaces; the graph only receives text
+  and emits localized text.
+- Missing facts produce another question; uncertainty or a caller request is
+  recorded as a durable escalation ticket rather than turned into a guess.
+
+Read the [initial product specification](docs/spec-v2.md) for the intended
+architecture and the [continuation spec](docs/continuation-spec.md) for the
+current build plan and acceptance checklist.

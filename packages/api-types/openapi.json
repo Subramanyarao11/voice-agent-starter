@@ -1,0 +1,1046 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Sahaayak",
+    "description": "Local-language voice agent for discovering government schemes, scholarships, and jobs, and checking eligibility for them.",
+    "version": "0.1.0"
+  },
+  "paths": {
+    "/health": {
+      "get": {
+        "tags": [
+          "health"
+        ],
+        "summary": "Health",
+        "operationId": "health_health_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HealthReport"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/languages": {
+      "get": {
+        "tags": [
+          "catalog"
+        ],
+        "summary": "List Languages",
+        "operationId": "list_languages_api_languages_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/LanguageOut"
+                  },
+                  "type": "array",
+                  "title": "Response List Languages Api Languages Get"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/states": {
+      "get": {
+        "tags": [
+          "catalog"
+        ],
+        "summary": "List States",
+        "operationId": "list_states_api_states_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/StateOut"
+                  },
+                  "type": "array",
+                  "title": "Response List States Api States Get"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/coverage": {
+      "get": {
+        "tags": [
+          "catalog"
+        ],
+        "summary": "Coverage",
+        "operationId": "coverage_api_coverage_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CoverageOut"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/turns": {
+      "post": {
+        "tags": [
+          "conversation"
+        ],
+        "summary": "Take Text Turn",
+        "description": "One text turn. The fastest way to exercise the dialogue during a build.",
+        "operationId": "take_text_turn_api_turns_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TurnRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TurnResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/voice/turns": {
+      "post": {
+        "tags": [
+          "conversation"
+        ],
+        "summary": "Take Voice Turn",
+        "description": "Audio in, audio out. Shared by the browser demo and any telephony webhook.",
+        "operationId": "take_voice_turn_api_voice_turns_post",
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/Body_take_voice_turn_api_voice_turns_post"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TurnResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/sessions/{caller_id}": {
+      "get": {
+        "tags": [
+          "sessions"
+        ],
+        "summary": "Get Session For Caller",
+        "operationId": "get_session_for_caller_api_sessions__caller_id__get",
+        "parameters": [
+          {
+            "name": "caller_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Caller Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SessionOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "sessions"
+        ],
+        "summary": "Reset Session",
+        "description": "Clear a caller's memory.\n\nNeeded for demos and re-testing, and it is also the honest answer to\n\"delete what you know about me\" for a service holding income and caste.",
+        "operationId": "reset_session_api_sessions__caller_id__delete",
+        "parameters": [
+          {
+            "name": "caller_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Caller Id"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/sessions/{caller_id}/transcript": {
+      "get": {
+        "tags": [
+          "sessions"
+        ],
+        "summary": "Get Transcript",
+        "operationId": "get_transcript_api_sessions__caller_id__transcript_get",
+        "parameters": [
+          {
+            "name": "caller_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Caller Id"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 100,
+              "title": "Limit"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/TurnOut"
+                  },
+                  "title": "Response Get Transcript Api Sessions  Caller Id  Transcript Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/escalations": {
+      "get": {
+        "tags": [
+          "escalations"
+        ],
+        "summary": "List Tickets",
+        "operationId": "list_tickets_api_escalations_get",
+        "parameters": [
+          {
+            "name": "status",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "open",
+              "title": "Status"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 50,
+              "title": "Limit"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/TicketOut"
+                  },
+                  "title": "Response List Tickets Api Escalations Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/escalations/{ticket_id}/resolve": {
+      "post": {
+        "tags": [
+          "escalations"
+        ],
+        "summary": "Resolve Ticket",
+        "operationId": "resolve_ticket_api_escalations__ticket_id__resolve_post",
+        "parameters": [
+          {
+            "name": "ticket_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Ticket Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TicketOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "Body_take_voice_turn_api_voice_turns_post": {
+        "properties": {
+          "audio": {
+            "type": "string",
+            "contentMediaType": "application/octet-stream",
+            "title": "Audio"
+          },
+          "caller_id": {
+            "type": "string",
+            "title": "Caller Id"
+          },
+          "language_code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Language Code"
+          },
+          "state_code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "State Code"
+          },
+          "speak": {
+            "type": "boolean",
+            "title": "Speak",
+            "default": true
+          }
+        },
+        "type": "object",
+        "required": [
+          "audio",
+          "caller_id"
+        ],
+        "title": "Body_take_voice_turn_api_voice_turns_post"
+      },
+      "CoverageOut": {
+        "properties": {
+          "by_domain": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "type": "object",
+            "title": "By Domain"
+          },
+          "by_state": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "type": "object",
+            "title": "By State"
+          },
+          "total": {
+            "type": "integer",
+            "title": "Total"
+          }
+        },
+        "type": "object",
+        "required": [
+          "by_domain",
+          "by_state",
+          "total"
+        ],
+        "title": "CoverageOut",
+        "description": "Benefit counts per state and domain.\n\nUseful in the demo for showing honestly how much data is loaded, rather\nthan implying nationwide coverage the pipeline has not produced yet."
+      },
+      "Domain": {
+        "type": "string",
+        "enum": [
+          "scheme",
+          "scholarship",
+          "job"
+        ],
+        "title": "Domain"
+      },
+      "EscalationReason": {
+        "type": "string",
+        "enum": [
+          "low_confidence",
+          "caller_requested",
+          "repeated_misunderstanding",
+          "no_matches"
+        ],
+        "title": "EscalationReason"
+      },
+      "HTTPValidationError": {
+        "properties": {
+          "detail": {
+            "items": {
+              "$ref": "#/components/schemas/ValidationError"
+            },
+            "type": "array",
+            "title": "Detail"
+          }
+        },
+        "type": "object",
+        "title": "HTTPValidationError"
+      },
+      "HealthReport": {
+        "properties": {
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "environment": {
+            "type": "string",
+            "title": "Environment"
+          },
+          "database": {
+            "type": "string",
+            "title": "Database"
+          },
+          "cache": {
+            "type": "string",
+            "title": "Cache"
+          },
+          "speech_to_text": {
+            "type": "boolean",
+            "title": "Speech To Text"
+          },
+          "text_to_speech": {
+            "type": "boolean",
+            "title": "Text To Speech"
+          },
+          "reasoning_model": {
+            "type": "boolean",
+            "title": "Reasoning Model"
+          },
+          "tracing": {
+            "type": "boolean",
+            "title": "Tracing"
+          },
+          "languages": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Languages"
+          }
+        },
+        "type": "object",
+        "required": [
+          "status",
+          "environment",
+          "database",
+          "cache",
+          "speech_to_text",
+          "text_to_speech",
+          "reasoning_model",
+          "tracing",
+          "languages"
+        ],
+        "title": "HealthReport"
+      },
+      "Intent": {
+        "type": "string",
+        "enum": [
+          "find_scheme",
+          "find_scholarship",
+          "find_job",
+          "ask_about_benefit",
+          "ask_how_to_apply",
+          "provide_info",
+          "request_human",
+          "greeting",
+          "unknown"
+        ],
+        "title": "Intent",
+        "description": "What the caller wants on this turn.\n\nSeparate from `Domain` because several intents are conversational rather\nthan a request for benefits."
+      },
+      "LanguageOut": {
+        "properties": {
+          "code": {
+            "type": "string",
+            "title": "Code"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "native_name": {
+            "type": "string",
+            "title": "Native Name"
+          },
+          "is_active": {
+            "type": "boolean",
+            "title": "Is Active"
+          }
+        },
+        "type": "object",
+        "required": [
+          "code",
+          "name",
+          "native_name",
+          "is_active"
+        ],
+        "title": "LanguageOut"
+      },
+      "MatchSummary": {
+        "properties": {
+          "benefit_id": {
+            "type": "string",
+            "title": "Benefit Id"
+          },
+          "benefit_name": {
+            "type": "string",
+            "title": "Benefit Name"
+          },
+          "domain": {
+            "$ref": "#/components/schemas/Domain"
+          },
+          "verdict": {
+            "type": "string",
+            "title": "Verdict"
+          },
+          "confidence": {
+            "type": "number",
+            "title": "Confidence"
+          },
+          "reasons": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Reasons"
+          }
+        },
+        "type": "object",
+        "required": [
+          "benefit_id",
+          "benefit_name",
+          "domain",
+          "verdict",
+          "confidence"
+        ],
+        "title": "MatchSummary",
+        "description": "A match flattened for the API, without the full criterion trace."
+      },
+      "SessionOut": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "phone_or_session_id": {
+            "type": "string",
+            "title": "Phone Or Session Id"
+          },
+          "state_code": {
+            "type": "string",
+            "title": "State Code"
+          },
+          "language_code": {
+            "type": "string",
+            "title": "Language Code"
+          },
+          "profile": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Profile"
+          },
+          "conversation_state": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Conversation State"
+          },
+          "matched_benefit_ids": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Matched Benefit Ids"
+          },
+          "turn_count": {
+            "type": "integer",
+            "title": "Turn Count"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "last_contact_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Last Contact At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "phone_or_session_id",
+          "state_code",
+          "language_code",
+          "turn_count",
+          "created_at",
+          "last_contact_at"
+        ],
+        "title": "SessionOut"
+      },
+      "SlotName": {
+        "type": "string",
+        "enum": [
+          "age",
+          "gender",
+          "social_category",
+          "annual_family_income",
+          "education_level",
+          "occupation",
+          "enrollment_mode",
+          "state_residency",
+          "disability",
+          "experience_years",
+          "location"
+        ],
+        "title": "SlotName"
+      },
+      "StateOut": {
+        "properties": {
+          "code": {
+            "type": "string",
+            "title": "Code"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "primary_language_code": {
+            "type": "string",
+            "title": "Primary Language Code"
+          },
+          "is_active": {
+            "type": "boolean",
+            "title": "Is Active"
+          }
+        },
+        "type": "object",
+        "required": [
+          "code",
+          "name",
+          "primary_language_code",
+          "is_active"
+        ],
+        "title": "StateOut"
+      },
+      "TicketOut": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "session_id": {
+            "type": "string",
+            "title": "Session Id"
+          },
+          "reason": {
+            "type": "string",
+            "title": "Reason"
+          },
+          "caller_context": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Caller Context"
+          },
+          "transcript_excerpt": {
+            "type": "string",
+            "title": "Transcript Excerpt"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "resolved_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Resolved At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "session_id",
+          "reason",
+          "transcript_excerpt",
+          "status",
+          "created_at"
+        ],
+        "title": "TicketOut"
+      },
+      "TurnOut": {
+        "properties": {
+          "turn_index": {
+            "type": "integer",
+            "title": "Turn Index"
+          },
+          "role": {
+            "type": "string",
+            "title": "Role"
+          },
+          "text": {
+            "type": "string",
+            "title": "Text"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "turn_index",
+          "role",
+          "text",
+          "created_at"
+        ],
+        "title": "TurnOut"
+      },
+      "TurnRequest": {
+        "properties": {
+          "caller_id": {
+            "type": "string",
+            "title": "Caller Id"
+          },
+          "text": {
+            "type": "string",
+            "title": "Text"
+          },
+          "language_code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Language Code"
+          },
+          "state_code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "State Code"
+          }
+        },
+        "type": "object",
+        "required": [
+          "caller_id",
+          "text"
+        ],
+        "title": "TurnRequest",
+        "description": "A text-mode turn. The voice endpoint builds this after transcription."
+      },
+      "TurnResponse": {
+        "properties": {
+          "session_id": {
+            "type": "string",
+            "title": "Session Id"
+          },
+          "transcript": {
+            "type": "string",
+            "title": "Transcript"
+          },
+          "response_text": {
+            "type": "string",
+            "title": "Response Text"
+          },
+          "intent": {
+            "$ref": "#/components/schemas/Intent"
+          },
+          "slots": {
+            "additionalProperties": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "boolean"
+                }
+              ]
+            },
+            "propertyNames": {
+              "$ref": "#/components/schemas/SlotName"
+            },
+            "type": "object",
+            "title": "Slots"
+          },
+          "pending_slot": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/SlotName"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "matches": {
+            "items": {
+              "$ref": "#/components/schemas/MatchSummary"
+            },
+            "type": "array",
+            "title": "Matches"
+          },
+          "needs_escalation": {
+            "type": "boolean",
+            "title": "Needs Escalation",
+            "default": false
+          },
+          "escalation_reason": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/EscalationReason"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "audio_base64": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Audio Base64"
+          },
+          "audio_mime_type": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Audio Mime Type"
+          }
+        },
+        "type": "object",
+        "required": [
+          "session_id",
+          "transcript",
+          "response_text",
+          "intent"
+        ],
+        "title": "TurnResponse"
+      },
+      "ValidationError": {
+        "properties": {
+          "loc": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ]
+            },
+            "type": "array",
+            "title": "Location"
+          },
+          "msg": {
+            "type": "string",
+            "title": "Message"
+          },
+          "type": {
+            "type": "string",
+            "title": "Error Type"
+          },
+          "input": {
+            "title": "Input"
+          },
+          "ctx": {
+            "type": "object",
+            "title": "Context"
+          }
+        },
+        "type": "object",
+        "required": [
+          "loc",
+          "msg",
+          "type"
+        ],
+        "title": "ValidationError"
+      }
+    }
+  }
+}

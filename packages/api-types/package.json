@@ -1,0 +1,18 @@
+{
+  "name": "@sahaayak/api-types",
+  "private": true,
+  "version": "0.1.0",
+  "description": "TypeScript types generated from the FastAPI OpenAPI schema",
+  "types": "./src/schema.d.ts",
+  "exports": {
+    ".": {
+      "types": "./src/schema.d.ts"
+    }
+  },
+  "files": [
+    "src"
+  ],
+  "scripts": {
+    "generate": "cd ../.. && uv run python scripts/generate_api_types.py"
+  }
+}
