@@ -15,7 +15,7 @@ demo catalog is intentionally narrower:
 
 - Languages: Kannada (`kn`), Hindi (`hi`), and English (`en`)
 - Active states in the catalog: Karnataka (`KA`) and Delhi (`DL`)
-- Data: six hand-entered illustrative benefits for local development
+- Data: eight hand-entered illustrative benefits for local development
 - Voice: OpenAI Whisper for speech-to-text, Sarvam Bulbul for speech output
 
 The demo rows are not a claim of verified nationwide eligibility coverage. Run
@@ -36,6 +36,7 @@ the ingestion pipeline in `scripts/01_download_and_extract.py` through
 | `tests` | Offline unit, dialogue, voice, and HTTP contract tests |
 | `docs/spec-v2.md` | Product and architecture specification |
 | `docs/continuation-spec.md` | Build status, acceptance criteria, and remaining work |
+| `docs/implementation-roadmap.md` | Current required work, beta plan, and nice-to-have backlog by product/FE/BE/infra |
 
 ## Frontend architecture
 

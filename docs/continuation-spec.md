@@ -7,6 +7,12 @@
 **Audience for this doc:** you (human reviewer) + any later agent session picking up the work  
 **Status of this doc:** written against git `main` after commit `217aca8` (test suite). Uncommitted stubs for npm/api-types may exist; see §3.1.
 
+> **2026-08-02 status note:** WP-0 and WP-1 are now complete, including the
+> generated API types and the refactored browser demo. Use
+> [`implementation-roadmap.md`](./implementation-roadmap.md) for the current
+> required-vs-nice-to-have plan; this continuation spec remains useful as the
+> historical scaffold checklist.
+
 ---
 
 ## 0. How to use this document
