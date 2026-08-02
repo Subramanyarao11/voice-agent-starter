@@ -7,7 +7,7 @@ now and turns "notify a volunteer" into a delivery detail later.
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
@@ -48,7 +48,7 @@ def resolve_ticket(ticket_id: str, db: Session = Depends(get_session)) -> Ticket
     if row is None:
         raise HTTPException(status_code=404, detail="No such ticket")
     row.status = "resolved"
-    row.resolved_at = datetime.now(timezone.utc)
+    row.resolved_at = datetime.now(UTC)
     db.add(row)
     db.commit()
     db.refresh(row)

@@ -23,7 +23,10 @@ OUTPUT_PATH = Path("data/structured/candidates.jsonl")
 
 # Loose keyword sets — expand as you find real misses during QA.
 CATEGORY_KEYWORDS = {
-    "education": ["scholarship", "student", "college", "university", "school", "education", "fee reimbursement"],
+    "education": [
+        "scholarship", "student", "college", "university", "school", "education",
+        "fee reimbursement",
+    ],
     "welfare": ["welfare", "pension", "disability", "widow", "senior citizen"],
     "housing": ["housing", "awas", "house construction", "shelter"],
     "agriculture": ["farmer", "agriculture", "kisan", "crop", "irrigation"],

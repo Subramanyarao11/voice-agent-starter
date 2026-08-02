@@ -49,20 +49,26 @@ def print_row(structured: dict, raw_text: str):
     print(sep)
 
     print("\n--- STRUCTURED (check this) ---")
-    print(json.dumps({k: v for k, v in structured.items() if k != "id"}, indent=2, ensure_ascii=False))
+    body = {k: v for k, v in structured.items() if k != "id"}
+    print(json.dumps(body, indent=2, ensure_ascii=False))
 
     print("\n--- SOURCE TEXT (ground truth) ---")
     print(wrap(raw_text[:2500]))
     if len(raw_text) > 2500:
-        print(f"...[{len(raw_text) - 2500} more characters truncated — open the PDF directly if needed]")
+        remaining = len(raw_text) - 2500
+        print(f"...[{remaining} more characters truncated — open the PDF directly if needed]")
     print()
 
 
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--n", type=int, default=10, help="number of random rows to check")
-    parser.add_argument("--seed", type=int, default=None, help="random seed for reproducible sampling")
-    parser.add_argument("--id", default=None, help="check one specific scheme id instead of sampling")
+    parser.add_argument(
+        "--seed", type=int, default=None, help="random seed for reproducible sampling"
+    )
+    parser.add_argument(
+        "--id", default=None, help="check one specific scheme id instead of sampling"
+    )
     args = parser.parse_args()
 
     if not BENEFITS_PATH.exists() or not RAW_TEXT_PATH.exists():
@@ -87,7 +93,11 @@ def main():
 
     for scheme_id in ids_to_check:
         raw_record = raw.get(scheme_id)
-        raw_text = raw_record["raw_text"] if raw_record else "(raw text not found — check id matches)"
+        raw_text = (
+            raw_record["raw_text"]
+            if raw_record
+            else "(raw text not found — check the id matches)"
+        )
         print_row(structured[scheme_id], raw_text)
 
     print("=" * 100)
