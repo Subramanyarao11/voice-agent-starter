@@ -318,14 +318,15 @@ Each package has: goal, prerequisites, concrete tasks, acceptance criteria, and 
 
 **Tasks:**
 
-1. `make extract` — download + OCR/extract (~723 PDFs; slow, disk-heavy)
+1. `make extract` — download + OCR/extract (the corpus currently contains
+   2,876 PDFs; slow, disk-heavy)
 2. Prefilter narrow for first cut:
 
    ```bash
    uv run python scripts/02_prefilter.py --state Karnataka --category education welfare
    ```
 
-   Target ballpark: **80–150 candidates**, not all 723.
+   Target ballpark: **80–150 candidates**, not all 2,876.
 
 3. Structure (start limited, then resume):
 
@@ -351,6 +352,13 @@ Each package has: goal, prerequisites, concrete tasks, acceptance criteria, and 
 6. Seed: `make seed` / `uv run python scripts/04_seed_db.py`
 7. Localize summaries: `uv run python scripts/06_localize.py --languages kn hi`
 8. Re-run dialogue tests + a manual Kannada/Hindi scholarship conversation against real rows
+
+**Current data pass (2026-08-02):** all 2,876 PDFs were extracted; the
+Karnataka education/welfare filter produced 317 matches, reduced to 220 unique
+candidate documents after exact-content deduplication, and a guarded 20-row
+`gpt-4o` structuring pilot completed with zero failed calls. The pilot rows are
+`machine_structured` and inactive pending human review. See
+[`docs/data-review-2026-08-02.md`](data-review-2026-08-02.md).
 
 **Do not commit:** `data/raw_pdfs*`, `data/structured/*.jsonl` (large / regenerable). Commit only pipeline code + a short `docs/data-notes.md` with counts, date, and spot-check summary if useful for submission narrative.
 

@@ -40,6 +40,18 @@ class Settings(BaseSettings):
     openai_reasoning_model: str = "gpt-4o-mini"
     openai_structuring_model: str = "gpt-4o"
     openai_transcription_model: str = "whisper-1"
+    # The data pipeline defaults to a conservative $10 lifetime ledger. The
+    # code-level guard refuses any ceiling above $15 and persists reservations
+    # across reruns, so a test command cannot reset the budget.
+    openai_budget_usd: float = 10.0
+    openai_budget_ledger_path: str = "data/usage/openai-budget.json"
+    openai_pipeline_max_records: int = 20
+    openai_pipeline_max_output_tokens: int = 1200
+    openai_agent_max_output_tokens: int = 600
+    # Whisper is billed by audio duration and does not expose text-token usage
+    # in the same way as chat completions. Reserve a conservative amount per
+    # local transcription request so voice testing shares the same ledger.
+    openai_transcription_reservation_usd: float = 0.10
     sarvam_api_key: str = ""
 
     # --- Tracing ---
@@ -63,6 +75,11 @@ class Settings(BaseSettings):
         if self.database_url:
             return self.database_url
         return f"sqlite:///{REPO_ROOT / 'data' / 'sahaayak.db'}"
+
+    @property
+    def resolved_openai_budget_ledger_path(self) -> Path:
+        path = Path(self.openai_budget_ledger_path)
+        return path if path.is_absolute() else REPO_ROOT / path
 
     @property
     def using_sqlite(self) -> bool:

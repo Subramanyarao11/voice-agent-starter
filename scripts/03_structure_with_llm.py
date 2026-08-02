@@ -25,12 +25,22 @@ import argparse
 import asyncio
 import hashlib
 import json
+import re
 from datetime import date
+from urllib.parse import quote
 
 from openai import AsyncOpenAI
 from pydantic import BaseModel, Field, ValidationError
 
-from sahaayak_common import REPO_ROOT, settings, slugify
+from sahaayak_common import (
+    REPO_ROOT,
+    BudgetError,
+    BudgetExceeded,
+    BudgetReservation,
+    OpenAIBudgetLedger,
+    settings,
+    slugify,
+)
 from sahaayak_contracts import (
     Domain,
     EducationLevel,
@@ -42,9 +52,9 @@ from sahaayak_contracts import (
 INPUT_PATH = REPO_ROOT / "data" / "structured" / "candidates.jsonl"
 OUTPUT_PATH = REPO_ROOT / "data" / "structured" / "benefits.jsonl"
 
-# Enough parallelism to make 300 documents tolerable, low enough to stay under
-# typical rate limits without a backoff dance.
-CONCURRENCY = 5
+# Keep only a couple of reservations in flight. The persistent budget ledger is
+# the hard guard; low concurrency makes the pilot easier to observe and retry.
+CONCURRENCY = 2
 
 # Source documents run long and the eligibility section is near the top; this
 # keeps a single oversized PDF from dominating the bill.
@@ -108,6 +118,12 @@ class StructuredBenefit(BaseModel):
     application_process: str = ""
 
 
+def canonical_source_id(record_id: str) -> str:
+    """Map duplicate-export suffixes back to the canonical myScheme slug."""
+    canonical = re.sub(r"\s+copy$", "", record_id, flags=re.IGNORECASE)
+    return re.sub(r"\s*\(\d+\)$", "", canonical)
+
+
 def load_candidates() -> list[dict]:
     if not INPUT_PATH.exists():
         raise SystemExit(f"{INPUT_PATH} not found — run steps 01 and 02 first.")
@@ -123,27 +139,46 @@ def already_structured() -> set[str]:
 
 
 async def structure_one(
-    client: AsyncOpenAI, record: dict, semaphore: asyncio.Semaphore
+    client: AsyncOpenAI,
+    record: dict,
+    semaphore: asyncio.Semaphore,
+    budget: OpenAIBudgetLedger,
 ) -> tuple[str, StructuredBenefit | None, str]:
     async with semaphore:
+        source_text = record["raw_text"][:MAX_INPUT_CHARACTERS]
+        reservation: BudgetReservation | None = None
         try:
+            reservation = budget.reserve_chat(
+                model=settings.openai_structuring_model,
+                input_characters=len(SYSTEM_PROMPT) + len(source_text),
+                max_output_tokens=settings.openai_pipeline_max_output_tokens,
+                operation=f"structure:{record['id']}",
+            )
             response = await client.chat.completions.create(
                 model=settings.openai_structuring_model,
                 response_format={"type": "json_object"},
                 temperature=0,
+                max_completion_tokens=settings.openai_pipeline_max_output_tokens,
+                n=1,
                 messages=[
                     {"role": "system", "content": SYSTEM_PROMPT},
-                    {
-                        "role": "user",
-                        "content": record["raw_text"][:MAX_INPUT_CHARACTERS],
-                    },
+                    {"role": "user", "content": source_text},
                 ],
             )
+            budget.record_chat_response(reservation, response)
             payload = json.loads(response.choices[0].message.content or "{}")
             return record["id"], StructuredBenefit.model_validate(payload), ""
+        except BudgetExceeded as exc:
+            return record["id"], None, f"budget cap reached: {exc}"
+        except BudgetError:
+            # A corrupt or unsafe ledger must stop the run rather than risk an
+            # unaccounted request.
+            raise
         except (json.JSONDecodeError, ValidationError) as exc:
             return record["id"], None, f"invalid output: {exc}"
         except Exception as exc:
+            if reservation is not None:
+                budget.record_failure(reservation, exc)
             return record["id"], None, f"{exc.__class__.__name__}: {exc}"
 
 
@@ -157,8 +192,17 @@ async def run(state_code: str, limit: int | None, resume: bool) -> None:
     if limit:
         pending = pending[:limit]
 
+    try:
+        budget = OpenAIBudgetLedger(
+            settings.openai_budget_usd,
+            settings.resolved_openai_budget_ledger_path,
+        )
+    except BudgetError as exc:
+        raise SystemExit(str(exc)) from exc
+
     if not pending:
         print("Nothing to do — every candidate is already structured.")
+        budget.print_summary()
         return
 
     print(
@@ -169,7 +213,7 @@ async def run(state_code: str, limit: int | None, resume: bool) -> None:
     client = AsyncOpenAI(api_key=settings.openai_api_key)
     semaphore = asyncio.Semaphore(CONCURRENCY)
     source_by_id = {record["id"]: record for record in pending}
-    tasks = [structure_one(client, record, semaphore) for record in pending]
+    tasks = [structure_one(client, record, semaphore, budget) for record in pending]
 
     OUTPUT_PATH.parent.mkdir(parents=True, exist_ok=True)
     written, failed = 0, 0
@@ -183,21 +227,25 @@ async def run(state_code: str, limit: int | None, resume: bool) -> None:
                 continue
 
             source_record = source_by_id.get(record_id, {})
+            raw_source_text = source_record.get("raw_text", "")
+            encoded_record_id = quote(canonical_source_id(record_id), safe="")
             row = {
                 "id": record_id or slugify(structured.name),
                 **structured.model_dump(mode="json"),
-                # The LLM is asked for a state code but the run is already
-                # scoped to one, so the caller's flag wins for anything the
-                # document left ambiguous.
-                "state_code": structured.state_code or state_code,
-                "source_url": f"https://www.myscheme.gov.in/schemes/{record_id}",
+                # Preserve the model's explicit scope. The run's state flag is
+                # a prefilter, not evidence that a scheme is state-specific;
+                # null remains the correct value for central/all-India schemes.
+                "state_code": structured.state_code,
+                "source_url": f"https://www.myscheme.gov.in/schemes/{encoded_record_id}",
                 "source_title": source_record.get("filename") or record_id,
-                "source_document_url": f"https://www.myscheme.gov.in/schemes/{record_id}",
+                "source_document_url": (
+                    f"https://www.myscheme.gov.in/schemes/{encoded_record_id}"
+                ),
                 # Review aid only. A human reviewer can replace this with a
                 # tighter excerpt before approving the row.
-                "source_excerpt": source_record.get("raw_text", "")[:4000],
+                "source_excerpt": raw_source_text[:4000],
                 "source_content_hash": hashlib.sha256(
-                    source_record.get("raw_text", "").encode("utf-8")
+                    raw_source_text.encode("utf-8")
                 ).hexdigest(),
                 "verification_status": "machine_structured",
                 "last_verified_date": date.today().isoformat(),
@@ -206,7 +254,9 @@ async def run(state_code: str, limit: int | None, resume: bool) -> None:
             written += 1
             print(f"  [OK] {structured.name}")
 
+    await client.close()
     print(f"\nStructured {written} schemes, {failed} failed -> {OUTPUT_PATH}")
+    budget.print_summary()
     print("Next: spot-check a sample against the source PDFs before seeding.")
     print(f"  python scripts/05_spotcheck.py --n {max(5, written // 5)}")
 
@@ -214,7 +264,12 @@ async def run(state_code: str, limit: int | None, resume: bool) -> None:
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--state-code", required=True, help="e.g. KA")
-    parser.add_argument("--limit", type=int, default=None, help="structure only the first N")
+    parser.add_argument(
+        "--limit",
+        type=int,
+        default=settings.openai_pipeline_max_records,
+        help=f"structure only the first N (default: {settings.openai_pipeline_max_records})",
+    )
     parser.add_argument(
         "--resume",
         action="store_true",

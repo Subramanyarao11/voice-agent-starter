@@ -38,9 +38,19 @@ def enum_column(enum_type: type, **kwargs) -> Column:
 
     `native_enum=False` keeps new enum members from requiring a database
     migration, which matters because adding a domain is meant to be a data
-    change rather than a schema change.
+    change rather than a schema change. `values_callable` is explicit because
+    SQLAlchemy otherwise stores Python enum member names (``SCHEME``) while
+    the API and contracts use the stable wire values (``scheme``).
     """
-    return Column(SAEnum(enum_type, native_enum=False, length=32), **kwargs)
+    return Column(
+        SAEnum(
+            enum_type,
+            native_enum=False,
+            length=32,
+            values_callable=lambda members: [member.value for member in members],
+        ),
+        **kwargs,
+    )
 
 
 class Language(SQLModel, table=True):

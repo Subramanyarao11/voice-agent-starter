@@ -11,7 +11,12 @@ from __future__ import annotations
 
 import json
 
-from sahaayak_common import get_logger, settings
+from sahaayak_common import (
+    BudgetReservation,
+    OpenAIBudgetLedger,
+    get_logger,
+    settings,
+)
 from sahaayak_contracts import (
     EducationLevel,
     Gender,
@@ -72,6 +77,10 @@ class LLMUnderstanding:
 
         self._client = AsyncOpenAI(api_key=settings.openai_api_key)
         self._model = model or settings.openai_reasoning_model
+        self._budget = OpenAIBudgetLedger(
+            settings.openai_budget_usd,
+            settings.resolved_openai_budget_ledger_path,
+        )
 
     async def extract(
         self,
@@ -88,15 +97,29 @@ class LLMUnderstanding:
             already = ", ".join(f"{k.value}={v}" for k, v in known_slots.items())
             context.append(f"Already known (do not repeat unless restated): {already}.")
 
-        response = await self._client.chat.completions.create(
+        user_content = f"{' '.join(context)}\n\nUtterance: {transcript}"
+        reservation: BudgetReservation = self._budget.reserve_chat(
             model=self._model,
-            response_format={"type": "json_object"},
-            temperature=0,
-            messages=[
-                {"role": "system", "content": SYSTEM_PROMPT},
-                {"role": "user", "content": f"{' '.join(context)}\n\nUtterance: {transcript}"},
-            ],
+            input_characters=len(SYSTEM_PROMPT) + len(user_content),
+            max_output_tokens=settings.openai_agent_max_output_tokens,
+            operation="agent:understanding",
         )
+        try:
+            response = await self._client.chat.completions.create(
+                model=self._model,
+                response_format={"type": "json_object"},
+                temperature=0,
+                max_completion_tokens=settings.openai_agent_max_output_tokens,
+                n=1,
+                messages=[
+                    {"role": "system", "content": SYSTEM_PROMPT},
+                    {"role": "user", "content": user_content},
+                ],
+            )
+        except Exception as exc:
+            self._budget.record_failure(reservation, exc)
+            raise
+        self._budget.record_chat_response(reservation, response)
 
         content = response.choices[0].message.content or "{}"
         payload = json.loads(content)

@@ -13,17 +13,27 @@ from sahaayak_common.models import (
     State,
     UserSession,
 )
+from sahaayak_common.openai_budget import (
+    BudgetError,
+    BudgetExceeded,
+    BudgetReservation,
+    OpenAIBudgetLedger,
+)
 from sahaayak_common.settings import REPO_ROOT, Settings, get_settings, settings
 
 __all__ = [
     "REPO_ROOT",
     "Benefit",
+    "BudgetError",
+    "BudgetExceeded",
+    "BudgetReservation",
     "Cache",
     "ConversationTurnLog",
     "DataImportRun",
     "EscalationTicket",
     "InMemoryCache",
     "Language",
+    "OpenAIBudgetLedger",
     "RedisCache",
     "Settings",
     "State",
