@@ -37,9 +37,40 @@ Build the next layer in this order:
 6. **Observability and quality evidence** — verified Langfuse traces, service
    metrics, versioned agent evaluations, native-speaker review, browser E2E
    tests, and a rehearsed demo.
+7. **Inclusive citizen experience** — a UX4G/GIGW-informed visual system,
+   predictable navigation, WCAG 2.2 AA behavior, and a reviewed localization
+   pipeline that can expand from Kannada/Hindi to ten Indian languages.
 
-Do not spend the core window on telephony, streaming voice, a large admin suite,
-or all five languages until those six outcomes are complete.
+Do not spend the core window on telephony, streaming voice, the complete admin
+suite, or activating all ten Indian languages until the submission slice of
+those seven outcomes is complete. The design tokens, navigation shell, locale
+architecture, and secure admin boundary should still be established early so
+later features do not require another structural rewrite.
+
+### 1.1 Approved scope expansion beyond the initial spec
+
+The initial spec describes an eventual five-language-by-five-state story. The
+product target is now broader and more explicit:
+
+- English remains the fallback interface language.
+- Ten Indian-language interfaces are the expansion target: Hindi, Kannada,
+  Tamil, Telugu, Marathi, Bengali, Gujarati, Malayalam, Punjabi, and Odia.
+- Kannada and Hindi remain the launch-quality voice languages. A locale is not
+  advertised as supported until its interface, content, understanding, voice,
+  and accessibility QA pass the relevant release gate.
+- Citizen browsing and benefit discovery remain usable without an account.
+  Authentication is introduced when a user saves, synchronizes, or manages
+  sensitive persistent information.
+- The operator console grows into a role-protected admin control center for
+  provider health/cost, data quality, traces, evaluations, audit history, and
+  feature flags.
+- Sarvam remains the preferred TTS provider for Indic speech where its quality
+  is approved; OpenAI becomes a budget-aware fallback, with text always
+  available as the final fallback.
+- The visual language follows Indian public-service design conventions without
+  using the State Emblem, a “Government of India” masthead, official seals, or
+  language that implies government ownership or endorsement unless Sahaayak is
+  formally authorized to do so.
 
 ---
 
@@ -81,6 +112,16 @@ or all five languages until those six outcomes are complete.
 - There are no frontend unit, accessibility, or Playwright E2E tests.
 - There is no documented retention period for income, caste/category, disability,
   transcript, or escalation data.
+- Citizen UI strings are embedded in components/prompt modules rather than a
+  typed ten-language localization workflow; only English, Hindi, and Kannada
+  prompt catalogs are active.
+- The current dark green/lime visual system and Manrope/DM Mono font setup do not
+  yet follow the proposed UX4G/GIGW-informed public-service direction or provide
+  deliberate font loading for all target Indic scripts.
+- There is no citizen account system, managed workforce identity, MFA/RBAC admin
+  shell, immutable audit log, or operational control center.
+- Sarvam TTS does not yet have a budget-aware, per-locale OpenAI/text fallback
+  policy with native-speaker quality gates and operator controls.
 
 ### 2.3 Product definition of done
 
@@ -104,7 +145,11 @@ spot-check record, and a repeatable test run.
 Production beta additionally requires authenticated session access, operator
 authorization, migrations, rate limits, backups, retention/deletion jobs,
 monitoring/alerts, provider-cost controls, accessibility checks, and an incident
-runbook.
+runbook. Citizen discovery remains guest-accessible; “authenticated” here means
+server-owned session authorization and optional account persistence, not a
+mandatory login wall. Beta also requires the citizen design-system shell,
+Kannada/Hindi/English localization catalogs, workforce MFA/RBAC, and a minimal
+admin overview for provider, cost, data-freshness, and audit visibility.
 
 ---
 
@@ -140,6 +185,8 @@ native speakers, platform provisioning, or contest approval.
 | P0-7 web quality | Accessible low-bandwidth flow | Tests, a11y, performance | Stable fixtures/errors | — | CI browser jobs |
 | P0-8 launch evidence | Demo and language quality | Scripted demo path | Trace/cache evidence | Review report | Staging rehearsal |
 | P0-9 agent evaluation | Trust thresholds | Failure messaging | Intent/slot evals and fallback | Versioned eval set | Eval report in CI |
+| P0-10 citizen design/i18n | Familiarity and easy navigation | Design tokens, routes, locale bundles | Locale contracts and prompt keys | Reviewed translations | Font assets, locale CI, visual/a11y tests |
+| P1-7 admin control center | Operational transparency | Separate admin shell and dashboards | Aggregates, RBAC, audit APIs | Quality/provider history | SLOs, alerts, cost controls |
 
 ---
 
@@ -339,6 +386,45 @@ degrades to text without losing the answer.
 - Add a response-size guard; large synthesized output should move to a
   binary/short-lived URL delivery path instead of unbounded base64 JSON.
 
+### Budget-aware TTS provider policy
+
+Implement TTS behind a provider-neutral router rather than calling Sarvam
+directly from conversation code. The default resolution order is:
+
+```text
+reviewed cached/prerecorded prompt
+  -> Sarvam TTS (primary for approved Indic locales)
+  -> OpenAI gpt-4o-mini-tts (quality-approved locale fallback)
+  -> text response with transcript (always available)
+```
+
+- Keep STT and TTS policies independent. Existing OpenAI transcription can
+  remain the STT path while this policy controls synthesized output only.
+- Switch away from Sarvam on quota exhaustion, an open circuit breaker,
+  configured daily/monthly budget threshold, repeated timeout/5xx response, or
+  an explicit operator override. Do not switch providers merely because one
+  request is slow.
+- Configure provider order per locale. OpenAI documents multilingual TTS
+  support, including Hindi, Kannada, Marathi, Tamil, and Urdu, but also states
+  that its built-in voices are optimized for English. Therefore a native-speaker
+  quality check is mandatory before enabling OpenAI fallback for each Indian
+  language; an unapproved locale falls directly to text.
+- Show a non-alarming “Using a fallback voice” status when the audible voice or
+  accent changes. Never silently reduce language quality.
+- Disclose that the voice is AI-generated before first playback, as required by
+  OpenAI's usage policy.
+- Cache audio by normalized text, locale, provider, model, voice, format, and
+  prompt revision. Pre-generate fixed prompts and use WAV/PCM for low-latency
+  playback where the measured bandwidth tradeoff is acceptable.
+- Store `VoiceProviderPolicy` in reviewed configuration, not scattered
+  environment conditionals. Include locale, provider order, enabled voices,
+  quality-review status, low-credit threshold, daily/monthly budget, circuit
+  state, and last operator change.
+- Reconcile estimated usage against provider billing and expose remaining
+  configured budget, fallback count, cache savings, and failure reason to admin.
+- Keep keys server-side, rotate them independently, and never expose provider
+  credentials or raw audio in client diagnostics.
+
 ### Conversation QA matrix
 
 Test at minimum:
@@ -364,6 +450,10 @@ Test at minimum:
       intent or advancing the conversation.
 - [ ] P95 turn latency and per-turn provider cost are recorded for the demo run.
 - [ ] Native speakers approve the core questions and top-result phrasing.
+- [ ] Sarvam quota/429 and outage tests fail over without losing the text answer.
+- [ ] OpenAI TTS is enabled only for locale/voice combinations with a recorded
+      native-speaker quality approval.
+- [ ] Users receive AI-voice disclosure and can always read the same transcript.
 
 ---
 
@@ -394,6 +484,30 @@ as a P0 production risk, not an admin polish item.
    permits it; otherwise use a bearer token with a documented XSS tradeoff.
 7. Telephony uses a separate trusted provider identity and verified webhook
    signature rather than browser tokens.
+
+### Citizen and workforce authentication model
+
+- Keep anonymous discovery as the default. Do not put a login wall before the
+  first question, coverage page, benefit detail, or help/privacy content.
+- Offer optional citizen authentication only for saved benefits, cross-device
+  continuity, reminders, and durable profile management. Support a low-friction
+  phone/email OTP or passkey path; never require a password a user may struggle
+  to recover on a shared device.
+- Link an anonymous browser session to an account only after explicit consent,
+  with a preview of the data that will be retained.
+- Use managed OIDC/OAuth where practical. Validate issuer, audience, signature,
+  expiry, nonce/state, and redirect allowlists server-side.
+- Require MFA or passkeys for workforce accounts. Define `admin`, `operator`,
+  `reviewer`, and read-only `observer/auditor` roles with deny-by-default
+  permissions; do not treat possession of an admin URL as authorization.
+- Use short-lived workforce sessions, secure cookie settings, CSRF protection
+  where cookies authenticate mutations, device/session revocation, and a forced
+  re-authentication step for provider-policy or role changes.
+- Audit sign-in, failed sign-in, role changes, sensitive record views, exports,
+  provider overrides, and feature-flag changes. Never put tokens or sensitive
+  profile values in the audit payload.
+- Provide an accessible sign-in/recovery experience with clear errors, generous
+  OTP expiry, resend throttling, and no CAPTCHA-only path.
 
 ### Operator authorization
 
@@ -431,6 +545,9 @@ resource-consumption risks described by the
 
 - [ ] A session token cannot access another session by changing an ID.
 - [ ] Anonymous callers cannot list or resolve escalation tickets.
+- [ ] Benefit discovery and the first conversation work without account creation.
+- [ ] Workforce routes require the correct role and MFA/passkey assurance.
+- [ ] Account linking shows and records explicit retention consent.
 - [ ] Voice rate limits prevent unbounded provider spending.
 - [ ] Delete removes/anonymizes every configured data category.
 - [ ] Production CORS contains no unconditional development origin.
@@ -506,10 +623,15 @@ Create distinct local, staging, and production environments. At minimum:
 | CORS origin | localhost | staging web | production web only |
 | Logs | human-readable | JSON | JSON + export |
 | Langfuse | optional | enabled/redacted | enabled/redacted |
+| Identity | local test issuer | managed test tenant | managed tenant + MFA |
+| Provider budgets | low dev caps | test caps + alerts | approved caps + circuit/fallback policy |
+| Locale/font assets | local bundles | immutable CDN/origin assets | immutable CDN/origin assets + monitoring |
 | Demo data | allowed/labeled | verified preferred | verified only |
 
 Never expose provider keys to the Vite build. Configure spend limits and key
-rotation in each provider account.
+rotation in each provider account. Environment variables bootstrap secret IDs
+and safe defaults; mutable per-locale routing/budget policy belongs in audited
+configuration with a database revision, not ad hoc environment flags.
 
 ### Backups and recovery
 
@@ -562,6 +684,8 @@ turn_duration_seconds by text/voice/language
 stt_duration_seconds and stt_error_total by provider
 tts_duration_seconds, tts_error_total, tts_billed_characters_total
 tts_cache_hit_total / tts_cache_miss_total
+tts_provider_fallback_total by from/to/locale/reason
+provider_budget_used and provider_budget_remaining by provider/period
 match_candidate_count and match_verdict_total
 no_match_total and escalation_total by reason
 active_session_total and turn_total
@@ -572,6 +696,9 @@ active_session_total and turn_total
 - Uptime alert: API unavailable or readiness failing.
 - Error alert: voice/provider error rate over threshold.
 - Cost alert: unexpected STT/TTS usage spike.
+- Budget alert: Sarvam/OpenAI reaches 50%, 75%, 90%, or 100% of the configured
+  period budget, or remaining quota cannot be fetched/reconciled.
+- Fallback alert: provider switch rate exceeds the normal baseline for a locale.
 - Data alert: zero verified benefits or stale-data threshold crossed.
 - Runbook: provider down, Redis down, database unavailable, bad deployment,
   key exhaustion, and accidental sensitive-data logging.
@@ -609,12 +736,21 @@ on low-end phones and unreliable networks.
 
 - Target WCAG 2.2 AA for the primary text and voice flow, using the
   [W3C WCAG guidance](https://www.w3.org/WAI/standards-guidelines/wcag/).
-- Verify keyboard-only operation, visible focus, 44px touch targets, contrast,
-  reduced motion, live-region announcements, and screen-reader labels.
+- Verify keyboard-only operation, skip links, semantic landmarks, logical heading
+  order, visible focus, 44px minimum targets (48px for primary touch controls),
+  contrast, reduced motion, live-region announcements, and screen-reader labels.
 - Set the document language and script direction from the selected language.
 - Test Kannada/Devanagari wrapping at 320px and 200% zoom.
 - Do not put essential instructions only in placeholder text or audio.
 - Add captions/transcript for every generated audio response.
+- Keep icons paired with text in primary navigation and never use color, motion,
+  audio, or shape as the only carrier of meaning.
+- Keep focus stable when a message arrives, announce it without stealing focus,
+  and provide pause/replay controls for audio.
+- Make text sizing, high contrast, and reduced motion real design-system modes;
+  do not rely on an accessibility overlay as a substitute for semantic HTML.
+- Publish an accessibility/help page describing keyboard use, microphone
+  alternatives, known limitations, and a contact/escalation route.
 
 ### Test stack
 
@@ -631,6 +767,9 @@ on low-end phones and unreliable networks.
 - [ ] Component tests cover every verdict and recorder state.
 - [ ] No critical automated accessibility violations on the primary route.
 - [ ] The primary flow is usable at 320px and keyboard-only.
+- [ ] The primary flow remains understandable at 200% zoom, high contrast, and
+      with animation disabled.
+- [ ] Navigation order and labels are consistent across every citizen route.
 - [ ] Production bundle is split or the size is justified with measured loading
       performance on a throttled mobile profile.
 
@@ -661,7 +800,8 @@ Record a deterministic demo path:
 4. Switch to Hindi without changing graph code.
 5. Ask for a person and show the escalation ticket.
 6. Show Langfuse trace and TTS cache evidence.
-7. Explain the honest scope: verified subset now, architecture for 5×5 later.
+7. Explain the honest scope: verified subset now, ten-language UI target and
+   state-by-state data expansion later.
 
 ### Acceptance
 
@@ -734,6 +874,215 @@ invalid model output causing a 5xx response = 0
       ambiguity rather than patched as a one-off phrase.
 - [ ] LLM failures degrade to clarification/rules without a server error.
 - [ ] Final eligibility remains deterministic and explainable.
+
+---
+
+## P0-10 — Citizen design system, navigation, and localization foundation
+
+**Outcome:** the app feels familiar to users of Indian public-service websites,
+is easy to navigate regardless of digital confidence, and can add reviewed
+languages without duplicating components or business logic.
+**Size:** L for the foundation and Kannada/Hindi migration; XL for all ten
+language packs and their human review
+**Depends on:** stable citizen routes, content ownership, and native-language
+reviewers
+
+This package uses the Government of India's UX4G foundations and GIGW guidance
+as design references. It adopts familiar patterns, clarity, and accessibility;
+it does **not** copy government identity or imply that Sahaayak is an official
+government website.
+
+### Visual direction and trust rules
+
+Replace the current dark green, acid-lime, and orange presentation with a light,
+calm public-service theme. Do not paint the interface as a tricolor. Navy/indigo
+is the structural color, saffron is a restrained accent, and green is reserved
+for positive status. Proposed semantic tokens are a Sahaayak palette inspired by
+public-service conventions, not claimed UX4G token values:
+
+| Token | Proposed value | Use |
+| --- | --- | --- |
+| `--color-brand-900` | `#12345B` | Header, high-emphasis surfaces |
+| `--color-brand-700` | `#1E4E85` | Primary controls and links |
+| `--color-brand-600` | `#245FAE` | Hover/interactive emphasis |
+| `--color-accent-saffron` | `#C65D00` | Small highlights, active markers |
+| `--color-success-700` | `#147A3E` | Verified/success status only |
+| `--color-warning-700` | `#8A4B00` | Stale data, caution, uncertainty |
+| `--color-danger-700` | `#B42318` | Errors and destructive actions |
+| `--color-info-700` | `#175CD3` | Informational status and focus |
+| `--color-text` | `#17202A` | Default text |
+| `--color-text-muted` | `#475467` | Secondary text |
+| `--color-border` | `#D0D5DD` | Borders and dividers |
+| `--color-surface` | `#FFFFFF` | Primary surface |
+| `--color-surface-subtle` | `#F6F8FB` | Page/background grouping |
+| `--color-focus` | `#0B57D0` | 3px visible focus ring |
+
+- Map these semantic variables into Tailwind v4 `@theme` and the shadcn
+  component variables. Components consume roles such as `primary`, `surface`,
+  `success`, and `focus`; they do not hard-code palette hex values.
+- Verify every final foreground/background pair in automated contrast tests;
+  token names and roles are fixed, but hex values may be adjusted to pass AA/AAA
+  targets and user testing.
+- Use white space, borders, and typography before elevation. Keep shadows subtle
+  and avoid glassmorphism, neon treatments, and animation-heavy decoration.
+- Use saffron in less than roughly 10% of a typical screen and never as the only
+  status indicator. Use green only for semantic success/verification, not for
+  generic branding.
+- Show source organization, last-verified date, coverage label, privacy/help,
+  and “independent guidance—not an official eligibility decision” in predictable
+  locations. Trust should come from provenance rather than official-looking
+  seals.
+- Never use the State Emblem of India, ministry marks, an `india.gov.in`-style
+  masthead, or “Government of India” ownership language without written
+  authorization. A future government partnership gets a separate legal/brand
+  review before adding co-branding.
+
+### Typography, icons, spacing, and motion
+
+- Follow the UX4G typography approach: `Noto Sans` for UI and
+  `Noto Sans Display` only for large display headings. Load script-specific Noto
+  Sans subsets for Devanagari, Kannada, Tamil, Telugu, Bengali, Gujarati,
+  Malayalam, Gurmukhi, and Odia as the selected locale requires.
+- Map the selected script font through a token such as `--font-locale` and use a
+  resilient stack like `var(--font-locale), "Noto Sans", system-ui, sans-serif`;
+  do not rely on a remote Google Fonts request. Self-host versioned WOFF2 subsets
+  with `font-display: swap` and preload only the active locale's critical subset.
+- Limit weights to 400, 500, 600, and 700. Use 16/24px as the default body size,
+  14/20px only for helper text, and 12/16px only for non-essential captions.
+  Suggested headings are 40/44, 32/36, 28/32, 24/28, 20/24, and 16/20.
+- Use a base-4 spacing scale and a responsive grid. Keep readable text near
+  65–75 characters per line; do not force Indic text into narrow fixed-height
+  cards or truncate critical labels.
+- Use Lucide icons consistently, paired with visible labels for primary actions.
+  Do not introduce decorative government emblems or unrelated illustration
+  styles.
+- Motion remains functional and restrained: 120–240ms transitions, no parallax,
+  no blocking intro animation, no repeated pulsing, and complete support for
+  `prefers-reduced-motion`. Audio/recording state must remain understandable with
+  motion disabled.
+
+### Citizen information architecture and navigation
+
+Use one predictable citizen shell, separate from `/admin`:
+
+```text
+/
+├── /conversation
+├── /benefits/$benefitId
+├── /saved                 (authentication requested only when needed)
+├── /profile               (optional authenticated persistence)
+├── /help
+├── /accessibility
+├── /transparency
+└── /privacy
+
+/admin/*                   (separate workforce shell and authorization)
+```
+
+- The first screen presents two obvious equal-status actions: “Speak” and
+  “Type”, followed by language selection and a short privacy explanation.
+- Desktop header: Sahaayak identity, language, accessibility, help, and optional
+  sign-in; put privacy, transparency, and provenance links in a consistent
+  footer. Mobile bottom navigation: at most Home, Conversation, Saved, and Help.
+- Keep the citizen hierarchy no more than two levels for normal tasks. Use a
+  back action and breadcrumb on benefit detail; preserve conversation state.
+- Keep controls in the same position across languages. Use plain, task-based
+  labels (“Find benefits”, “Listen again”, “Talk to a person”) rather than
+  internal terms such as “agent”, “turn”, “intent”, or “escalation”.
+- Provide multiple paths to critical actions: header/help, contextual link, and
+  voice/text command where relevant. Never hide delete, privacy, human help, or
+  language change inside an unlabeled menu.
+- Use progressive disclosure: ask one question at a time, explain why sensitive
+  information is requested, preserve entered answers, and show a short progress
+  cue without promising an exact number of remaining questions.
+- Test the shell with keyboard, screen reader, switch/voice control, low-end
+  Android, 320px width, 200% zoom, slow network, and a first-time low-literacy
+  usability cohort.
+
+### Ten-language localization architecture
+
+English is the fallback, not part of the ten-language commitment. Use these
+stable locale identifiers:
+
+| Rollout | Language | Locale |
+| --- | --- | --- |
+| Launch | Kannada | `kn-IN` |
+| Launch | Hindi | `hi-IN` |
+| Wave 2 | Tamil | `ta-IN` |
+| Wave 2 | Telugu | `te-IN` |
+| Wave 2 | Marathi | `mr-IN` |
+| Wave 2 | Bengali | `bn-IN` |
+| Wave 3 | Gujarati | `gu-IN` |
+| Wave 3 | Malayalam | `ml-IN` |
+| Wave 3 | Punjabi | `pa-IN` |
+| Wave 3 | Odia | `or-IN` |
+| Fallback | English | `en-IN` |
+
+- Standardize the web app on `i18next` + `react-i18next` with ICU support for
+  plurals, interpolation, and locale-aware formatting. Use typed semantic keys,
+  namespaces per feature, lazy locale chunks, and a missing-key failure in CI.
+- Initialize localization once at the app root; route metadata, validation,
+  toasts, dialogs, empty states, and accessibility labels use the same catalog.
+  No user-visible English literal remains embedded in a feature component.
+- Separate interface locale from benefit geography. A Bengali-speaking user can
+  search Karnataka data; a translated interface must never imply that benefits
+  for every state are available.
+- Use a fallback chain of selected locale -> `en-IN` -> visible safe key/error.
+  Persist the user's explicit selection; browser language detection may suggest
+  but must not override it.
+- Set `<html lang>` from the active locale. Make layout tokens direction-aware
+  now (`inline-start`/`inline-end`) so a future Urdu/RTL pack does not require a
+  rewrite, even though the initial ten are left-to-right.
+- Keep UI strings, backend validation/error messages, agent prompts, benefit
+  summaries, and TTS phrases in separate versioned catalogs with shared semantic
+  IDs. Never send an English backend error directly into a localized screen.
+- Do not machine-translate eligibility criteria, caveats, application steps, or
+  legal/policy text at request time. Translate from the reviewed source, keep
+  reviewer/date/version metadata, and display English fallback explicitly when
+  a reviewed translation is unavailable.
+- Format dates, numbers, and currency with `Intl`; store canonical numbers and
+  ISO dates, never locale-formatted values, in APIs and the database.
+- Define a translation state machine of `draft`, `machine_assisted`, `reviewed`,
+  `approved`, `active`, and `superseded`. Only `active` content is user-facing.
+- Add pseudo-localization, long-string, missing-glyph, mixed-script, English
+  numeral, and code-switch tests. Screenshot every critical route in each active
+  script at mobile and desktop sizes.
+
+### Backend, data, and infrastructure work
+
+- Return stable machine-readable error codes and localized message parameters;
+  let the client catalog render UI errors. Server-rendered/voice-only responses
+  use the matching reviewed backend catalog.
+- Add locale to session, transcript, trace, content revision, and provider-policy
+  records. Normalize locale aliases at the API boundary.
+- Expose a versioned coverage endpoint reporting, per locale and state, whether
+  UI, prompts, data translation, understanding, STT, TTS, and native review are
+  `unsupported`, `preview`, or `active`.
+- Generate translation completeness and stale-source reports in CI. Block
+  activation when required keys, fonts, reviewed content, provider policy, or
+  accessibility screenshots are missing.
+- Serve locale/font assets from the same CDN/origin with immutable hashes and a
+  small English fallback bundle. Monitor missing translation keys and font load
+  failures without logging user text.
+- Keep language rollout behind feature flags. Roll back one locale independently
+  without taking the whole application offline.
+
+### Acceptance
+
+- [ ] The citizen shell follows the proposed semantic tokens and no longer uses
+      the current dark green/lime visual treatment.
+- [ ] Primary routes are navigable by keyboard, screen reader, and touch with
+      consistent labels and no more than two normal hierarchy levels.
+- [ ] Typography renders every active script without missing glyphs, clipping,
+      or critical layout shift at 320px and 200% zoom.
+- [ ] Kannada, Hindi, and English have complete typed UI catalogs with no
+      production missing-key fallback.
+- [ ] Locale and state are independently selectable and coverage is represented
+      honestly.
+- [ ] A locale cannot become active without translation, voice, content,
+      accessibility, and native-review evidence.
+- [ ] Sahaayak displays its independent status and uses no restricted government
+      identity asset or implied endorsement.
 
 ---
 
@@ -893,6 +1242,117 @@ with optional redacted feedback.
 
 ---
 
+## P1-7 — Admin control center and operational transparency
+
+**Outcome:** authorized staff can understand what the system did, why it did it,
+what it costs, where quality is degrading, and who changed production behavior
+without querying the database or exposing citizen data.
+**Size:** XL
+**Depends on:** workforce authentication/RBAC, P0 telemetry, provider policy,
+data revisions, and immutable audit events
+
+The admin control center is separate from the citizen interface and uses its own
+`/admin` shell. The escalation queue in P1-1 becomes one module, not the entire
+admin product.
+
+### Admin navigation and screens
+
+```text
+/admin
+├── /overview
+├── /conversations       (redacted metadata by default)
+├── /escalations
+├── /benefits            (coverage, freshness, review queue)
+├── /languages           (catalog/voice/QA readiness)
+├── /providers           (health, spend, fallback policy)
+├── /evaluations         (agent and native-language reports)
+├── /traces              (safe trace links and failure drill-down)
+├── /system              (deployments, SLOs, incidents, feature flags)
+├── /audit-log
+└── /settings            (role-restricted)
+```
+
+- Overview shows uptime/SLO status, p50/p95 turn latency, 4xx/5xx/error rate,
+  active sessions, no-match/escalation rate, verified/stale benefit counts,
+  language mix, STT/TTS health, provider fallback rate, cache hit rate, and
+  current/forecast provider spend.
+- Every card links to a filtered detail view, names its time window and data
+  freshness, and clearly distinguishes “no data” from zero.
+- Conversation drill-down starts with request ID, locale, state, step, timings,
+  provider/model/prompt/data revisions, and redacted error metadata. Raw
+  transcript or sensitive profile access requires a stronger role, stated
+  reason, and audited action; it is never shown on overview dashboards.
+- Provider controls expose policy per locale, circuit state, estimated budget,
+  quota/credit status when provider APIs support it, fallback reasons, voice QA
+  approval, and cache savings. Manual override requires confirmation, reason,
+  re-authentication, audit entry, and optional expiry.
+- Language readiness shows interface completeness, prompt review, data
+  translation, understanding evaluation, STT/TTS approval, font/visual checks,
+  and rollout status as separate dimensions.
+- Data views expose source, last verified date, reviewer/revision history,
+  expiry, ingestion failures, and rollback—not just row counts.
+- System view records deployment commit, migration revision, data revision,
+  prompt/model versions, active flags, incidents, backup age, and last restore
+  test.
+- Use tables for comparison, sparklines only where a trend matters, plain-language
+  labels, keyboard-accessible filters, shareable URLs, CSV export of already
+  redacted data, and accessible empty/loading/error states.
+- Use a TanStack Router protected admin layout, TanStack Query for all server
+  aggregates and mutations, URL search parameters for shareable filters, and
+  Zustand only for ephemeral display preferences. A frontend route guard improves
+  UX but never replaces API authorization.
+
+### Backend and data work
+
+- Build read-optimized aggregate endpoints; do not make the browser join raw
+  operational tables or depend directly on vendor dashboard APIs.
+- Introduce `AuditEvent`, `DeploymentRevision`, `VoiceProviderPolicy`,
+  `ProviderUsageDaily`, `LocaleReadiness`, and `FeatureFlagRevision` records with
+  actor, reason, before/after, request ID, and timestamp where applicable.
+- Use append-only audit semantics with retention and integrity monitoring.
+  Corrections are new events, not edits to historical events.
+- Create scheduled rollups for latency, errors, spend, language, results, and
+  data freshness. Keep metric dimensions bounded; request IDs belong in traces,
+  not metric labels.
+- Proxy links into Langfuse or other vendor tools through authorization-aware
+  metadata. Never embed an unrestricted vendor API key in the web client.
+- Add cursor pagination, bounded date ranges, server-side filtering, export size
+  limits, and background jobs for large reports.
+- Return explicit `data_fresh_at`, partial-data, and upstream-unavailable fields
+  so dashboards never imply false certainty.
+
+### Security, privacy, and operational controls
+
+- Enforce role/action permissions server-side: observers read aggregate health;
+  operators handle escalations; reviewers manage content; admins manage roles,
+  provider policies, and flags. UI hiding is not an access control.
+- Require MFA/passkey assurance and short sessions; apply IP/device controls only
+  where they do not create an inaccessible recovery path.
+- Redact by default, apply least privilege, require a reason for sensitive
+  access/export, watermark exports, and alert on unusual access patterns.
+- Make destructive/high-risk controls two-step and reversible where possible.
+  Provider overrides and flags have an expiry/rollback path; role removal takes
+  effect immediately.
+- Publish a separate public transparency page containing non-sensitive coverage,
+  source/freshness methodology, known limitations, AI/voice disclosure, language
+  status, privacy/retention summary, and incident contact. Do not publish internal
+  traces, costs, vulnerabilities, or identifiable usage.
+
+### Acceptance
+
+- [ ] Each role sees and can call only its authorized modules/actions.
+- [ ] An operator can follow a failed turn by request ID across safe app,
+      provider, trace, prompt, model, and data-revision metadata.
+- [ ] Provider budget/fallback status is visible and an audited emergency switch
+      can be safely applied and automatically expired.
+- [ ] Dashboard totals reconcile with source metrics and state their freshness.
+- [ ] Sensitive transcript/profile data is absent by default and every elevated
+      view/export is reasoned and audited.
+- [ ] The public transparency page explains coverage, provenance, AI voice,
+      limitations, and last update in all active interface languages.
+
+---
+
 ## 6. P2 nice-to-have packages
 
 ## P2-1 — Telephony adapter
@@ -1012,24 +1472,37 @@ with optional redacted feedback.
 
 ---
 
-## P2-6 — Language/state expansion to 5×5
+## P2-6 — Ten-language and state-by-state expansion
 
-**Value:** fulfills the architecture’s scale story after the initial proof.
-**Size:** XL per language/data combination
+**Value:** makes the citizen interface usable across ten Indian languages while
+expanding verified benefit coverage honestly, one geography at a time.
+**Size:** XL per language/content/data combination
+
+The interface-language target and benefit-geography target are independent.
+Completing ten UI language packs does not create ten-state benefit coverage, and
+the product must never present them as equivalent.
 
 ### Sequence per language/state
 
-1. Add/activate language and state configuration.
-2. Translate prompt catalog and have it reviewed by a native speaker.
-3. Configure STT/TTS locale and voice.
-4. Ingest and review state-specific data.
+1. Complete and review the interface locale independently of geography.
+2. Translate the prompt and benefit-content catalogs; record native review.
+3. Configure STT/TTS locale, primary/fallback providers, and voice quality gate.
+4. Ingest and review state-specific data without blocking use of the locale for
+   already-supported geographies.
 5. Add understanding fixtures for script, numbers, category, education, and
    common code-switch patterns.
-6. Run the full text/voice/accessibility QA matrix.
-7. Launch behind a feature flag and monitor no-match/escalation rates.
+6. Run translation completeness, font/glyph, text/voice, accessibility, visual,
+   and low-bandwidth QA.
+7. Launch the locale and each new state behind independent feature flags; monitor
+   no-match, fallback, abandonment, and escalation rates.
+
+Roll out in the waves defined by P0-10: Kannada/Hindi, then
+Tamil/Telugu/Marathi/Bengali, then Gujarati/Malayalam/Punjabi/Odia. English
+remains the safe fallback throughout.
 
 Do not activate a language merely because prompts compile; active means data,
-voice, and review quality meet the launch bar.
+content, understanding, voice (or an explicitly disclosed text-only mode), fonts,
+accessibility, and review quality meet the launch bar.
 
 ---
 
@@ -1048,6 +1521,8 @@ voice, and review quality meet the launch bar.
 | DELETE | `/api/me/session` | Delete/anonymize current session | P0 |
 | GET | `/api/benefits/{id}` | Verified details and source | P0 |
 | GET | `/api/coverage` | Verified/illustrative counts and freshness | existing, extend P0 |
+| GET | `/api/locales` | Locale/state/UI/voice/content readiness matrix | P0 |
+| GET | `/api/transparency` | Public non-sensitive coverage/methodology snapshot | P1 |
 | GET | `/health/live` | Process liveness | P0 |
 | GET | `/health/ready` | Deployment readiness | P0 |
 
@@ -1061,6 +1536,12 @@ voice, and review quality meet the launch bar.
 | POST | `/api/operator/escalations/{id}/resolve` | Resolve with outcome | P1 |
 | GET | `/api/operator/data/reviews` | Pending data revisions | P1 |
 | POST | `/api/operator/data/reviews/{id}/approve` | Publish reviewed revision | P1 |
+| GET | `/api/admin/overview` | Bounded operational and quality aggregates | P1 |
+| GET | `/api/admin/providers` | Health, spend, fallback, and locale policy | P1 |
+| PATCH | `/api/admin/providers/{provider}/policies/{locale}` | Audited provider policy change | P1 |
+| GET | `/api/admin/languages` | Translation/voice/data/QA readiness | P1 |
+| GET | `/api/admin/audit-events` | Filtered immutable audit history | P1 |
+| GET | `/api/admin/system/revisions` | Deploy, migration, data, prompt/model versions | P1 |
 
 ### 7.3 Core schema additions
 
@@ -1086,6 +1567,32 @@ EscalationEvent (new)
 
 OpenTask (P1, new)
   id, session_id, benefit_id, title, due_at, status, reminder_consent
+
+VoiceProviderPolicy (new)
+  locale, provider_order, voice_by_provider, quality_status
+  low_credit_threshold, daily_budget, monthly_budget, circuit_state
+  changed_by, change_reason, expires_at, updated_at
+
+TranslationRevision (new)
+  locale, namespace, source_locale, source_revision, status
+  content_hash, reviewed_by, reviewed_at, activated_at
+
+LocaleReadiness (new)
+  locale, interface_status, prompt_status, content_status
+  understanding_status, stt_status, tts_status, accessibility_status
+  evidence_links, activated_at
+
+AuditEvent (new, append-only)
+  actor_id, actor_role, action, target_type, target_id
+  reason, safe_before, safe_after, request_id, created_at
+
+ProviderUsageDaily (new)
+  provider, date, requests, input_units, output_units
+  estimated_cost, reconciled_cost, fallback_count, cache_saved_units
+
+DeploymentRevision (new)
+  commit_sha, migration_revision, data_revision
+  prompt_versions, model_versions, deployed_by, deployed_at
 ```
 
 Every schema change must be introduced through Alembic and reflected in
@@ -1101,20 +1608,22 @@ fixtures, and migration tests.
 | Layer | Required coverage |
 | --- | --- |
 | Pure unit | eligibility boundaries, parsing, ranking, prompt rendering, cache keys, redaction |
-| Contract | every API response, error code, OpenAPI drift, generated TS/Zod compatibility |
-| Component | result states, recorder states, consent, profile correction, operator queue |
+| Contract | every API response, localized error code, OpenAPI drift, generated TS/Zod compatibility |
+| Component | result states, recorder states, consent, locale switch, profile correction, admin/operator UI |
 | Integration | Postgres transactions/migrations, Redis cache, authorization, deletion cascade |
-| Provider contract | recorded/mock OpenAI/Sarvam response shapes, timeout/error mapping |
-| E2E | text flow, voice-degraded flow, result details, delete, operator escalation |
-| Human QA | Kannada/Hindi voice, respectful wording, noisy audio, low-end Android browser |
-| Non-functional | accessibility, bundle/load performance, rate limits, backup restore, basic load |
+| Provider contract | recorded/mock OpenAI/Sarvam shapes, quota/timeout mapping, circuit/fallback policy |
+| E2E | text flow, voice/fallback flow, result details, locale/state switch, delete, admin/operator authorization |
+| Localization/visual | typed-key completeness, pseudo-locale, script fonts/glyphs, screenshots by active locale |
+| Human QA | native-language content/voice, respectful wording, noisy audio, low-literacy and low-end Android use |
+| Non-functional | WCAG/contrast/zoom/reduced-motion, bundle/load performance, rate limits, backup restore, basic load |
 
 ### 8.2 Required merge gate
 
 ```text
 ruff -> mypy -> pytest -> migration check -> OpenAPI/type drift
      -> frontend typecheck -> frontend unit tests -> production build
-     -> Playwright primary smoke -> container readiness smoke
+     -> locale/font/contrast checks -> Playwright primary smoke
+     -> container readiness smoke
 ```
 
 ### 8.3 Required release gate
@@ -1127,6 +1636,9 @@ ruff -> mypy -> pytest -> migration check -> OpenAPI/type drift
 - Launch-language agent evaluation thresholds pass.
 - Rollback and backup status are known.
 - Native-language demo script passes.
+- Every advertised locale has current content, voice/text fallback, font,
+  accessibility, and native-review evidence.
+- Provider budgets and fallback policy are healthy, reconciled, and visible.
 
 ---
 
@@ -1136,12 +1648,12 @@ ruff -> mypy -> pytest -> migration check -> OpenAPI/type drift
 
 | Day | Primary outcome | Parallel work |
 | --- | --- | --- |
-| 1 | Data pilot, review rubric, provenance schema | Alembic skeleton + session security design |
-| 2 | 20+ reviewed benefits seeded | Benefit detail API/contract |
-| 3 | Actionable result UI complete | Kannada voice provider smoke + TTS prewarm |
-| 4 | Kannada voice E2E reliable | Hindi voice/language review |
+| 1 | Data pilot, review rubric, provenance schema | Alembic + session/auth and UX4G token design |
+| 2 | 20+ reviewed benefits seeded | Benefit detail contract + citizen navigation shell |
+| 3 | Actionable result UI complete | Kannada voice smoke, TTS prewarm/provider router |
+| 4 | Kannada voice E2E reliable | Hindi review + Kannada/Hindi i18n catalog migration |
 | 5 | Staging deploy with Postgres/Redis/migrations | Langfuse + metrics + CI |
-| 6 | Security minimum, Playwright, accessibility, native review | Agent eval + data/report cleanup |
+| 6 | Security minimum, Playwright, accessibility, native review | Agent eval + palette/font/locale QA |
 | 7 | Full rehearsal and screencast | Fixes and fallback recording |
 | 8 | Buffer and submit | No new features |
 
@@ -1155,8 +1667,9 @@ labels, deletion, or the fallback text path.
 3. Ship operator escalation console.
 4. Add transcript hydration and profile correction.
 5. Add data review/freshness console.
-6. Harden CI/CD, backups, alerts, and Postgres/Redis integration tests.
-7. Curate real jobs.
+6. Ship the admin overview, provider/cost, language-readiness, and audit modules.
+7. Harden CI/CD, backups, alerts, and Postgres/Redis integration tests.
+8. Curate real jobs.
 
 ### 9.3 Expansion phase
 
@@ -1164,7 +1677,8 @@ labels, deletion, or the fallback text path.
 2. Add reminders/tasks if users reach results but do not apply.
 3. Add telephony if browser access is the limiting factor.
 4. Add streaming/VAD if clip latency is the limiting factor.
-5. Expand languages/states one reviewed combination at a time.
+5. Expand the interface to ten Indian languages in reviewed waves and add state
+   datasets independently, one verified geography at a time.
 
 ---
 
@@ -1184,6 +1698,13 @@ Resolve these before the associated package begins:
 | D8 | Telephony | Defer until browser voice is stable and measured | P2-1 |
 | D9 | Streaming/VAD | Build only if measured clip latency justifies it | P2-2 |
 | D10 | State #2 | Delhi to reuse Hindi; activate only with reviewed data | P0/P2 |
+| D11 | Citizen visual direction | UX4G/GIGW-informed light public-service theme; no government identity assets | P0-10 |
+| D12 | UI localization stack | `i18next` + `react-i18next` + ICU; typed semantic keys and lazy locale chunks | P0-10 |
+| D13 | Ten-language rollout | KN/HI, then TA/TE/MR/BN, then GU/ML/PA/OR; English fallback | P0-10/P2-6 |
+| D14 | Citizen authentication | Guest-first; optional OTP/passkey account for persistence | P0-4/P1-2 |
+| D15 | Workforce authentication | Managed OIDC, MFA/passkey, strict admin/operator/reviewer/observer roles | P0-4/P1-7 |
+| D16 | TTS routing | Cache -> Sarvam -> quality-approved OpenAI -> text | P0-3 |
+| D17 | Admin scope | Separate role-protected control center; redacted-by-default drill-down | P1-7 |
 
 ---
 
@@ -1193,11 +1714,13 @@ Resolve these before the associated package begins:
 - An LLM making the final eligibility decision.
 - Fully autonomous form submission or claims of official approval.
 - Local GPU/model hosting.
-- Five active languages with unreviewed prompts or no matching data.
+- Ten active languages with unreviewed UI/content, missing glyphs, or no honest
+  coverage/voice status.
 - Nationwide coverage claims based on schema extensibility.
 - Storing raw voice recordings by default.
 - Building separate eligibility logic for browser, telephony, or each language.
-- A large dashboard before the user result and escalation flows are reliable.
+- A large admin dashboard before the user result, provider telemetry, secure
+  workforce boundary, and escalation flows are reliable.
 
 ---
 
@@ -1217,16 +1740,35 @@ Resolve these before the associated package begins:
   — object authorization, authentication, resource limits, and admin boundaries.
 - [W3C WCAG 2 overview](https://www.w3.org/WAI/standards-guidelines/wcag/) —
   accessibility criteria for the web and voice/transcript experience.
+- [UX4G foundations](https://www.ux4g.gov.in/foundations?lang=en) — official
+  Government of India design-system foundations for color, typography, spacing,
+  content, and accessibility.
+- [UX4G color](https://www.ux4g.gov.in/foundations/color) and
+  [typography](https://www.ux4g.gov.in/foundations/typography) — semantic color
+  roles and the Noto Sans-based public-service typography approach.
+- [GIGW guidelines](https://guidelines.india.gov.in/guidelines/) and
+  [quick tips](https://guidelines.india.gov.in/quick-tips/) — government website
+  accessibility, consistent multilingual content, ownership, and citizen-focused
+  content guidance.
+- [react-i18next documentation](https://react.i18next.com/) and
+  [ICU integration](https://react.i18next.com/misc/using-with-icu-format) — React
+  localization, lazy language resources, interpolation, and ICU message support.
+- [OpenAI text-to-speech guide](https://developers.openai.com/api/docs/guides/text-to-speech)
+  — `gpt-4o-mini-tts`, streaming/formats, multilingual support, English-optimized
+  voice caveat, and required AI-voice disclosure.
 
 ---
 
 ## 13. Immediate next action
 
-Start **P0-1 and the P0-5 Alembic skeleton in parallel**. P0-1 resolves the
-largest product-trust gap; the migration skeleton prevents every subsequent
-schema improvement from deepening the current `create_all` debt. Once the pilot
-data shape is stable, implement P0-2, then complete P0-3 against the same verified
-benefits.
+Start **P0-1 and the P0-5 Alembic skeleton in parallel**, while a frontend track
+defines the P0-10 semantic tokens, Noto font loading, citizen route shell, and
+typed Kannada/Hindi/English catalog. P0-1 resolves the largest product-trust gap;
+the migration skeleton prevents every subsequent schema improvement from
+deepening the current `create_all` debt; and the small design/i18n foundation
+prevents new result/auth screens from being built twice. Once the pilot data
+shape is stable, implement P0-2, then complete the P0-3 provider router and live
+voice path against the same verified benefits.
 
 The implementation session should begin with:
 
@@ -1234,4 +1776,9 @@ The implementation session should begin with:
 2. Add benefit provenance/verification fields and `DataImportRun` migration.
 3. Run the 20-row Karnataka ingestion pilot.
 4. Review the pilot and publish a `docs/data-review-YYYY-MM-DD.md` report.
-5. Extend benefit/match APIs and build the actionable result detail UI.
+5. Add the UX4G-informed semantic color/typography tokens, citizen navigation
+   shell, and typed `en-IN`/`kn-IN`/`hi-IN` locale catalogs.
+6. Extend benefit/match APIs and build the actionable result detail UI with those
+   shared tokens and localized semantic keys.
+7. Introduce the provider-neutral TTS policy and prove Sarvam -> approved OpenAI
+   -> text fallback with cost/failure telemetry.
