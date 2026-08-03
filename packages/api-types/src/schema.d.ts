@@ -21,6 +21,54 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/readyz": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Ready
+         * @description Readiness probe used by the reverse proxy and deployment monitor.
+         *
+         *     Liveness remains deliberately cheap at ``/health``. Readiness fails when
+         *     the shared database is unavailable or production has configured Redis but
+         *     the cache cannot be reached.
+         */
+        get: operations["ready_readyz_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/metrics": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Metrics
+         * @description Expose aggregate, privacy-safe Prometheus text metrics.
+         *
+         *     Labels intentionally exclude session IDs, IP addresses, languages, and
+         *     provider names. Detailed traces remain in the configured OTel/Langfuse
+         *     backend; this endpoint is for alert thresholds only.
+         */
+        get: operations["metrics_metrics_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/languages": {
         parameters: {
             query?: never;
@@ -166,6 +214,161 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/sessions/{session_id}/saved-benefits": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Saved Benefits */
+        get: operations["list_saved_benefits_api_sessions__session_id__saved_benefits_get"];
+        put?: never;
+        /** Save Benefit */
+        post: operations["save_benefit_api_sessions__session_id__saved_benefits_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/sessions/{session_id}/saved-benefits/{benefit_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Remove Saved Benefit */
+        delete: operations["remove_saved_benefit_api_sessions__session_id__saved_benefits__benefit_id__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/sessions/{session_id}/reminders": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Reminders */
+        get: operations["list_reminders_api_sessions__session_id__reminders_get"];
+        put?: never;
+        /** Create Reminder */
+        post: operations["create_reminder_api_sessions__session_id__reminders_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/sessions/{session_id}/reminders/{reminder_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Cancel Reminder */
+        delete: operations["cancel_reminder_api_sessions__session_id__reminders__reminder_id__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/sessions/{session_id}/contact-points": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Contact Points */
+        get: operations["list_contact_points_api_sessions__session_id__contact_points_get"];
+        put?: never;
+        /**
+         * Create Contact Point
+         * @description Register a destination and send it a verification challenge.
+         */
+        post: operations["create_contact_point_api_sessions__session_id__contact_points_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/sessions/{session_id}/contact-points/{contact_id}/verify": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Verify Contact Point */
+        post: operations["verify_contact_point_api_sessions__session_id__contact_points__contact_id__verify_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/sessions/{session_id}/contact-points/{contact_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * Revoke Contact Point
+         * @description Revoke a contact and stop future delivery to it.
+         *
+         *     The row is kept rather than deleted, and an opt-out event is appended. A
+         *     deleted row would lose the evidence that the caller asked to stop, which is
+         *     exactly the evidence a complaint about unwanted messages turns on.
+         */
+        delete: operations["revoke_contact_point_api_sessions__session_id__contact_points__contact_id__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/sessions/{session_id}/notification-channels": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Notification Channels
+         * @description Which channels this caller can use, and why the others are unavailable.
+         *
+         *     Exists so the reminder form can explain itself. A channel the caller cannot
+         *     use should say what would make it usable, not present a dead control.
+         */
+        get: operations["list_notification_channels_api_sessions__session_id__notification_channels_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/browser-sessions": {
         parameters: {
             query?: never;
@@ -218,6 +421,149 @@ export interface paths {
         get: operations["get_transcript_api_sessions__session_id__transcript_get"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/telephony/turns": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Take Telephony Turn */
+        post: operations["take_telephony_turn_api_telephony_turns_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/webhooks/infobip/sms": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Sms Delivery Reports */
+        post: operations["sms_delivery_reports_api_webhooks_infobip_sms_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/webhooks/infobip/email": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Email Delivery Reports */
+        post: operations["email_delivery_reports_api_webhooks_infobip_email_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/webhooks/infobip/whatsapp": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Whatsapp Delivery Reports */
+        post: operations["whatsapp_delivery_reports_api_webhooks_infobip_whatsapp_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/webhooks/infobip/whatsapp/inbound": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Inbound Whatsapp
+         * @description Accept an inbound WhatsApp message and answer immediately.
+         *
+         *     The agent turn — and the transcription before it, for a voice note — takes
+         *     far longer than a provider waits before deciding the callback failed and
+         *     retrying it. So the work is scheduled and the acknowledgement goes back
+         *     now. An opt-out is the exception: it is applied inline, because a STOP is a
+         *     legal instruction and must not depend on a background task succeeding.
+         */
+        post: operations["inbound_whatsapp_api_webhooks_infobip_whatsapp_inbound_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/webhooks/infobip/voice/events": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Voice Events
+         * @description Inbound Calls API events, processed after acknowledgement.
+         *
+         *     A live call cannot wait on a synthesis round trip inside a webhook
+         *     response, and a provider that times out on this callback may tear the call
+         *     down. The event is normalized here and the call actions happen behind it.
+         */
+        post: operations["voice_events_api_webhooks_infobip_voice_events_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/webhooks/infobip/sms/inbound": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Inbound Sms
+         * @description Inbound SMS, processed only for opt-out.
+         *
+         *     A reply of STOP is a legal instruction, not a conversation opener, and this
+         *     route deliberately does not feed anything into the agent. The sender string
+         *     is hashed immediately and matched against registered contacts; it never
+         *     identifies a caller on its own.
+         */
+        post: operations["inbound_sms_api_webhooks_infobip_sms_inbound_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -496,6 +842,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/admin/notifications": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Admin Notifications */
+        get: operations["admin_notifications_api_admin_notifications_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -651,6 +1014,22 @@ export interface components {
             /** Activate */
             activate?: boolean | null;
         };
+        /** Body_take_telephony_turn_api_telephony_turns_post */
+        Body_take_telephony_turn_api_telephony_turns_post: {
+            /** Audio */
+            audio: string;
+            /** Caller Id */
+            caller_id: string;
+            /** Language Code */
+            language_code?: string | null;
+            /** State Code */
+            state_code?: string | null;
+            /**
+             * Speak
+             * @default true
+             */
+            speak: boolean;
+        };
         /** Body_take_voice_turn_api_voice_turns_post */
         Body_take_voice_turn_api_voice_turns_post: {
             /** Audio */
@@ -687,6 +1066,168 @@ export interface components {
             language_code?: string | null;
             /** State Code */
             state_code?: string | null;
+        };
+        /** ChannelCardOut */
+        ChannelCardOut: {
+            /** Channel */
+            channel: string;
+            /** Configured */
+            configured: boolean;
+            /** Policy Enabled */
+            policy_enabled: boolean;
+            /** Circuit State */
+            circuit_state: string;
+            /** Primary Provider */
+            primary_provider: string;
+            /** Fallback Provider */
+            fallback_provider: string;
+            /** Sender Ready */
+            sender_ready: boolean;
+            /** Templates Total */
+            templates_total: number;
+            /** Templates Approved */
+            templates_approved: number;
+            /** Template Ready */
+            template_ready: boolean;
+            /**
+             * Accepted
+             * @default 0
+             */
+            accepted: number;
+            /**
+             * Delivered
+             * @default 0
+             */
+            delivered: number;
+            /**
+             * Failed
+             * @default 0
+             */
+            failed: number;
+            /**
+             * Suppressed
+             * @default 0
+             */
+            suppressed: number;
+            /**
+             * Awaiting Report
+             * @default 0
+             */
+            awaiting_report: number;
+            /**
+             * Stale Awaiting Report
+             * @default 0
+             */
+            stale_awaiting_report: number;
+            /**
+             * Delivery Rate
+             * @default 0
+             */
+            delivery_rate: number;
+            /** Last Success At */
+            last_success_at?: string | null;
+            /** Last Failure At */
+            last_failure_at?: string | null;
+            /** Last Report At */
+            last_report_at?: string | null;
+            /**
+             * Top Error Class
+             * @default
+             */
+            top_error_class: string;
+            /**
+             * Cost Minor Units
+             * @default 0
+             */
+            cost_minor_units: number;
+            /**
+             * Cost Currency
+             * @default INR
+             */
+            cost_currency: string;
+            /**
+             * Verified Contacts
+             * @default 0
+             */
+            verified_contacts: number;
+            /**
+             * Opted Out Contacts
+             * @default 0
+             */
+            opted_out_contacts: number;
+            /**
+             * Note
+             * @default
+             */
+            note: string;
+        };
+        /** ChannelStatusOut */
+        ChannelStatusOut: {
+            /** Channel */
+            channel: string;
+            /** Available */
+            available: boolean;
+            /** Gate */
+            gate: string;
+            /** Reason */
+            reason: string;
+            /** Contact Point Id */
+            contact_point_id?: string | null;
+            /**
+             * Display Suffix
+             * @default
+             */
+            display_suffix: string;
+        };
+        /** ContactPointCreate */
+        ContactPointCreate: {
+            /**
+             * Channel
+             * @enum {string}
+             */
+            channel: "email" | "sms" | "whatsapp";
+            /** Destination */
+            destination: string;
+            /**
+             * Locale
+             * @default en
+             */
+            locale: string;
+            /**
+             * Consent
+             * @default false
+             */
+            consent: boolean;
+            /**
+             * Purpose
+             * @default reminders
+             * @enum {string}
+             */
+            purpose: "reminders" | "support";
+        };
+        /** ContactPointOut */
+        ContactPointOut: {
+            /** Id */
+            id: string;
+            /** Channel */
+            channel: string;
+            /** Display Suffix */
+            display_suffix: string;
+            /** Locale */
+            locale: string;
+            /** Verification Status */
+            verification_status: string;
+            /** Consent Status */
+            consent_status: string;
+            /** Consent Purpose */
+            consent_purpose: string;
+            /** Verified At */
+            verified_at: string | null;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
         };
         /** ConversationListOut */
         ConversationListOut: {
@@ -915,6 +1456,31 @@ export interface components {
             verified_at?: string | null;
             /** Last Verified Date */
             last_verified_date?: string | null;
+        };
+        /** NotificationOverviewOut */
+        NotificationOverviewOut: {
+            /**
+             * Generated At
+             * Format: date-time
+             */
+            generated_at: string;
+            /** Window Hours */
+            window_hours: number;
+            /** Channels */
+            channels: components["schemas"]["ChannelCardOut"][];
+            voice: components["schemas"]["VoiceCardOut"];
+            /** Budget Daily Spent Minor Units */
+            budget_daily_spent_minor_units: number;
+            /** Budget Daily Limit Minor Units */
+            budget_daily_limit_minor_units: number | null;
+            /** Budget Monthly Spent Minor Units */
+            budget_monthly_spent_minor_units: number;
+            /** Budget Monthly Limit Minor Units */
+            budget_monthly_limit_minor_units: number | null;
+            /** Cost Currency */
+            cost_currency: string;
+            /** Controls Note */
+            controls_note: string;
         };
         /** ProviderListOut */
         ProviderListOut: {
@@ -1157,6 +1723,71 @@ export interface components {
              */
             created_at: string;
         };
+        /** ReminderCreate */
+        ReminderCreate: {
+            /** Benefit Id */
+            benefit_id: string;
+            /**
+             * Due At
+             * Format: date-time
+             */
+            due_at: string;
+            /**
+             * Note
+             * @default
+             */
+            note: string;
+            /**
+             * Timezone
+             * @default Asia/Kolkata
+             */
+            timezone: string;
+            /**
+             * Channel
+             * @default in_app
+             * @enum {string}
+             */
+            channel: "in_app" | "email" | "sms" | "whatsapp";
+        };
+        /** ReminderOut */
+        ReminderOut: {
+            /** Id */
+            id: string;
+            /** Benefit Id */
+            benefit_id: string;
+            /** Benefit Name */
+            benefit_name: string;
+            /**
+             * Due At
+             * Format: date-time
+             */
+            due_at: string;
+            /** Note */
+            note: string;
+            /** Timezone */
+            timezone: string;
+            /** Channel */
+            channel: string;
+            /** Status */
+            status: string;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Delivered At */
+            delivered_at: string | null;
+            /**
+             * Contact Display Suffix
+             * @default
+             */
+            contact_display_suffix: string;
+            /**
+             * Delivery Status
+             * @default
+             */
+            delivery_status: string;
+        };
         /** RetrievedSource */
         RetrievedSource: {
             /** Source Id */
@@ -1189,6 +1820,37 @@ export interface components {
             };
             /** Data Fresh At */
             data_fresh_at: string | null;
+        };
+        /** SaveBenefitRequest */
+        SaveBenefitRequest: {
+            /** Benefit Id */
+            benefit_id: string;
+        };
+        /** SavedBenefitOut */
+        SavedBenefitOut: {
+            /** Id */
+            id: string;
+            /** Benefit Id */
+            benefit_id: string;
+            /** Name */
+            name: string;
+            /** Domain */
+            domain: string;
+            /** State Code */
+            state_code: string | null;
+            /** Description */
+            description: string;
+            /** Source Title */
+            source_title: string;
+            /** Source Document Url */
+            source_document_url: string;
+            /** Verification Status */
+            verification_status: string;
+            /**
+             * Saved At
+             * Format: date-time
+             */
+            saved_at: string;
         };
         /** SessionOut */
         SessionOut: {
@@ -1431,6 +2093,63 @@ export interface components {
          * @enum {string}
          */
         VerificationStatus: "illustrative" | "machine_structured" | "machine_reviewed" | "needs_review" | "human_verified" | "stale";
+        /** VerifyRequest */
+        VerifyRequest: {
+            /** Code */
+            code: string;
+        };
+        /** VoiceCardOut */
+        VoiceCardOut: {
+            /** Configured */
+            configured: boolean;
+            /** Policy Enabled */
+            policy_enabled: boolean;
+            /**
+             * Calls
+             * @default 0
+             */
+            calls: number;
+            /**
+             * Answered
+             * @default 0
+             */
+            answered: number;
+            /**
+             * Ended
+             * @default 0
+             */
+            ended: number;
+            /**
+             * Average Duration Seconds
+             * @default 0
+             */
+            average_duration_seconds: number;
+            /**
+             * Note
+             * @default
+             */
+            note: string;
+        };
+        /**
+         * WebhookAck
+         * @description Deliberately uninformative.
+         *
+         *     The response tells an unauthenticated caller nothing about whether a
+         *     message ID exists or what state it is in, which would otherwise make this
+         *     endpoint an oracle for probing delivery records.
+         */
+        WebhookAck: {
+            /**
+             * Accepted
+             * @default true
+             */
+            accepted: boolean;
+            /**
+             * Processed
+             * @default 0
+             */
+            processed: number;
+        };
     };
     responses: never;
     parameters: never;
@@ -1456,6 +2175,48 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["HealthReport"];
+                };
+            };
+        };
+    };
+    ready_readyz_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: string;
+                    };
+                };
+            };
+        };
+    };
+    metrics_metrics_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": string;
                 };
             };
         };
@@ -1683,6 +2444,363 @@ export interface operations {
             };
         };
     };
+    list_saved_benefits_api_sessions__session_id__saved_benefits_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                session_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SavedBenefitOut"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    save_benefit_api_sessions__session_id__saved_benefits_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                session_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SaveBenefitRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SavedBenefitOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    remove_saved_benefit_api_sessions__session_id__saved_benefits__benefit_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                session_id: string;
+                benefit_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_reminders_api_sessions__session_id__reminders_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                session_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReminderOut"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    create_reminder_api_sessions__session_id__reminders_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                session_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ReminderCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReminderOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    cancel_reminder_api_sessions__session_id__reminders__reminder_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                session_id: string;
+                reminder_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_contact_points_api_sessions__session_id__contact_points_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                session_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ContactPointOut"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    create_contact_point_api_sessions__session_id__contact_points_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                session_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ContactPointCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ContactPointOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    verify_contact_point_api_sessions__session_id__contact_points__contact_id__verify_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                session_id: string;
+                contact_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["VerifyRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ContactPointOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    revoke_contact_point_api_sessions__session_id__contact_points__contact_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                session_id: string;
+                contact_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_notification_channels_api_sessions__session_id__notification_channels_get: {
+        parameters: {
+            query?: {
+                template_key?: string;
+            };
+            header?: never;
+            path: {
+                session_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ChannelStatusOut"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     create_browser_session_api_browser_sessions_post: {
         parameters: {
             query?: never;
@@ -1805,6 +2923,159 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    take_telephony_turn_api_telephony_turns_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "multipart/form-data": components["schemas"]["Body_take_telephony_turn_api_telephony_turns_post"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TurnResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    sms_delivery_reports_api_webhooks_infobip_sms_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WebhookAck"];
+                };
+            };
+        };
+    };
+    email_delivery_reports_api_webhooks_infobip_email_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WebhookAck"];
+                };
+            };
+        };
+    };
+    whatsapp_delivery_reports_api_webhooks_infobip_whatsapp_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WebhookAck"];
+                };
+            };
+        };
+    };
+    inbound_whatsapp_api_webhooks_infobip_whatsapp_inbound_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WebhookAck"];
+                };
+            };
+        };
+    };
+    voice_events_api_webhooks_infobip_voice_events_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WebhookAck"];
+                };
+            };
+        };
+    };
+    inbound_sms_api_webhooks_infobip_sms_inbound_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WebhookAck"];
                 };
             };
         };
@@ -2270,6 +3541,37 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["SystemOut"];
+                };
+            };
+        };
+    };
+    admin_notifications_api_admin_notifications_get: {
+        parameters: {
+            query?: {
+                hours?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NotificationOverviewOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };

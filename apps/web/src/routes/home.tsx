@@ -18,6 +18,7 @@ import {
   useSaveBenefitMutation,
   useSavedBenefitsQuery,
 } from "@/features/saved/queries";
+import { ContactSettingsPanel } from "@/features/contacts/components/contact-settings-panel";
 import { SavedBenefitsPanel } from "@/features/saved/components/saved-benefits-panel";
 import { useVoiceRecorder } from "@/hooks/use-voice-recorder";
 import { audioDataUrl, cn } from "@/lib/utils";
@@ -311,6 +312,13 @@ export function HomePage() {
           accessToken={accessToken}
           savedBenefits={savedBenefitsQuery.data ?? []}
         />
+        {accessToken ? (
+          <ContactSettingsPanel
+            sessionId={sessionId}
+            accessToken={accessToken}
+            languageCode={languageCode}
+          />
+        ) : null}
       </div>
 
       <footer className="relative mx-auto flex max-w-[1440px] flex-wrap justify-between gap-3 border-t border-paper/10 py-6 text-[0.68rem] uppercase tracking-[0.12em] text-paper/35">

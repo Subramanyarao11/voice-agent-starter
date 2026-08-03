@@ -148,4 +148,44 @@ async def metrics(db: Session = Depends(get_session)) -> str:
         "# TYPE sahaayak_cache_up gauge",
         f"sahaayak_cache_up {1 if health_report.cache in {'redis', 'memory'} else 0}",
     ]
+    lines.extend(_notification_metric_lines(db))
     return "\n".join(lines) + "\n"
+
+
+def _notification_metric_lines(db: Session) -> list[str]:
+    """Messaging counters, unlabelled by channel.
+
+    Per-channel detail lives in the authenticated admin console. This endpoint
+    exists for alert thresholds, and a channel label here would let anyone able
+    to scrape it infer which channels a deployment has turned on.
+
+    ``stale_awaiting_report`` is the one worth alerting on hardest: messages
+    accepted by a provider that never produced a delivery report. Sending looks
+    perfectly healthy while nothing is arriving.
+    """
+    from sahaayak_api.routers.admin_notifications import notification_metrics
+
+    try:
+        counts = notification_metrics(db)
+    except Exception:
+        # Metrics must never be the reason a scrape fails and a target is
+        # marked down; the core process gauges above still get through.
+        return []
+
+    return [
+        "# HELP sahaayak_notification_send_total Messages accepted by a provider in the last hour.",
+        "# TYPE sahaayak_notification_send_total gauge",
+        f"sahaayak_notification_send_total {counts['sent']}",
+        "# HELP sahaayak_notification_delivery_total Messages confirmed delivered, last hour.",
+        "# TYPE sahaayak_notification_delivery_total gauge",
+        f"sahaayak_notification_delivery_total {counts['delivered']}",
+        "# HELP sahaayak_notification_failure_total Messages that failed in the last hour.",
+        "# TYPE sahaayak_notification_failure_total gauge",
+        f"sahaayak_notification_failure_total {counts['failed']}",
+        "# HELP sahaayak_notification_suppressed_total Messages deliberately not sent, last hour.",
+        "# TYPE sahaayak_notification_suppressed_total gauge",
+        f"sahaayak_notification_suppressed_total {counts['suppressed']}",
+        "# HELP sahaayak_provider_webhook_lag_total Accepted messages with no delivery report.",
+        "# TYPE sahaayak_provider_webhook_lag_total gauge",
+        f"sahaayak_provider_webhook_lag_total {counts['stale_awaiting_report']}",
+    ]

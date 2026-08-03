@@ -27,6 +27,54 @@
         }
       }
     },
+    "/readyz": {
+      "get": {
+        "tags": [
+          "health"
+        ],
+        "summary": "Ready",
+        "description": "Readiness probe used by the reverse proxy and deployment monitor.\n\nLiveness remains deliberately cheap at ``/health``. Readiness fails when\nthe shared database is unavailable or production has configured Redis but\nthe cache cannot be reached.",
+        "operationId": "ready_readyz_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": {
+                    "type": "string"
+                  },
+                  "type": "object",
+                  "title": "Response Ready Readyz Get"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/metrics": {
+      "get": {
+        "tags": [
+          "health"
+        ],
+        "summary": "Metrics",
+        "description": "Expose aggregate, privacy-safe Prometheus text metrics.\n\nLabels intentionally exclude session IDs, IP addresses, languages, and\nprovider names. Detailed traces remain in the configured OTel/Langfuse\nbackend; this endpoint is for alert thresholds only.",
+        "operationId": "metrics_metrics_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/languages": {
       "get": {
         "tags": [
@@ -307,6 +355,546 @@
         }
       }
     },
+    "/api/sessions/{session_id}/saved-benefits": {
+      "get": {
+        "tags": [
+          "saved benefits"
+        ],
+        "summary": "List Saved Benefits",
+        "operationId": "list_saved_benefits_api_sessions__session_id__saved_benefits_get",
+        "parameters": [
+          {
+            "name": "session_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Session Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/SavedBenefitOut"
+                  },
+                  "title": "Response List Saved Benefits Api Sessions  Session Id  Saved Benefits Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "saved benefits"
+        ],
+        "summary": "Save Benefit",
+        "operationId": "save_benefit_api_sessions__session_id__saved_benefits_post",
+        "parameters": [
+          {
+            "name": "session_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Session Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SaveBenefitRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SavedBenefitOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/sessions/{session_id}/saved-benefits/{benefit_id}": {
+      "delete": {
+        "tags": [
+          "saved benefits"
+        ],
+        "summary": "Remove Saved Benefit",
+        "operationId": "remove_saved_benefit_api_sessions__session_id__saved_benefits__benefit_id__delete",
+        "parameters": [
+          {
+            "name": "session_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Session Id"
+            }
+          },
+          {
+            "name": "benefit_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Benefit Id"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/sessions/{session_id}/reminders": {
+      "get": {
+        "tags": [
+          "saved benefits"
+        ],
+        "summary": "List Reminders",
+        "operationId": "list_reminders_api_sessions__session_id__reminders_get",
+        "parameters": [
+          {
+            "name": "session_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Session Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ReminderOut"
+                  },
+                  "title": "Response List Reminders Api Sessions  Session Id  Reminders Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "saved benefits"
+        ],
+        "summary": "Create Reminder",
+        "operationId": "create_reminder_api_sessions__session_id__reminders_post",
+        "parameters": [
+          {
+            "name": "session_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Session Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReminderCreate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReminderOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/sessions/{session_id}/reminders/{reminder_id}": {
+      "delete": {
+        "tags": [
+          "saved benefits"
+        ],
+        "summary": "Cancel Reminder",
+        "operationId": "cancel_reminder_api_sessions__session_id__reminders__reminder_id__delete",
+        "parameters": [
+          {
+            "name": "session_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Session Id"
+            }
+          },
+          {
+            "name": "reminder_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Reminder Id"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/sessions/{session_id}/contact-points": {
+      "get": {
+        "tags": [
+          "contact points"
+        ],
+        "summary": "List Contact Points",
+        "operationId": "list_contact_points_api_sessions__session_id__contact_points_get",
+        "parameters": [
+          {
+            "name": "session_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Session Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ContactPointOut"
+                  },
+                  "title": "Response List Contact Points Api Sessions  Session Id  Contact Points Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "contact points"
+        ],
+        "summary": "Create Contact Point",
+        "description": "Register a destination and send it a verification challenge.",
+        "operationId": "create_contact_point_api_sessions__session_id__contact_points_post",
+        "parameters": [
+          {
+            "name": "session_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Session Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ContactPointCreate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ContactPointOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/sessions/{session_id}/contact-points/{contact_id}/verify": {
+      "post": {
+        "tags": [
+          "contact points"
+        ],
+        "summary": "Verify Contact Point",
+        "operationId": "verify_contact_point_api_sessions__session_id__contact_points__contact_id__verify_post",
+        "parameters": [
+          {
+            "name": "session_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Session Id"
+            }
+          },
+          {
+            "name": "contact_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Contact Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/VerifyRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ContactPointOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/sessions/{session_id}/contact-points/{contact_id}": {
+      "delete": {
+        "tags": [
+          "contact points"
+        ],
+        "summary": "Revoke Contact Point",
+        "description": "Revoke a contact and stop future delivery to it.\n\nThe row is kept rather than deleted, and an opt-out event is appended. A\ndeleted row would lose the evidence that the caller asked to stop, which is\nexactly the evidence a complaint about unwanted messages turns on.",
+        "operationId": "revoke_contact_point_api_sessions__session_id__contact_points__contact_id__delete",
+        "parameters": [
+          {
+            "name": "session_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Session Id"
+            }
+          },
+          {
+            "name": "contact_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Contact Id"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/sessions/{session_id}/notification-channels": {
+      "get": {
+        "tags": [
+          "contact points"
+        ],
+        "summary": "List Notification Channels",
+        "description": "Which channels this caller can use, and why the others are unavailable.\n\nExists so the reminder form can explain itself. A channel the caller cannot\nuse should say what would make it usable, not present a dead control.",
+        "operationId": "list_notification_channels_api_sessions__session_id__notification_channels_get",
+        "parameters": [
+          {
+            "name": "session_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Session Id"
+            }
+          },
+          {
+            "name": "template_key",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "benefit_reminder",
+              "title": "Template Key"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ChannelStatusOut"
+                  },
+                  "title": "Response List Notification Channels Api Sessions  Session Id  Notification Channels Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/browser-sessions": {
       "post": {
         "tags": [
@@ -475,6 +1063,176 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/telephony/turns": {
+      "post": {
+        "tags": [
+          "telephony"
+        ],
+        "summary": "Take Telephony Turn",
+        "operationId": "take_telephony_turn_api_telephony_turns_post",
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/Body_take_telephony_turn_api_telephony_turns_post"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TurnResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/webhooks/infobip/sms": {
+      "post": {
+        "tags": [
+          "provider webhooks"
+        ],
+        "summary": "Sms Delivery Reports",
+        "operationId": "sms_delivery_reports_api_webhooks_infobip_sms_post",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WebhookAck"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/webhooks/infobip/email": {
+      "post": {
+        "tags": [
+          "provider webhooks"
+        ],
+        "summary": "Email Delivery Reports",
+        "operationId": "email_delivery_reports_api_webhooks_infobip_email_post",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WebhookAck"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/webhooks/infobip/whatsapp": {
+      "post": {
+        "tags": [
+          "provider webhooks"
+        ],
+        "summary": "Whatsapp Delivery Reports",
+        "operationId": "whatsapp_delivery_reports_api_webhooks_infobip_whatsapp_post",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WebhookAck"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/webhooks/infobip/whatsapp/inbound": {
+      "post": {
+        "tags": [
+          "provider webhooks"
+        ],
+        "summary": "Inbound Whatsapp",
+        "description": "Accept an inbound WhatsApp message and answer immediately.\n\nThe agent turn \u2014 and the transcription before it, for a voice note \u2014 takes\nfar longer than a provider waits before deciding the callback failed and\nretrying it. So the work is scheduled and the acknowledgement goes back\nnow. An opt-out is the exception: it is applied inline, because a STOP is a\nlegal instruction and must not depend on a background task succeeding.",
+        "operationId": "inbound_whatsapp_api_webhooks_infobip_whatsapp_inbound_post",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WebhookAck"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/webhooks/infobip/voice/events": {
+      "post": {
+        "tags": [
+          "provider webhooks"
+        ],
+        "summary": "Voice Events",
+        "description": "Inbound Calls API events, processed after acknowledgement.\n\nA live call cannot wait on a synthesis round trip inside a webhook\nresponse, and a provider that times out on this callback may tear the call\ndown. The event is normalized here and the call actions happen behind it.",
+        "operationId": "voice_events_api_webhooks_infobip_voice_events_post",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WebhookAck"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/webhooks/infobip/sms/inbound": {
+      "post": {
+        "tags": [
+          "provider webhooks"
+        ],
+        "summary": "Inbound Sms",
+        "description": "Inbound SMS, processed only for opt-out.\n\nA reply of STOP is a legal instruction, not a conversation opener, and this\nroute deliberately does not feed anything into the agent. The sender string\nis hashed immediately and matched against registered contacts; it never\nidentifies a caller on its own.",
+        "operationId": "inbound_sms_api_webhooks_infobip_sms_inbound_post",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WebhookAck"
                 }
               }
             }
@@ -1285,6 +2043,49 @@
           }
         }
       }
+    },
+    "/api/admin/notifications": {
+      "get": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "Admin Notifications",
+        "operationId": "admin_notifications_api_admin_notifications_get",
+        "parameters": [
+          {
+            "name": "hours",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 24,
+              "title": "Hours"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NotificationOverviewOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -1777,6 +2578,54 @@
         ],
         "title": "BenefitReviewRequest"
       },
+      "Body_take_telephony_turn_api_telephony_turns_post": {
+        "properties": {
+          "audio": {
+            "type": "string",
+            "contentMediaType": "application/octet-stream",
+            "title": "Audio"
+          },
+          "caller_id": {
+            "type": "string",
+            "maxLength": 256,
+            "minLength": 1,
+            "title": "Caller Id"
+          },
+          "language_code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Language Code"
+          },
+          "state_code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "State Code"
+          },
+          "speak": {
+            "type": "boolean",
+            "title": "Speak",
+            "default": true
+          }
+        },
+        "type": "object",
+        "required": [
+          "audio",
+          "caller_id"
+        ],
+        "title": "Body_take_telephony_turn_api_telephony_turns_post"
+      },
       "Body_take_voice_turn_api_voice_turns_post": {
         "properties": {
           "audio": {
@@ -1883,6 +2732,316 @@
         },
         "type": "object",
         "title": "BrowserSessionRequest"
+      },
+      "ChannelCardOut": {
+        "properties": {
+          "channel": {
+            "type": "string",
+            "title": "Channel"
+          },
+          "configured": {
+            "type": "boolean",
+            "title": "Configured"
+          },
+          "policy_enabled": {
+            "type": "boolean",
+            "title": "Policy Enabled"
+          },
+          "circuit_state": {
+            "type": "string",
+            "title": "Circuit State"
+          },
+          "primary_provider": {
+            "type": "string",
+            "title": "Primary Provider"
+          },
+          "fallback_provider": {
+            "type": "string",
+            "title": "Fallback Provider"
+          },
+          "sender_ready": {
+            "type": "boolean",
+            "title": "Sender Ready"
+          },
+          "templates_total": {
+            "type": "integer",
+            "title": "Templates Total"
+          },
+          "templates_approved": {
+            "type": "integer",
+            "title": "Templates Approved"
+          },
+          "template_ready": {
+            "type": "boolean",
+            "title": "Template Ready"
+          },
+          "accepted": {
+            "type": "integer",
+            "title": "Accepted",
+            "default": 0
+          },
+          "delivered": {
+            "type": "integer",
+            "title": "Delivered",
+            "default": 0
+          },
+          "failed": {
+            "type": "integer",
+            "title": "Failed",
+            "default": 0
+          },
+          "suppressed": {
+            "type": "integer",
+            "title": "Suppressed",
+            "default": 0
+          },
+          "awaiting_report": {
+            "type": "integer",
+            "title": "Awaiting Report",
+            "default": 0
+          },
+          "stale_awaiting_report": {
+            "type": "integer",
+            "title": "Stale Awaiting Report",
+            "default": 0
+          },
+          "delivery_rate": {
+            "type": "number",
+            "title": "Delivery Rate",
+            "default": 0.0
+          },
+          "last_success_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Success At"
+          },
+          "last_failure_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Failure At"
+          },
+          "last_report_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Report At"
+          },
+          "top_error_class": {
+            "type": "string",
+            "title": "Top Error Class",
+            "default": ""
+          },
+          "cost_minor_units": {
+            "type": "integer",
+            "title": "Cost Minor Units",
+            "default": 0
+          },
+          "cost_currency": {
+            "type": "string",
+            "title": "Cost Currency",
+            "default": "INR"
+          },
+          "verified_contacts": {
+            "type": "integer",
+            "title": "Verified Contacts",
+            "default": 0
+          },
+          "opted_out_contacts": {
+            "type": "integer",
+            "title": "Opted Out Contacts",
+            "default": 0
+          },
+          "note": {
+            "type": "string",
+            "title": "Note",
+            "default": ""
+          }
+        },
+        "type": "object",
+        "required": [
+          "channel",
+          "configured",
+          "policy_enabled",
+          "circuit_state",
+          "primary_provider",
+          "fallback_provider",
+          "sender_ready",
+          "templates_total",
+          "templates_approved",
+          "template_ready"
+        ],
+        "title": "ChannelCardOut"
+      },
+      "ChannelStatusOut": {
+        "properties": {
+          "channel": {
+            "type": "string",
+            "title": "Channel"
+          },
+          "available": {
+            "type": "boolean",
+            "title": "Available"
+          },
+          "gate": {
+            "type": "string",
+            "title": "Gate"
+          },
+          "reason": {
+            "type": "string",
+            "title": "Reason"
+          },
+          "contact_point_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Contact Point Id"
+          },
+          "display_suffix": {
+            "type": "string",
+            "title": "Display Suffix",
+            "default": ""
+          }
+        },
+        "type": "object",
+        "required": [
+          "channel",
+          "available",
+          "gate",
+          "reason"
+        ],
+        "title": "ChannelStatusOut"
+      },
+      "ContactPointCreate": {
+        "properties": {
+          "channel": {
+            "type": "string",
+            "enum": [
+              "email",
+              "sms",
+              "whatsapp"
+            ],
+            "title": "Channel"
+          },
+          "destination": {
+            "type": "string",
+            "maxLength": 254,
+            "minLength": 3,
+            "title": "Destination"
+          },
+          "locale": {
+            "type": "string",
+            "maxLength": 8,
+            "title": "Locale",
+            "default": "en"
+          },
+          "consent": {
+            "type": "boolean",
+            "title": "Consent",
+            "default": false
+          },
+          "purpose": {
+            "type": "string",
+            "enum": [
+              "reminders",
+              "support"
+            ],
+            "title": "Purpose",
+            "default": "reminders"
+          }
+        },
+        "type": "object",
+        "required": [
+          "channel",
+          "destination"
+        ],
+        "title": "ContactPointCreate"
+      },
+      "ContactPointOut": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "channel": {
+            "type": "string",
+            "title": "Channel"
+          },
+          "display_suffix": {
+            "type": "string",
+            "title": "Display Suffix"
+          },
+          "locale": {
+            "type": "string",
+            "title": "Locale"
+          },
+          "verification_status": {
+            "type": "string",
+            "title": "Verification Status"
+          },
+          "consent_status": {
+            "type": "string",
+            "title": "Consent Status"
+          },
+          "consent_purpose": {
+            "type": "string",
+            "title": "Consent Purpose"
+          },
+          "verified_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Verified At"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "channel",
+          "display_suffix",
+          "locale",
+          "verification_status",
+          "consent_status",
+          "consent_purpose",
+          "verified_at",
+          "created_at"
+        ],
+        "title": "ContactPointOut"
       },
       "ConversationListOut": {
         "properties": {
@@ -2445,6 +3604,81 @@
         ],
         "title": "MatchSummary",
         "description": "A match flattened for the API, without the full criterion trace."
+      },
+      "NotificationOverviewOut": {
+        "properties": {
+          "generated_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Generated At"
+          },
+          "window_hours": {
+            "type": "integer",
+            "title": "Window Hours"
+          },
+          "channels": {
+            "items": {
+              "$ref": "#/components/schemas/ChannelCardOut"
+            },
+            "type": "array",
+            "title": "Channels"
+          },
+          "voice": {
+            "$ref": "#/components/schemas/VoiceCardOut"
+          },
+          "budget_daily_spent_minor_units": {
+            "type": "integer",
+            "title": "Budget Daily Spent Minor Units"
+          },
+          "budget_daily_limit_minor_units": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Budget Daily Limit Minor Units"
+          },
+          "budget_monthly_spent_minor_units": {
+            "type": "integer",
+            "title": "Budget Monthly Spent Minor Units"
+          },
+          "budget_monthly_limit_minor_units": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Budget Monthly Limit Minor Units"
+          },
+          "cost_currency": {
+            "type": "string",
+            "title": "Cost Currency"
+          },
+          "controls_note": {
+            "type": "string",
+            "title": "Controls Note"
+          }
+        },
+        "type": "object",
+        "required": [
+          "generated_at",
+          "window_hours",
+          "channels",
+          "voice",
+          "budget_daily_spent_minor_units",
+          "budget_daily_limit_minor_units",
+          "budget_monthly_spent_minor_units",
+          "budget_monthly_limit_minor_units",
+          "cost_currency",
+          "controls_note"
+        ],
+        "title": "NotificationOverviewOut"
       },
       "ProviderListOut": {
         "properties": {
@@ -3119,6 +4353,127 @@
         ],
         "title": "RecentErrorOut"
       },
+      "ReminderCreate": {
+        "properties": {
+          "benefit_id": {
+            "type": "string",
+            "title": "Benefit Id"
+          },
+          "due_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Due At"
+          },
+          "note": {
+            "type": "string",
+            "maxLength": 240,
+            "title": "Note",
+            "default": ""
+          },
+          "timezone": {
+            "type": "string",
+            "maxLength": 64,
+            "minLength": 1,
+            "title": "Timezone",
+            "default": "Asia/Kolkata"
+          },
+          "channel": {
+            "type": "string",
+            "enum": [
+              "in_app",
+              "email",
+              "sms",
+              "whatsapp"
+            ],
+            "title": "Channel",
+            "default": "in_app"
+          }
+        },
+        "type": "object",
+        "required": [
+          "benefit_id",
+          "due_at"
+        ],
+        "title": "ReminderCreate"
+      },
+      "ReminderOut": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "benefit_id": {
+            "type": "string",
+            "title": "Benefit Id"
+          },
+          "benefit_name": {
+            "type": "string",
+            "title": "Benefit Name"
+          },
+          "due_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Due At"
+          },
+          "note": {
+            "type": "string",
+            "title": "Note"
+          },
+          "timezone": {
+            "type": "string",
+            "title": "Timezone"
+          },
+          "channel": {
+            "type": "string",
+            "title": "Channel"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "delivered_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Delivered At"
+          },
+          "contact_display_suffix": {
+            "type": "string",
+            "title": "Contact Display Suffix",
+            "default": ""
+          },
+          "delivery_status": {
+            "type": "string",
+            "title": "Delivery Status",
+            "default": ""
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "benefit_id",
+          "benefit_name",
+          "due_at",
+          "note",
+          "timezone",
+          "channel",
+          "status",
+          "created_at",
+          "delivered_at"
+        ],
+        "title": "ReminderOut"
+      },
       "RetrievedSource": {
         "properties": {
           "source_id": {
@@ -3211,6 +4566,87 @@
           "data_fresh_at"
         ],
         "title": "ReviewQueueOut"
+      },
+      "SaveBenefitRequest": {
+        "properties": {
+          "benefit_id": {
+            "type": "string",
+            "maxLength": 160,
+            "minLength": 1,
+            "title": "Benefit Id"
+          }
+        },
+        "type": "object",
+        "required": [
+          "benefit_id"
+        ],
+        "title": "SaveBenefitRequest"
+      },
+      "SavedBenefitOut": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "benefit_id": {
+            "type": "string",
+            "title": "Benefit Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "domain": {
+            "type": "string",
+            "title": "Domain"
+          },
+          "state_code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "State Code"
+          },
+          "description": {
+            "type": "string",
+            "title": "Description"
+          },
+          "source_title": {
+            "type": "string",
+            "title": "Source Title"
+          },
+          "source_document_url": {
+            "type": "string",
+            "title": "Source Document Url"
+          },
+          "verification_status": {
+            "type": "string",
+            "title": "Verification Status"
+          },
+          "saved_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Saved At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "benefit_id",
+          "name",
+          "domain",
+          "state_code",
+          "description",
+          "source_title",
+          "source_document_url",
+          "verification_status",
+          "saved_at"
+        ],
+        "title": "SavedBenefitOut"
       },
       "SessionOut": {
         "properties": {
@@ -3883,6 +5319,81 @@
         ],
         "title": "VerificationStatus",
         "description": "How much human review a benefit row has received.\n\nThese values are deliberately data rather than Python branches: a new\nsource row can move through the review lifecycle without changing matcher\nlogic. Only ``human_verified`` rows are production-ready."
+      },
+      "VerifyRequest": {
+        "properties": {
+          "code": {
+            "type": "string",
+            "maxLength": 12,
+            "minLength": 4,
+            "title": "Code"
+          }
+        },
+        "type": "object",
+        "required": [
+          "code"
+        ],
+        "title": "VerifyRequest"
+      },
+      "VoiceCardOut": {
+        "properties": {
+          "configured": {
+            "type": "boolean",
+            "title": "Configured"
+          },
+          "policy_enabled": {
+            "type": "boolean",
+            "title": "Policy Enabled"
+          },
+          "calls": {
+            "type": "integer",
+            "title": "Calls",
+            "default": 0
+          },
+          "answered": {
+            "type": "integer",
+            "title": "Answered",
+            "default": 0
+          },
+          "ended": {
+            "type": "integer",
+            "title": "Ended",
+            "default": 0
+          },
+          "average_duration_seconds": {
+            "type": "number",
+            "title": "Average Duration Seconds",
+            "default": 0.0
+          },
+          "note": {
+            "type": "string",
+            "title": "Note",
+            "default": ""
+          }
+        },
+        "type": "object",
+        "required": [
+          "configured",
+          "policy_enabled"
+        ],
+        "title": "VoiceCardOut"
+      },
+      "WebhookAck": {
+        "properties": {
+          "accepted": {
+            "type": "boolean",
+            "title": "Accepted",
+            "default": true
+          },
+          "processed": {
+            "type": "integer",
+            "title": "Processed",
+            "default": 0
+          }
+        },
+        "type": "object",
+        "title": "WebhookAck",
+        "description": "Deliberately uninformative.\n\nThe response tells an unauthenticated caller nothing about whether a\nmessage ID exists or what state it is in, which would otherwise make this\nendpoint an oracle for probing delivery records."
       }
     }
   }

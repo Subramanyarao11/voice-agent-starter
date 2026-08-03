@@ -134,6 +134,31 @@ export const reminderSchema = z.object({
   status: z.string(),
   created_at: z.string(),
   delivered_at: z.string().nullable(),
+  // Masked only; the API never returns a destination.
+  contact_display_suffix: z.string().default(""),
+  delivery_status: z.string().default(""),
+});
+
+export const contactPointSchema = z.object({
+  id: z.string(),
+  channel: z.string(),
+  display_suffix: z.string(),
+  locale: z.string(),
+  verification_status: z.string(),
+  consent_status: z.string(),
+  consent_purpose: z.string(),
+  verified_at: z.string().nullable(),
+  created_at: z.string(),
+});
+
+export const channelStatusSchema = z.object({
+  channel: z.string(),
+  available: z.boolean(),
+  gate: z.string(),
+  // Always populated when unavailable, so a disabled control can explain itself.
+  reason: z.string(),
+  contact_point_id: z.string().nullable(),
+  display_suffix: z.string().default(""),
 });
 
 export const turnResponseSchema = z.object({
@@ -173,6 +198,8 @@ export type BenefitDetail = z.infer<typeof benefitDetailSchema>;
 export type RetrievedSource = z.infer<typeof retrievedSourceSchema>;
 export type SavedBenefit = z.infer<typeof savedBenefitSchema>;
 export type Reminder = z.infer<typeof reminderSchema>;
+export type ContactPoint = z.infer<typeof contactPointSchema>;
+export type ChannelStatus = z.infer<typeof channelStatusSchema>;
 
 export type Catalog = {
   languages: Language[];
@@ -327,7 +354,7 @@ export function getReminders(sessionId: string, accessToken: string): Promise<Re
 
 export function createReminder(
   sessionId: string,
-  payload: { benefit_id: string; due_at: string; note?: string },
+  payload: { benefit_id: string; due_at: string; note?: string; channel?: string },
   accessToken: string,
 ): Promise<Reminder> {
   return request(
@@ -338,6 +365,73 @@ export function createReminder(
       body: JSON.stringify(payload),
       headers: { Authorization: `Bearer ${accessToken}` },
     },
+  );
+}
+
+export function getContactPoints(
+  sessionId: string,
+  accessToken: string,
+): Promise<ContactPoint[]> {
+  return request(
+    `/api/sessions/${encodeURIComponent(sessionId)}/contact-points`,
+    z.array(contactPointSchema),
+    { headers: { Authorization: `Bearer ${accessToken}` } },
+  );
+}
+
+export function addContactPoint(
+  sessionId: string,
+  payload: { channel: string; destination: string; locale: string; consent: boolean },
+  accessToken: string,
+): Promise<ContactPoint> {
+  return request(
+    `/api/sessions/${encodeURIComponent(sessionId)}/contact-points`,
+    contactPointSchema,
+    {
+      method: "POST",
+      body: JSON.stringify(payload),
+      headers: { Authorization: `Bearer ${accessToken}` },
+    },
+  );
+}
+
+export function verifyContactPoint(
+  sessionId: string,
+  contactId: string,
+  code: string,
+  accessToken: string,
+): Promise<ContactPoint> {
+  return request(
+    `/api/sessions/${encodeURIComponent(sessionId)}/contact-points/${encodeURIComponent(contactId)}/verify`,
+    contactPointSchema,
+    {
+      method: "POST",
+      body: JSON.stringify({ code }),
+      headers: { Authorization: `Bearer ${accessToken}` },
+    },
+  );
+}
+
+export function revokeContactPoint(
+  sessionId: string,
+  contactId: string,
+  accessToken: string,
+): Promise<void> {
+  return request(
+    `/api/sessions/${encodeURIComponent(sessionId)}/contact-points/${encodeURIComponent(contactId)}`,
+    z.undefined(),
+    { method: "DELETE", headers: { Authorization: `Bearer ${accessToken}` } },
+  );
+}
+
+export function getNotificationChannels(
+  sessionId: string,
+  accessToken: string,
+): Promise<ChannelStatus[]> {
+  return request(
+    `/api/sessions/${encodeURIComponent(sessionId)}/notification-channels`,
+    z.array(channelStatusSchema),
+    { headers: { Authorization: `Bearer ${accessToken}` } },
   );
 }
 

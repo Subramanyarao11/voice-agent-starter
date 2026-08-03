@@ -25,3 +25,45 @@ groups:
           severity: warning
         annotations:
           summary: Sahaayak HTTP 5xx rate is above 5 percent
+
+  - name: sahaayak-notifications
+    rules:
+      # The most important alert on this page. Messages a provider accepted but
+      # never reported on mean callbacks have stopped arriving — from the send
+      # side that is indistinguishable from everything working.
+      - alert: SahaayakDeliveryReportsStopped
+        expr: sahaayak_provider_webhook_lag_total > 5
+        for: 30m
+        labels:
+          severity: critical
+        annotations:
+          summary: Messages accepted with no delivery reports
+          description: >
+            Provider callbacks may not be reaching /api/webhooks/infobip. Check the
+            webhook URL, the shared secret, and TLS termination before assuming
+            delivery is healthy.
+
+      - alert: SahaayakNotificationFailureRate
+        expr: sahaayak_notification_send_total > 10 and (sahaayak_notification_failure_total / sahaayak_notification_send_total) > 0.2
+        for: 15m
+        labels:
+          severity: warning
+        annotations:
+          summary: More than a fifth of messages are failing
+          description: >
+            Often a sender, template, or DLT registration problem rather than an
+            outage. Check the failing error class in the admin notifications view.
+
+      # Suppression is a policy decision, not a fault, so this is informational.
+      # A sudden spike usually means a channel was disabled or a budget ran out
+      # while callers were still creating reminders that depend on it.
+      - alert: SahaayakNotificationsSuppressedSpike
+        expr: sahaayak_notification_suppressed_total > 20
+        for: 30m
+        labels:
+          severity: info
+        annotations:
+          summary: Many notifications are being suppressed
+          description: >
+            Check whether a channel policy is disabled or a messaging budget is
+            exhausted. In-app reminders are unaffected.

@@ -1,6 +1,6 @@
 # Infobip operations
 
-**Status:** integration built, every channel disabled
+**Status:** integration built end to end, every channel disabled
 **Date:** 2026-08-03
 **Plan:** [`infobip-integration-plan.md`](./infobip-integration-plan.md)
 
@@ -9,8 +9,7 @@ can legally be sent, and what has and has not been verified.
 
 ## What is implemented
 
-Phases 1 through 4 of the plan, plus the SMS and email adapters and their
-callbacks:
+All phases of the plan except real-time voice transport (§10 Paths A and B):
 
 | Area | Location |
 | --- | --- |
@@ -19,19 +18,25 @@ callbacks:
 | Provider-neutral notification layer | `services/api/src/sahaayak_api/notifications/` |
 | Contact points, consent, verification | `routers/contact_points.py` |
 | Delivery and inbound callbacks | `routers/webhooks_infobip.py` |
-| Tables and migration | `sahaayak_common/models.py`, `migrations/versions/20260803_0008_*` |
+| WhatsApp send and inbound conversation | `integrations/infobip/whatsapp.py`, `workers/whatsapp_inbound.py` |
+| Clip-based inbound voice | `integrations/infobip/calls.py`, `workers/voice_call.py` |
+| Notification worker | `workers/notification_worker.py`, `scripts/14_run_notification_worker.py` |
+| Admin channel view | `routers/admin_notifications.py` |
+| Contact settings UI | `apps/web/src/features/contacts/` |
+| Tables and migrations | `sahaayak_common/models.py`, `migrations/versions/20260803_000{8,9}_*` |
 | Destination encryption | `sahaayak_common/contact_crypto.py` |
 
-Not implemented: the WhatsApp adapter, voice transport, the notification
-worker, and the admin/frontend surfaces. Reminders on an external channel are
-recorded with a `next_attempt_at` but nothing dispatches them yet — that is the
-worker, plan §11.
+Not implemented, deliberately: real-time streaming voice (Infobip WebSocket
+media or a SIP trunk to Jambonz), and outbound calling. The plan calls for
+choosing between those two paths before building either; the clip-based path
+here is the proof that the shared runtime works over a phone line.
 
 ## What has been verified
 
-- 357 offline tests pass, including the full retry, segmentation, gating,
-  webhook auth, replay, and ordering paths against a mocked transport.
-- The migration applies, reverses, and re-applies on a clean database.
+- 437 offline tests pass, covering retry policy, SMS segmentation, channel
+  gating, worker claiming and retries, webhook auth, replay and out-of-order
+  reports, the WhatsApp window, and the call state machine.
+- Both migrations apply, reverse, and re-apply on a clean database.
 - No test reaches the network. `tests/conftest.py` fails any test that tries.
 
 ## What has NOT been verified
@@ -46,6 +51,12 @@ channel**, and treat the first live send as a smoke test.
 | --- | --- | --- |
 | SMS send | `POST /sms/3/messages` | `integrations/infobip/sms.py` |
 | Email send | `POST /email/3/send` | `integrations/infobip/email.py` |
+| WhatsApp template | `POST /whatsapp/1/message/template` | `integrations/infobip/whatsapp.py` |
+| WhatsApp text | `POST /whatsapp/1/message/text` | `integrations/infobip/whatsapp.py` |
+| Call actions | `POST /calls/1/calls/{id}/…` | `integrations/infobip/calls.py` |
+
+The Calls API paths are the least certain of these: the capture/play flow was
+written from the documented event model and has never seen a real call.
 
 ## Operator prerequisites
 
@@ -84,8 +95,16 @@ None of the following can be done from the codebase. Each is a hard gate.
 - Set `INFOBIP_WEBHOOK_AUTH_SECRET` and configure Infobip to send it as
   `X-Infobip-Webhook-Secret`. With no secret configured the routes return 503
   and process nothing.
-- Point delivery callbacks at `/api/webhooks/infobip/{sms,email}` and inbound
-  SMS at `/api/webhooks/infobip/sms/inbound`.
+- Point callbacks at, as applicable:
+
+  | Purpose | Path |
+  | --- | --- |
+  | SMS delivery reports | `/api/webhooks/infobip/sms` |
+  | SMS inbound (STOP handling) | `/api/webhooks/infobip/sms/inbound` |
+  | Email delivery reports | `/api/webhooks/infobip/email` |
+  | WhatsApp delivery/seen | `/api/webhooks/infobip/whatsapp` |
+  | WhatsApp inbound | `/api/webhooks/infobip/whatsapp/inbound` |
+  | Calls API events | `/api/webhooks/infobip/voice/events` |
 
 ### Encryption key
 
@@ -135,3 +154,45 @@ amount that would actually hurt.
 `SMS_MAX_SEGMENTS` caps a single message. Kannada and Hindi force UCS-2
 encoding at 67 characters per segment, so a message that is one segment in
 English can be five in Kannada.
+
+### WhatsApp, before `INFOBIP_WHATSAPP_ENABLED=true`
+
+- Verify the Meta Business Portfolio and onboard a WABA through Infobip.
+- Configure and verify the sender.
+- Register utility templates for reminders and authentication templates for
+  verification. Record each approved name on the matching
+  `notification_template` row; WhatsApp refuses to send without one.
+- Confirm Indian WhatsApp pricing and per-conversation limits.
+
+### Voice, before `INFOBIP_VOICE_ENABLED=true`
+
+- Provision an India DID and complete number KYC.
+- Confirm Calls API availability on the account.
+- Set `INFOBIP_CALLS_CONFIGURATION_ID` and link the DID to it.
+- Confirm whether Indian inbound voice requires additional enterprise
+  communication authorization for your use case.
+
+Outbound calling is not implemented and should stay that way until there is a
+reason and an authorization for it.
+
+## Running the worker
+
+External-channel reminders are dispatched by a separate process. Nothing is
+sent until it runs.
+
+```bash
+make notifications-dry-run   # what is due, sends nothing — run this first
+make notifications           # one batch
+```
+
+In Compose, the `notification-worker` service runs it continuously. It is
+harmless with every channel disabled: it claims nothing.
+
+## Watching it
+
+`GET /api/admin/notifications` shows per-channel posture, delivery counts,
+suppression reasons, and cost. The number to watch is
+**accepted but never reported on** — messages a provider took and never
+reported back about. From the send side that is indistinguishable from
+everything working. It is also the `SahaayakDeliveryReportsStopped` alert in
+`infra/monitor/alert.rules.yml`.

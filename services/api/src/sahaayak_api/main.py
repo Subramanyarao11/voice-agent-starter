@@ -16,6 +16,7 @@ from sahaayak_api.observability import (
 )
 from sahaayak_api.routers import (
     admin,
+    admin_notifications,
     browser_sessions,
     catalog,
     contact_points,
@@ -88,3 +89,4 @@ app.include_router(telephony.router)
 app.include_router(webhooks_infobip.router)
 app.include_router(escalations.router)
 app.include_router(admin.router)
+app.include_router(admin_notifications.router)
