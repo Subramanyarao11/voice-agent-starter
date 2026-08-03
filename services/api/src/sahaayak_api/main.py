@@ -26,6 +26,7 @@ from sahaayak_api.routers import (
     sessions,
     telephony,
     turns,
+    webhooks_infobip,
 )
 from sahaayak_common import configure_logging, get_logger, init_db, settings
 
@@ -84,5 +85,6 @@ app.include_router(contact_points.router)
 app.include_router(browser_sessions.router)
 app.include_router(sessions.router)
 app.include_router(telephony.router)
+app.include_router(webhooks_infobip.router)
 app.include_router(escalations.router)
 app.include_router(admin.router)
