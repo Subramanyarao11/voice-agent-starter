@@ -135,6 +135,59 @@ class Settings(BaseSettings):
     retention_escalation_days: int = 365
     retention_expired_session_days: int = 7
 
+    # --- Infobip messaging seam --------------------------------------------
+    # Every channel is off by default and gated twice: the master switch here
+    # and a per-channel switch. A configured API key is never on its own taken
+    # as evidence that SMS, email, or WhatsApp is actually enabled on the
+    # account — those require DLT, domain, and Meta approvals this code cannot
+    # verify.
+    infobip_enabled: bool = False
+    # Each Infobip account gets a personalized base URL. It is configuration,
+    # not a secret; the API key is the secret.
+    infobip_base_url: str = ""
+    infobip_api_key: str = ""
+    infobip_environment: str = "development"
+
+    infobip_sms_enabled: bool = False
+    infobip_sms_sender: str = ""
+
+    infobip_whatsapp_enabled: bool = False
+    infobip_whatsapp_sender: str = ""
+
+    infobip_email_enabled: bool = False
+    infobip_email_sender: str = ""
+    infobip_email_sender_name: str = "Sahaayak"
+
+    infobip_voice_enabled: bool = False
+    infobip_voice_number: str = ""
+    infobip_calls_configuration_id: str = ""
+    infobip_calls_subscription_id: str = ""
+
+    infobip_webhook_auth_secret: str = ""
+    infobip_request_timeout_seconds: float = 10.0
+    infobip_max_retries: int = 2
+    infobip_max_webhook_bytes: int = 256 * 1024
+    # Telecom and messaging charges are billed in local currency, so the
+    # Infobip ledger is kept in minor units with an explicit ISO code rather
+    # than reusing the OpenAI USD ledger.
+    infobip_cost_currency: str = "INR"
+    infobip_daily_budget_minor_units: int | None = None
+    infobip_monthly_budget_minor_units: int | None = None
+
+    # Contact destinations are encrypted at rest with this key. External
+    # channels refuse to enable without it rather than falling back to storing
+    # a phone number in plaintext.
+    infobip_contact_encryption_key: str = ""
+
+    # A single outbound message can only cost so much before something is
+    # wrong with the template. Unicode Kannada/Hindi text costs roughly one
+    # segment per 67 characters, so this is a small number of segments.
+    sms_max_segments: int = 4
+    contact_verification_code_ttl_seconds: int = 600
+    contact_verification_max_attempts: int = 5
+    rate_limit_contact_verify_per_session: int = 5
+    rate_limit_contact_verify_per_ip: int = 20
+
     # --- Telephony seam ----------------------------------------------------
     # The generic signed webhook is disabled until a telephony provider and
     # webhook secret are configured. Browser callers never use this path.
@@ -209,6 +262,37 @@ class Settings(BaseSettings):
     @property
     def tracing_enabled(self) -> bool:
         return bool(self.langfuse_public_key and self.langfuse_secret_key)
+
+    @property
+    def infobip_configured(self) -> bool:
+        """Credentials are present. Says nothing about channel entitlement."""
+        return bool(self.infobip_base_url.strip() and self.infobip_api_key.strip())
+
+    @property
+    def infobip_ready(self) -> bool:
+        return self.infobip_enabled and self.infobip_configured
+
+    @property
+    def contact_encryption_configured(self) -> bool:
+        return bool(self.infobip_contact_encryption_key.strip())
+
+    def infobip_channel_ready(self, channel: str) -> bool:
+        """Whether one channel may be attempted at all.
+
+        Deliberately conservative: an external channel also needs somewhere to
+        store its destination safely, so a missing encryption key disables the
+        channel rather than degrading how the contact is stored.
+        """
+        if not self.infobip_ready or not self.contact_encryption_configured:
+            return False
+        return {
+            "sms": self.infobip_sms_enabled and bool(self.infobip_sms_sender.strip()),
+            "email": self.infobip_email_enabled and bool(self.infobip_email_sender.strip()),
+            "whatsapp": (
+                self.infobip_whatsapp_enabled and bool(self.infobip_whatsapp_sender.strip())
+            ),
+            "voice": self.infobip_voice_enabled and bool(self.infobip_voice_number.strip()),
+        }.get(channel, False)
 
     @property
     def otel_enabled(self) -> bool:
