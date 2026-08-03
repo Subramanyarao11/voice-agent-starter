@@ -46,8 +46,20 @@ def reset_providers() -> None:
 def _default_provider(channel: NotificationChannel) -> NotificationProvider | None:
     if channel is NotificationChannel.IN_APP:
         return InAppProvider()
-    # External channels are bound by their adapters; until one is registered,
-    # the channel has no provider and callers fall back to in-app.
+
+    # Imported lazily: building an adapter reads settings and may construct an
+    # HTTP client, and importing this module must require neither. Each builder
+    # returns None when its channel is not configured, so an unconfigured
+    # deployment falls through to the in-app fallback below.
+    if channel is NotificationChannel.EMAIL:
+        from sahaayak_api.integrations.infobip.email import build_email_provider
+
+        return build_email_provider()
+    if channel is NotificationChannel.SMS:
+        from sahaayak_api.integrations.infobip.sms import build_sms_provider
+
+        return build_sms_provider()
+    # WhatsApp has no adapter yet; it needs an approved WABA sender first.
     return None
 
 
