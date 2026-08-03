@@ -195,13 +195,201 @@ class SavedBenefit(SQLModel, table=True):
     created_at: datetime = Field(default_factory=_utcnow, index=True)
 
 
-class Reminder(SQLModel, table=True):
-    """A bounded in-app reminder for a saved benefit.
+class ContactPoint(SQLModel, table=True):
+    """A destination a caller has asked us to reach them at.
 
-    Delivery channels other than ``in_app`` are intentionally not accepted by
-    the API until a verified contact/account channel exists. This keeps the
-    feature useful today without pretending that an anonymous browser session
-    has an SMS or email destination.
+    The plaintext destination exists in exactly one column, encrypted. Lookup
+    and deduplication run off a keyed hash, and anything user-facing shows only
+    the masked suffix — so a bug that returns this row to a browser, writes it
+    to a log, or backs it up somewhere unexpected does not leak a phone number.
+
+    Verification and consent are separate columns because they answer different
+    questions. Verification asks whether the destination reaches the person who
+    typed it. Consent asks whether that person agreed to be messaged. Typing an
+    address establishes neither.
+    """
+
+    __tablename__ = "contact_point"
+    __table_args__ = (
+        # One verified destination per channel per session. The hash carries
+        # the uniqueness so the constraint never touches the plaintext.
+        Index(
+            "ix_contact_point_session_channel_hash",
+            "session_id",
+            "channel",
+            "destination_hash",
+            unique=True,
+        ),
+    )
+
+    id: str = Field(primary_key=True)
+    session_id: str = Field(foreign_key="user_session.id", index=True)
+    channel: str = Field(index=True)  # email | sms | whatsapp
+
+    destination_ciphertext: str
+    destination_hash: str = Field(index=True)
+    display_suffix: str = ""
+
+    locale: str = ""
+    verification_status: str = Field(default="pending", index=True)
+    verification_provider: str = ""
+    # Only the hash of the challenge code is stored, and only until it is used
+    # or expires. The code itself is never persisted and never logged.
+    verification_code_hash: str | None = None
+    verification_expires_at: datetime | None = None
+    verification_attempts: int = 0
+    verified_at: datetime | None = None
+
+    consent_status: str = Field(default="unknown", index=True)
+    consent_purpose: str = "reminders"
+    consent_source: str = ""  # browser | whatsapp_inbound | operator
+    consent_at: datetime | None = None
+    opted_out_at: datetime | None = None
+
+    created_at: datetime = Field(default_factory=_utcnow, index=True)
+    updated_at: datetime = Field(default_factory=_utcnow)
+
+
+class ConsentEvent(SQLModel, table=True):
+    """Append-only evidence of every opt-in and opt-out.
+
+    Kept as its own table rather than as columns on ContactPoint because the
+    current state is not the thing under scrutiny — the question a regulator or
+    a complaint asks is *when did this person agree, to what, and through what
+    surface*, which only a history can answer. Rows are never updated.
+    """
+
+    __tablename__ = "consent_event"
+    __table_args__ = (
+        Index("ix_consent_event_contact_created", "contact_point_id", "created_at"),
+    )
+
+    id: str = Field(primary_key=True)
+    session_id: str = Field(foreign_key="user_session.id", index=True)
+    contact_point_id: str | None = Field(
+        default=None, foreign_key="contact_point.id", index=True
+    )
+    channel: str = Field(index=True)
+    purpose: str = Field(default="reminders", index=True)
+    status: str = Field(index=True)  # opted_in | opted_out
+    source: str = ""  # browser | sms_stop | whatsapp_inbound | operator | bounce
+    # The exact wording the caller agreed to, so a later change to the consent
+    # copy does not rewrite what past callers were shown.
+    consent_text_version: str = ""
+    actor: str = "caller"
+    safe_metadata: dict = Field(default_factory=dict, sa_column=json_dict())
+    created_at: datetime = Field(default_factory=_utcnow, index=True)
+
+
+class NotificationTemplate(SQLModel, table=True):
+    """Mapping from an application template key to an approved provider template.
+
+    The reminder row stores a key such as ``benefit_reminder``; this table
+    resolves it per channel and locale. Keeping the indirection means a bad
+    Kannada translation or a rejected DLT template is rolled back by flipping a
+    row, without editing code or touching the reminders already scheduled.
+    """
+
+    __tablename__ = "notification_template"
+    __table_args__ = (
+        Index(
+            "ix_notification_template_key_channel_locale",
+            "template_key",
+            "channel",
+            "locale",
+            unique=True,
+        ),
+    )
+
+    id: str = Field(primary_key=True)
+    template_key: str = Field(index=True)
+    channel: str = Field(index=True)
+    locale: str = Field(index=True)
+
+    provider: str = "infobip"
+    provider_template_name: str = ""
+    provider_template_version: str = ""
+    # DLT registration identifiers, required before any Indian SMS is legal to
+    # send. Recorded here so the admin console can show which rows are ready.
+    dlt_template_id: str = ""
+    dlt_principal_entity_id: str = ""
+
+    subject: str = ""
+    body: str = ""
+    approval_status: str = Field(default="draft", index=True)
+    content_revision: int = 1
+    active: bool = Field(default=False, index=True)
+
+    updated_by: str = "system"
+    created_at: datetime = Field(default_factory=_utcnow)
+    updated_at: datetime = Field(default_factory=_utcnow)
+
+
+class NotificationDelivery(SQLModel, table=True):
+    """One attempt to deliver one notification through one channel.
+
+    Deliberately holds no message body. A template key plus safe parameters is
+    enough to explain what was sent and to reproduce it, while a stored body
+    would put a caller's benefit details into a table the admin console reads.
+    """
+
+    __tablename__ = "notification_delivery"
+    __table_args__ = (
+        # The webhook's only lookup: find the row a provider callback refers to.
+        Index("ix_notification_delivery_channel_external", "channel", "external_message_id"),
+        Index("ix_notification_delivery_status_next", "status", "next_attempt_at"),
+    )
+
+    id: str = Field(primary_key=True)
+    reminder_id: str | None = Field(default=None, foreign_key="reminder.id", index=True)
+    session_id: str = Field(foreign_key="user_session.id", index=True)
+    contact_point_id: str | None = Field(
+        default=None, foreign_key="contact_point.id", index=True
+    )
+
+    channel: str = Field(index=True)
+    provider: str = Field(default="infobip", index=True)
+    template_key: str = Field(default="", index=True)
+    locale: str = ""
+
+    internal_message_id: str = Field(index=True, unique=True)
+    external_message_id: str | None = Field(default=None, index=True)
+    external_bulk_id: str | None = None
+
+    status: str = Field(default="queued", index=True)
+    provider_status_code: str = ""
+    provider_status_group: str = ""
+    provider_error_code: str = ""
+    provider_error_class: str = ""
+
+    attempt_count: int = 0
+    next_attempt_at: datetime | None = Field(default=None, index=True)
+    # Stable across retries of the same logical send, so a duplicate worker
+    # claim or a retried 5xx cannot bill the caller's phone twice.
+    idempotency_key: str = Field(index=True, unique=True)
+
+    sent_at: datetime | None = None
+    delivered_at: datetime | None = None
+    seen_at: datetime | None = None
+    failed_at: datetime | None = None
+
+    # Integer minor units with an explicit currency: messaging is billed in
+    # local currency, and float rupees accumulate error across a queue drain.
+    cost_minor_units: int | None = None
+    cost_currency: str = ""
+
+    safe_metadata: dict = Field(default_factory=dict, sa_column=json_dict())
+    created_at: datetime = Field(default_factory=_utcnow, index=True)
+    updated_at: datetime = Field(default_factory=_utcnow)
+
+
+class Reminder(SQLModel, table=True):
+    """A bounded reminder for a saved benefit.
+
+    ``in_app`` remains the default and always works. External channels are
+    accepted only when a verified contact point and live consent exist, which
+    is enforced at the API rather than here — a column permitting a value is
+    not the same as the product being allowed to use it.
     """
 
     __tablename__ = "reminder"
@@ -219,6 +407,20 @@ class Reminder(SQLModel, table=True):
     status: str = Field(default="scheduled", index=True)  # scheduled | delivered | cancelled
     created_at: datetime = Field(default_factory=_utcnow, index=True)
     delivered_at: datetime | None = None
+
+    # Set only for external channels; in_app reminders leave these null and
+    # behave exactly as they did before notification delivery existed.
+    contact_point_id: str | None = Field(
+        default=None, foreign_key="contact_point.id", index=True
+    )
+    template_key: str | None = None
+    # The consent record in force when the reminder was created. Kept so a
+    # later opt-out is visibly a change rather than a rewrite of history.
+    consent_snapshot_id: str | None = Field(
+        default=None, foreign_key="consent_event.id"
+    )
+    next_attempt_at: datetime | None = Field(default=None, index=True)
+    last_delivery_id: str | None = None
 
 
 class ConversationTurnLog(SQLModel, table=True):
