@@ -36,6 +36,31 @@ def database() -> None:
     ensure_reference_data()
 
 
+@pytest.fixture(autouse=True)
+def no_real_provider_calls(monkeypatch):
+    """Fail loudly if a test tries to reach Infobip for real.
+
+    A test that configures credentials to exercise a code path can otherwise
+    build the genuine adapter and dial out — which is slow, depends on the
+    network, and would send real messages the moment a working key existed in
+    the environment. Every provider test supplies a mock transport; anything
+    without one is a bug in the test, not a reason to make a request.
+    """
+    from sahaayak_api.integrations.infobip.client import InfobipClient
+
+    original = InfobipClient._get_client
+
+    async def guarded(self):
+        if self._transport is None:
+            raise RuntimeError(
+                "test attempted a real Infobip HTTP call; pass a mock transport "
+                "or disable the channel"
+            )
+        return await original(self)
+
+    monkeypatch.setattr(InfobipClient, "_get_client", guarded)
+
+
 @pytest.fixture(scope="session")
 def seeded(database) -> None:
     """Load the illustrative benefit set the dialogue tests reason over."""

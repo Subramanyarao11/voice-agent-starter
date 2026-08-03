@@ -10,9 +10,24 @@ from pydantic import BaseModel, Field
 from sqlmodel import Session, select
 
 from sahaayak_api.browser_auth import BrowserSessionPrincipal, require_browser_session
-from sahaayak_common import Benefit, Reminder, SavedBenefit, get_session, new_id
+from sahaayak_api.notifications import check_channel
+from sahaayak_common import (
+    Benefit,
+    ConsentEvent,
+    ContactPoint,
+    NotificationDelivery,
+    Reminder,
+    SavedBenefit,
+    get_session,
+    new_id,
+)
+from sahaayak_contracts import ConsentStatus, NotificationChannel, VerificationStatusValue
 
 router = APIRouter(prefix="/api/sessions", tags=["saved benefits"])
+
+# Every benefit reminder uses one application template key; the channel and
+# locale are resolved from it at send time.
+TEMPLATE_KEY = "benefit_reminder"
 
 
 class SavedBenefitOut(BaseModel):
@@ -37,7 +52,9 @@ class ReminderCreate(BaseModel):
     due_at: datetime
     note: str = Field(default="", max_length=240)
     timezone: str = Field(default="Asia/Kolkata", min_length=1, max_length=64)
-    channel: Literal["in_app"] = "in_app"
+    # External channels are accepted here but granted only after the full gate
+    # list passes. in_app remains the default and never depends on a provider.
+    channel: Literal["in_app", "email", "sms", "whatsapp"] = "in_app"
 
 
 class ReminderOut(BaseModel):
@@ -51,6 +68,9 @@ class ReminderOut(BaseModel):
     status: str
     created_at: datetime
     delivered_at: datetime | None
+    # Masked only, and null for in-app reminders.
+    contact_display_suffix: str = ""
+    delivery_status: str = ""
 
 
 @router.get("/{session_id}/saved-benefits", response_model=list[SavedBenefitOut])
@@ -161,6 +181,24 @@ def create_reminder(
             status_code=400, detail="Reminder time cannot be more than one year away"
         )
 
+    channel = NotificationChannel(payload.channel)
+    contact = _verified_contact(db, principal.session_id, channel)
+    availability = check_channel(
+        db,
+        channel=channel,
+        contact=contact,
+        session_id=principal.session_id,
+        template_key=TEMPLATE_KEY,
+        locale=principal.language_code,
+    )
+    if not availability.available:
+        # 409 rather than 400: the request is well-formed, the channel is not
+        # currently usable. The reason is the caller-facing sentence, so the UI
+        # can show it verbatim instead of inventing its own wording.
+        raise HTTPException(status_code=409, detail=availability.reason)
+
+    consent_snapshot = _latest_consent(db, contact) if contact is not None else None
+
     row = Reminder(
         id=new_id("rem"),
         session_id=principal.session_id,
@@ -168,7 +206,11 @@ def create_reminder(
         note=payload.note.strip(),
         due_at=due_at,
         timezone=payload.timezone,
-        channel=payload.channel,
+        channel=channel.value,
+        contact_point_id=contact.id if contact else None,
+        template_key=TEMPLATE_KEY if channel is not NotificationChannel.IN_APP else None,
+        consent_snapshot_id=consent_snapshot,
+        next_attempt_at=due_at if channel is not NotificationChannel.IN_APP else None,
     )
     db.add(row)
     db.commit()
@@ -227,6 +269,12 @@ def _reminder_out(
     db: Session, row: Reminder, *, benefit: Benefit | None = None
 ) -> ReminderOut:
     benefit = benefit or db.get(Benefit, row.benefit_id)
+    contact = (
+        db.get(ContactPoint, row.contact_point_id) if row.contact_point_id else None
+    )
+    delivery = (
+        db.get(NotificationDelivery, row.last_delivery_id) if row.last_delivery_id else None
+    )
     return ReminderOut(
         id=row.id,
         benefit_id=row.benefit_id,
@@ -238,7 +286,47 @@ def _reminder_out(
         status=row.status,
         created_at=row.created_at,
         delivered_at=row.delivered_at,
+        contact_display_suffix=contact.display_suffix if contact else "",
+        delivery_status=delivery.status if delivery else "",
     )
+
+
+def _verified_contact(
+    db: Session, session_id: str, channel: NotificationChannel
+) -> ContactPoint | None:
+    """The usable contact for a channel, if the caller has one.
+
+    Returns None for in-app, which needs no destination, and for a channel with
+    no contact at all — the gate check then reports the specific reason.
+    """
+    if channel is NotificationChannel.IN_APP:
+        return None
+    return db.exec(
+        select(ContactPoint)
+        .where(
+            ContactPoint.session_id == session_id,
+            ContactPoint.channel == channel.value,
+            ContactPoint.verification_status == VerificationStatusValue.VERIFIED.value,
+        )
+        .order_by(ContactPoint.created_at.desc())
+    ).first()
+
+
+def _latest_consent(db: Session, contact: ContactPoint) -> str | None:
+    """The opt-in in force right now, recorded on the reminder.
+
+    Pinning it means a later opt-out is visibly a change of mind rather than a
+    rewrite of what was agreed when the reminder was set.
+    """
+    row = db.exec(
+        select(ConsentEvent)
+        .where(
+            ConsentEvent.contact_point_id == contact.id,
+            ConsentEvent.status == ConsentStatus.OPTED_IN.value,
+        )
+        .order_by(ConsentEvent.created_at.desc())
+    ).first()
+    return row.id if row else None
 
 
 def _as_utc(value: datetime) -> datetime:

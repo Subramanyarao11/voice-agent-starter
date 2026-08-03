@@ -18,6 +18,7 @@ from sahaayak_api.routers import (
     admin,
     browser_sessions,
     catalog,
+    contact_points,
     escalations,
     health,
     rag,
@@ -79,6 +80,7 @@ app.include_router(catalog.router)
 app.include_router(turns.router)
 app.include_router(rag.router)
 app.include_router(saved_benefits.router)
+app.include_router(contact_points.router)
 app.include_router(browser_sessions.router)
 app.include_router(sessions.router)
 app.include_router(telephony.router)
