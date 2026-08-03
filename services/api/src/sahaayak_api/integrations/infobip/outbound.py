@@ -29,6 +29,18 @@ _GROUP_TO_STATUS: dict[int, DeliveryStatus] = {
 }
 
 
+def _parse_send(payload: dict) -> InfobipSendResponse:
+    """Normalize the two send-response shapes into one.
+
+    Bulk endpoints answer with a ``messages`` array; the WhatsApp text endpoint
+    answers with a single message object. Wrapping the latter here keeps every
+    adapter reading one shape.
+    """
+    if isinstance(payload, dict) and "messages" not in payload and "messageId" in payload:
+        return InfobipSendResponse.model_validate({"messages": [payload]})
+    return InfobipSendResponse.model_validate(payload)
+
+
 def status_for_group(group_id: int | None, *, default: DeliveryStatus) -> DeliveryStatus:
     if group_id is None:
         return default
@@ -57,7 +69,7 @@ def result_from_response(
             duration_ms=response.duration_ms,
         )
 
-    parsed = InfobipSendResponse.model_validate(response.payload)
+    parsed = _parse_send(response.payload)
     message = parsed.first()
     if message is None or not message.message_id:
         return ProviderSendResult(

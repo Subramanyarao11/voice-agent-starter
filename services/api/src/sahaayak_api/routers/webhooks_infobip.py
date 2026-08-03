@@ -22,7 +22,7 @@ from __future__ import annotations
 import hmac
 from datetime import UTC, datetime
 
-from fastapi import APIRouter, Depends, HTTPException, Request, status
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request, status
 from pydantic import BaseModel
 from sqlmodel import Session, select
 
@@ -30,8 +30,10 @@ from sahaayak_api.integrations.infobip.webhooks import (
     is_stop_keyword,
     parse_delivery_reports,
     parse_inbound_sms,
+    parse_inbound_whatsapp,
 )
 from sahaayak_api.telemetry import record_telemetry
+from sahaayak_api.workers.whatsapp_inbound import handle_event as handle_whatsapp_event
 from sahaayak_common import (
     ConsentEvent,
     ContactPoint,
@@ -142,6 +144,69 @@ async def email_delivery_reports(
     updates = parse_delivery_reports(payload, channel=NotificationChannel.EMAIL)
     processed = await _apply_updates(db, updates, channel=NotificationChannel.EMAIL)
     return WebhookAck(processed=processed)
+
+
+@router.post(
+    "/whatsapp", response_model=WebhookAck, dependencies=[Depends(require_webhook_secret)]
+)
+async def whatsapp_delivery_reports(
+    request: Request, db: Session = Depends(get_session)
+) -> WebhookAck:
+    payload = await read_bounded_payload(request)
+    updates = parse_delivery_reports(payload, channel=NotificationChannel.WHATSAPP)
+    processed = await _apply_updates(db, updates, channel=NotificationChannel.WHATSAPP)
+    return WebhookAck(processed=processed)
+
+
+@router.post(
+    "/whatsapp/inbound",
+    response_model=WebhookAck,
+    dependencies=[Depends(require_webhook_secret)],
+)
+async def inbound_whatsapp(
+    request: Request, background: BackgroundTasks, db: Session = Depends(get_session)
+) -> WebhookAck:
+    """Accept an inbound WhatsApp message and answer immediately.
+
+    The agent turn — and the transcription before it, for a voice note — takes
+    far longer than a provider waits before deciding the callback failed and
+    retrying it. So the work is scheduled and the acknowledgement goes back
+    now. An opt-out is the exception: it is applied inline, because a STOP is a
+    legal instruction and must not depend on a background task succeeding.
+    """
+    payload = await read_bounded_payload(request)
+    events = parse_inbound_whatsapp(payload)
+    scheduled = 0
+    revoked = 0
+
+    for event in events:
+        sender = event.get("sender") or ""
+        text = str(event.get("text") or "")
+        if event.get("kind") == "TEXT" and is_stop_keyword(text):
+            revoked += _revoke_by_destination(
+                db, sender, channel=NotificationChannel.WHATSAPP
+            )
+            continue
+        if await _seen_before(
+            f"mo:wa:{event.get('provider_message_id') or ''}"
+        ) and event.get("provider_message_id"):
+            continue
+        background.add_task(handle_whatsapp_event, event)
+        scheduled += 1
+
+    if revoked:
+        db.commit()
+
+    record_telemetry(
+        event_type="notification",
+        route="/api/webhooks/infobip/whatsapp/inbound",
+        method="POST",
+        surface="whatsapp",
+        provider="infobip",
+        outcome="accepted",
+        safe_metadata={"scheduled": scheduled, "revoked": revoked},
+    )
+    return WebhookAck(processed=scheduled + revoked)
 
 
 @router.post(

@@ -59,7 +59,10 @@ def _default_provider(channel: NotificationChannel) -> NotificationProvider | No
         from sahaayak_api.integrations.infobip.sms import build_sms_provider
 
         return build_sms_provider()
-    # WhatsApp has no adapter yet; it needs an approved WABA sender first.
+    if channel is NotificationChannel.WHATSAPP:
+        from sahaayak_api.integrations.infobip.whatsapp import build_whatsapp_provider
+
+        return build_whatsapp_provider()
     return None
 
 

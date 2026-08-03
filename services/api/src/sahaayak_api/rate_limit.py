@@ -222,6 +222,27 @@ async def enforce_rate_limit(
     return min(decisions, key=lambda item: (item.remaining, item.reset_seconds))
 
 
+async def consume_channel_limit(
+    identity: str, *, bucket: str, limit: int, window_seconds: int
+) -> RateLimitDecision:
+    """Consume one unit of an inbound-channel budget.
+
+    For surfaces with no HTTP request to derive an IP from — a WhatsApp sender,
+    a telephony caller — where the identity is a hash the channel supplied.
+    Kept independent of the browser buckets: a flood of inbound WhatsApp must
+    not exhaust the limit protecting the web demo.
+
+    Returns the decision rather than raising, because an inbound channel
+    answers a provider webhook that must still get a 2xx.
+    """
+    backend = await _get_backend()
+    return await backend.consume(
+        f"sahaayak:rate:{bucket}:{_fingerprint(identity)}",
+        limit=max(1, limit),
+        window_seconds=max(1, window_seconds),
+    )
+
+
 def _raise_rate_limit(decision: RateLimitDecision) -> None:
     raise HTTPException(
         status_code=status.HTTP_429_TOO_MANY_REQUESTS,

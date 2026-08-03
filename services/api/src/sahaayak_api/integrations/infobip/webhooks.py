@@ -203,6 +203,73 @@ def is_stop_keyword(text: str) -> bool:
     return words[0] in STOP_KEYWORDS
 
 
+def parse_inbound_whatsapp(payload: dict[str, Any] | None) -> list[dict[str, Any]]:
+    """Normalize inbound WhatsApp events into a small typed vocabulary.
+
+    Returns dicts rather than a Pydantic model because the sender must be
+    hashed by the caller before anything is constructed around it, and handing
+    back a tidy object holding a raw phone number invites it being stored.
+
+    Button and list replies are mapped to a typed action and never sent to a
+    language model. The user pressed a specific control; asking a model to
+    interpret which one would be strictly worse than reading the payload.
+    """
+    events: list[dict[str, Any]] = []
+    for entry in results_from(payload):
+        sender = entry.get("from") or entry.get("sender") or ""
+        if not isinstance(sender, str) or not sender:
+            continue
+
+        message = entry.get("message")
+        if not isinstance(message, dict):
+            continue
+
+        kind = str(message.get("type") or "").upper()
+        event: dict[str, Any] = {
+            "sender": sender,
+            "kind": kind,
+            "provider_message_id": entry.get("messageId") or "",
+            "text": "",
+            "media_id": "",
+            "media_mime_type": "",
+            "action": "",
+        }
+
+        if kind in ("TEXT", ""):
+            event["kind"] = "TEXT"
+            event["text"] = message.get("text") or ""
+        elif kind in ("AUDIO", "VOICE"):
+            event["kind"] = "AUDIO"
+            event["media_id"] = message.get("id") or message.get("mediaId") or ""
+            event["media_mime_type"] = message.get("mimeType") or "audio/ogg"
+        elif kind in ("BUTTON", "INTERACTIVE_BUTTON_REPLY"):
+            event["kind"] = "ACTION"
+            event["action"] = _action_id(message)
+            event["text"] = message.get("title") or message.get("text") or ""
+        elif kind in ("LIST", "INTERACTIVE_LIST_REPLY"):
+            event["kind"] = "ACTION"
+            event["action"] = _action_id(message)
+            event["text"] = message.get("title") or message.get("text") or ""
+        elif kind == "LOCATION":
+            # Never written to the caller's profile automatically. A location
+            # narrows eligibility, and inferring it from a shared pin is a
+            # profile mutation the caller did not ask for.
+            event["kind"] = "LOCATION"
+        else:
+            event["kind"] = "UNSUPPORTED"
+
+        events.append(event)
+    return events
+
+
+def _action_id(message: dict[str, Any]) -> str:
+    for key in ("id", "payload", "postbackData", "buttonId"):
+        value = message.get(key)
+        if isinstance(value, str) and value:
+            return value[:64]
+    return ""
+
+
 def parse_inbound_sms(payload: dict[str, Any] | None) -> list[tuple[str, str]]:
     """Inbound SMS as (sender, text) pairs.
 
