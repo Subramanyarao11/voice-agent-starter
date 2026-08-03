@@ -35,6 +35,38 @@ DEFAULT_PROVIDER_POLICIES: dict[tuple[str, str], dict[str, Any]] = {
         "fallback_provider": "rules",
         "circuit_state": "closed",
     },
+    # Messaging channels default to disabled. Unlike the model providers above,
+    # these spend money per message and reach a person's phone, so the safe
+    # default is off until an operator turns one on deliberately — and each
+    # falls back to in-app rather than to another paid channel.
+    ("email", "*"): {
+        "enabled": False,
+        "primary_provider": "infobip_email",
+        "fallback_provider": "in_app",
+        "circuit_state": "closed",
+    },
+    ("sms", "*"): {
+        "enabled": False,
+        "primary_provider": "infobip_sms",
+        "fallback_provider": "in_app",
+        "circuit_state": "closed",
+    },
+    ("whatsapp", "*"): {
+        "enabled": False,
+        "primary_provider": "infobip_whatsapp",
+        # Deliberately in-app and not SMS. Falling back from WhatsApp to a
+        # charged channel requires separate SMS consent, which the caller may
+        # not have given, so that route is opted into per contact rather than
+        # assumed here.
+        "fallback_provider": "in_app",
+        "circuit_state": "closed",
+    },
+    ("telephony", "*"): {
+        "enabled": False,
+        "primary_provider": "infobip_calls",
+        "fallback_provider": "browser_voice_or_text",
+        "circuit_state": "closed",
+    },
 }
 
 
@@ -46,34 +78,41 @@ def get_effective_provider_policy(provider: str, scope: str = "*") -> dict[str, 
         "fallback_provider": "none",
         "circuit_state": "closed",
     }))
+    # Every attribute is read inside the session. Reading them after the block
+    # closed worked only while no policy row existed: the moment an operator
+    # saves one, the rows come back detached and touching `.scope` raises.
     with session_scope() as db:
-        row = db.exec(
+        rows = db.exec(
             select(ProviderPolicy).where(
                 ProviderPolicy.provider == provider,
                 ProviderPolicy.scope.in_([scope, "*"]),
             )
         ).all()
-    row = next((item for item in row if item.scope == scope), None) or next(
-        (item for item in row if item.scope == "*"), None
-    )
-    if row is None:
-        return {"provider": provider, "scope": scope, **default, "revision": 0}
 
-    if row.override_expires_at is not None:
-        expires_at = row.override_expires_at
-        if expires_at.tzinfo is None:
-            expires_at = expires_at.replace(tzinfo=UTC)
-        if expires_at <= datetime.now(UTC):
-            return {"provider": provider, "scope": scope, **default, "revision": row.revision}
-    return {
-        "provider": row.provider,
-        "scope": row.scope,
-        "enabled": row.enabled,
-        "primary_provider": row.primary_provider,
-        "fallback_provider": row.fallback_provider,
-        "circuit_state": row.circuit_state,
-        "daily_budget_usd": row.daily_budget_usd,
-        "monthly_budget_usd": row.monthly_budget_usd,
-        "override_expires_at": row.override_expires_at,
-        "revision": row.revision,
-    }
+        # A scope-specific policy wins over the wildcard, so a per-locale
+        # override is not silently outranked by the global default.
+        row = next((item for item in rows if item.scope == scope), None) or next(
+            (item for item in rows if item.scope == "*"), None
+        )
+        if row is None:
+            return {"provider": provider, "scope": scope, **default, "revision": 0}
+
+        if row.override_expires_at is not None:
+            expires_at = row.override_expires_at
+            if expires_at.tzinfo is None:
+                expires_at = expires_at.replace(tzinfo=UTC)
+            if expires_at <= datetime.now(UTC):
+                return {"provider": provider, "scope": scope, **default, "revision": row.revision}
+
+        return {
+            "provider": row.provider,
+            "scope": row.scope,
+            "enabled": row.enabled,
+            "primary_provider": row.primary_provider,
+            "fallback_provider": row.fallback_provider,
+            "circuit_state": row.circuit_state,
+            "daily_budget_usd": row.daily_budget_usd,
+            "monthly_budget_usd": row.monthly_budget_usd,
+            "override_expires_at": row.override_expires_at,
+            "revision": row.revision,
+        }

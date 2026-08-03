@@ -17,6 +17,7 @@ from sahaayak_common.contact_crypto import (
 from sahaayak_common.db import engine, get_session, init_db, run_migrations, session_scope
 from sahaayak_common.ids import new_id, session_id, slugify, ticket_id, turn_id
 from sahaayak_common.logging import configure_logging, get_logger, request_id_var
+from sahaayak_common.messaging_budget import BudgetPosture, evaluate_budget, spend_since
 from sahaayak_common.models import (
     AuditEvent,
     Benefit,
@@ -54,6 +55,7 @@ __all__ = [
     "Benefit",
     "BudgetError",
     "BudgetExceeded",
+    "BudgetPosture",
     "BudgetReservation",
     "Cache",
     "ConsentEvent",
@@ -83,6 +85,7 @@ __all__ = [
     "destination_hash",
     "encrypt_destination",
     "engine",
+    "evaluate_budget",
     "get_cache",
     "get_logger",
     "get_effective_provider_policy",
@@ -101,6 +104,7 @@ __all__ = [
     "run_migrations",
     "session_id",
     "session_scope",
+    "spend_since",
     "settings",
     "slugify",
     "ticket_id",
