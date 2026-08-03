@@ -423,6 +423,44 @@ class Reminder(SQLModel, table=True):
     last_delivery_id: str | None = None
 
 
+class CallSession(SQLModel, table=True):
+    """Lifecycle of one inbound phone call.
+
+    Holds no audio and no recording. A call to this service is someone saying
+    their income, their caste category, and whether they have a disability out
+    loud; keeping the audio would collect precisely what the rest of the system
+    is built to avoid holding. What is kept is enough to bill, debug, and
+    enforce limits: who called as a hash, how long it lasted, and how it ended.
+    """
+
+    __tablename__ = "call_session"
+    __table_args__ = (
+        Index("ix_call_session_provider_call", "provider", "provider_call_id", unique=True),
+    )
+
+    id: str = Field(primary_key=True)
+    provider: str = Field(default="infobip", index=True)
+    provider_call_id: str = Field(index=True)
+    # The caller's number, hashed. A phone number is not stored, and the hash
+    # authorizes nothing — it only lets a repeat caller resume a conversation.
+    hashed_caller_identity: str = Field(index=True)
+    session_id: str | None = Field(default=None, foreign_key="user_session.id", index=True)
+
+    language_code: str = ""
+    state_code: str = ""
+    status: str = Field(default="ringing", index=True)
+
+    turn_count: int = 0
+    started_at: datetime = Field(default_factory=_utcnow, index=True)
+    answered_at: datetime | None = None
+    ended_at: datetime | None = None
+    duration_seconds: int | None = None
+
+    provider_error_code: str = ""
+    end_reason: str = ""
+    safe_metadata: dict = Field(default_factory=dict, sa_column=json_dict())
+
+
 class ConversationTurnLog(SQLModel, table=True):
     """Turn-by-turn transcript, kept for demo playback and quality review."""
 

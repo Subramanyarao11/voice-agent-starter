@@ -21,6 +21,7 @@ from sahaayak_common.messaging_budget import BudgetPosture, evaluate_budget, spe
 from sahaayak_common.models import (
     AuditEvent,
     Benefit,
+    CallSession,
     ConsentEvent,
     ContactPoint,
     ConversationTurnLog,
@@ -58,6 +59,7 @@ __all__ = [
     "BudgetPosture",
     "BudgetReservation",
     "Cache",
+    "CallSession",
     "ConsentEvent",
     "ContactEncryptionUnavailable",
     "ContactPoint",

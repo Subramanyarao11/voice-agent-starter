@@ -28,11 +28,13 @@ from sqlmodel import Session, select
 
 from sahaayak_api.integrations.infobip.webhooks import (
     is_stop_keyword,
+    parse_call_events,
     parse_delivery_reports,
     parse_inbound_sms,
     parse_inbound_whatsapp,
 )
 from sahaayak_api.telemetry import record_telemetry
+from sahaayak_api.workers.voice_call import handle_call_event
 from sahaayak_api.workers.whatsapp_inbound import handle_event as handle_whatsapp_event
 from sahaayak_common import (
     ConsentEvent,
@@ -207,6 +209,35 @@ async def inbound_whatsapp(
         safe_metadata={"scheduled": scheduled, "revoked": revoked},
     )
     return WebhookAck(processed=scheduled + revoked)
+
+
+@router.post(
+    "/voice/events",
+    response_model=WebhookAck,
+    dependencies=[Depends(require_webhook_secret)],
+)
+async def voice_events(request: Request, background: BackgroundTasks) -> WebhookAck:
+    """Inbound Calls API events, processed after acknowledgement.
+
+    A live call cannot wait on a synthesis round trip inside a webhook
+    response, and a provider that times out on this callback may tear the call
+    down. The event is normalized here and the call actions happen behind it.
+    """
+    payload = await read_bounded_payload(request)
+    events = parse_call_events(payload)
+    for event in events:
+        background.add_task(handle_call_event, event)
+
+    record_telemetry(
+        event_type="provider",
+        route="/api/webhooks/infobip/voice/events",
+        method="POST",
+        surface="voice",
+        provider="infobip",
+        outcome="accepted",
+        safe_metadata={"events": len(events)},
+    )
+    return WebhookAck(processed=len(events))
 
 
 @router.post(

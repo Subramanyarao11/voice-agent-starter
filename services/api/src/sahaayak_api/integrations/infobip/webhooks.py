@@ -203,6 +203,52 @@ def is_stop_keyword(text: str) -> bool:
     return words[0] in STOP_KEYWORDS
 
 
+def parse_call_events(payload: dict[str, Any] | None) -> list[dict[str, Any]]:
+    """Normalize Calls API events into the vocabulary the call worker uses.
+
+    The caller's number is passed through raw for the worker to hash
+    immediately; like a WhatsApp sender, a caller ID is asserted by the network
+    and proves nothing about who is on the line.
+    """
+    if not isinstance(payload, dict):
+        return []
+
+    entries = payload.get("events")
+    if not isinstance(entries, list):
+        entries = [payload]
+
+    events: list[dict[str, Any]] = []
+    for entry in entries:
+        if not isinstance(entry, dict):
+            continue
+        properties = entry.get("properties") if isinstance(entry.get("properties"), dict) else {}
+        call = properties.get("call") if isinstance(properties.get("call"), dict) else {}
+
+        call_id = (
+            entry.get("callId")
+            or call.get("id")
+            or properties.get("callId")
+            or entry.get("call_id")
+            or ""
+        )
+        if not call_id:
+            continue
+
+        endpoint = call.get("endpoint") if isinstance(call.get("endpoint"), dict) else {}
+        events.append(
+            {
+                "type": str(entry.get("type") or entry.get("name") or "").upper(),
+                "call_id": str(call_id),
+                "from": str(endpoint.get("phoneNumber") or call.get("from") or entry.get("from")
+                             or ""),
+                "text": str(properties.get("text") or entry.get("text") or ""),
+                "reason": str(properties.get("reason") or entry.get("reason") or ""),
+                "error_code": str(properties.get("errorCode") or ""),
+            }
+        )
+    return events
+
+
 def parse_inbound_whatsapp(payload: dict[str, Any] | None) -> list[dict[str, Any]]:
     """Normalize inbound WhatsApp events into a small typed vocabulary.
 
