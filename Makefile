@@ -1,6 +1,7 @@
 .DEFAULT_GOAL := help
 .PHONY: help setup up down infra api web lint fmt test check types seed validate-data migrate \
-pipeline extract prefilter structure spotcheck evaluate retention rate-limit-smoke logs-api ps clean
+pipeline extract prefilter structure spotcheck evaluate retention rate-limit-smoke \
+notifications notifications-dry-run logs-api ps clean
 
 help: ## Show every available target
 	@grep -hE '^[a-zA-Z_-]+:.*?## ' $(MAKEFILE_LIST) \
@@ -59,6 +60,12 @@ retention: ## Preview privacy retention deletions; add --execute explicitly to a
 
 rate-limit-smoke: ## Verify two Redis limiter instances share one atomic window
 	uv run python scripts/13_rate_limit_smoke.py
+
+notifications: ## Dispatch one batch of due external-channel reminders
+	uv run python scripts/14_run_notification_worker.py
+
+notifications-dry-run: ## Show which reminders are due without sending anything
+	uv run python scripts/14_run_notification_worker.py --dry-run
 
 migrate: ## Apply all Alembic migrations to the configured database
 	uv run alembic upgrade head
