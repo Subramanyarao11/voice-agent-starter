@@ -702,6 +702,8 @@ Before release, all of the following should be true:
   retention, alerts, and limiter smoke tests.
 - docs/data-review-2026-08-02.md — data review findings and structured-benefit review
   context.
+- docs/infobip-integration-plan.md — detailed Infobip plan for SMS, WhatsApp,
+  email, voice transport, reminders, webhooks, consent, admin, and rollout.
 
 ## 16. External references discussed
 
@@ -734,4 +736,3 @@ Before release, all of the following should be true:
 - Add tests and update the roadmap when a work package changes status.
 - Record live-provider evidence, native-language QA, and deployment assumptions in
   a dated operations or review document.
-
