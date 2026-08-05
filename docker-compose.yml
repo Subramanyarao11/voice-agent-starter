@@ -8,7 +8,10 @@ services:
       POSTGRES_PASSWORD: sahaayak
       POSTGRES_DB: sahaayak
     ports:
-      - "5432:5432"
+      # Published on a non-default host port so the stack coexists with a
+      # native Postgres on 5432. Containers reach this by service name on the
+      # compose network, so the mapping only affects tools run on the host.
+      - "5433:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
     healthcheck:
@@ -20,7 +23,8 @@ services:
   redis:
     image: redis:7
     ports:
-      - "6379:6379"
+      # Likewise offset, so a native redis-server on 6379 is left alone.
+      - "6380:6379"
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 5s
