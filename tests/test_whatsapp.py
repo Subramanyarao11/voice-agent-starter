@@ -313,3 +313,50 @@ def test_an_inbound_stop_is_applied_inline_not_in_the_background(
         headers={"X-Infobip-Webhook-Secret": "s3cret"},
     )
     assert response.status_code == 200
+
+
+# --- Provider MSISDN format (found against the live API) -------------------
+
+
+def test_an_inbound_sender_without_a_plus_is_restored_to_e164() -> None:
+    """Infobip reports MSISDNs in international format but without the plus.
+
+    Found the hard way: the agent ran correctly on a real inbound payload and
+    then refused to reply, because the sender failed strict E.164 validation.
+    """
+    from sahaayak_api.integrations.infobip.webhooks import to_e164
+
+    assert to_e164("919034334891") == "+919034334891"
+    assert to_e164("+919034334891") == "+919034334891"
+    assert to_e164("+91 90343-34891") == "+919034334891"
+
+
+def test_a_non_numeric_sender_is_left_alone() -> None:
+    """Alphanumeric sender IDs are not phone numbers and must not gain a plus."""
+    from sahaayak_api.integrations.infobip.webhooks import to_e164
+
+    assert to_e164("SAHAYK") == "SAHAYK"
+    assert to_e164("") == ""
+
+
+def test_a_real_inbound_payload_yields_a_sendable_destination() -> None:
+    """The exact shape Infobip delivered, end to end through the parser."""
+    from sahaayak_common import is_valid_e164
+
+    events = parse_inbound_whatsapp(
+        {
+            "results": [
+                {
+                    "from": "919034334891",
+                    "to": "447860088970",
+                    "integrationType": "WHATSAPP",
+                    "messageId": "sim-inbound-2",
+                    "message": {"type": "TEXT", "text": "find me a job"},
+                    "contact": {"name": "Daksh"},
+                }
+            ],
+            "messageCount": 1,
+        }
+    )
+    assert events[0]["sender"] == "+919034334891"
+    assert is_valid_e164(events[0]["sender"]), "the reply path validates strict E.164"

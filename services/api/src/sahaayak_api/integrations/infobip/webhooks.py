@@ -88,6 +88,32 @@ STOP_KEYWORDS = frozenset(
 )
 
 
+_DIGITS_ONLY = re.compile(r"^\d{8,15}$")
+
+
+def to_e164(value: str) -> str:
+    """Put a provider-supplied phone number into E.164 form.
+
+    Infobip reports MSISDNs in international format but without the leading
+    plus — an inbound WhatsApp message from +91 90343 34891 arrives as
+    ``919034334891``. Everything downstream validates strict E.164, so the
+    number is restored to it here, at the boundary where the convention is
+    known.
+
+    Deliberately not done in ``normalize_destination``: that handles what a
+    caller typed, where a bare string of digits has no reliable country code
+    and prefixing a plus would be guessing. Here the country code is already
+    present and only the punctuation is missing, which is a different problem
+    with a safe answer.
+    """
+    cleaned = re.sub(r"[\s\-().]", "", (value or "").strip())
+    if cleaned.startswith("+"):
+        return cleaned
+    if _DIGITS_ONLY.match(cleaned):
+        return f"+{cleaned}"
+    return cleaned
+
+
 def results_from(payload: dict[str, Any] | None) -> list[dict[str, Any]]:
     """The report array, tolerating the shapes a callback may arrive in."""
     if not isinstance(payload, dict):
@@ -239,8 +265,9 @@ def parse_call_events(payload: dict[str, Any] | None) -> list[dict[str, Any]]:
             {
                 "type": str(entry.get("type") or entry.get("name") or "").upper(),
                 "call_id": str(call_id),
-                "from": str(endpoint.get("phoneNumber") or call.get("from") or entry.get("from")
-                             or ""),
+                "from": to_e164(
+                    str(endpoint.get("phoneNumber") or call.get("from") or entry.get("from") or "")
+                ),
                 "text": str(properties.get("text") or entry.get("text") or ""),
                 "reason": str(properties.get("reason") or entry.get("reason") or ""),
                 "error_code": str(properties.get("errorCode") or ""),
@@ -272,7 +299,7 @@ def parse_inbound_whatsapp(payload: dict[str, Any] | None) -> list[dict[str, Any
 
         kind = str(message.get("type") or "").upper()
         event: dict[str, Any] = {
-            "sender": sender,
+            "sender": to_e164(sender),
             "kind": kind,
             "provider_message_id": entry.get("messageId") or "",
             "text": "",
@@ -334,5 +361,5 @@ def parse_inbound_sms(payload: dict[str, Any] | None) -> list[tuple[str, str]]:
         elif isinstance(entry.get("cleanText"), str):
             text = entry["cleanText"]
         if isinstance(sender, str) and isinstance(text, str) and sender and text:
-            messages.append((sender, text))
+            messages.append((to_e164(sender), text))
     return messages
