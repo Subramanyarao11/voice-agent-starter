@@ -22,6 +22,30 @@ os.environ["LANGFUSE_SECRET_KEY"] = ""
 os.environ["ADMIN_API_TOKEN"] = "test-admin-token"
 os.environ["ENV"] = "test"
 
+# Pinned off regardless of the developer's .env. Without this the suite reads
+# whatever messaging credentials happen to be configured locally, so tests
+# asserting the default posture pass or fail depending on whose machine they
+# run on — and a test could reach a real provider with a real key.
+for _var in (
+    "INFOBIP_ENABLED",
+    "INFOBIP_SMS_ENABLED",
+    "INFOBIP_EMAIL_ENABLED",
+    "INFOBIP_WHATSAPP_ENABLED",
+    "INFOBIP_VOICE_ENABLED",
+):
+    os.environ[_var] = "false"
+for _var in (
+    "INFOBIP_API_KEY",
+    "INFOBIP_BASE_URL",
+    "INFOBIP_WEBHOOK_AUTH_SECRET",
+    "INFOBIP_CONTACT_ENCRYPTION_KEY",
+    "INFOBIP_SMS_SENDER",
+    "INFOBIP_EMAIL_SENDER",
+    "INFOBIP_WHATSAPP_SENDER",
+    "INFOBIP_VOICE_NUMBER",
+):
+    os.environ[_var] = ""
+
 import pytest  # noqa: E402
 
 from sahaayak_agent import AgentRuntime  # noqa: E402
