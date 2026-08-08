@@ -1006,30 +1006,38 @@ as design references. It adopts familiar patterns, clarity, and accessibility;
 it does **not** copy government identity or imply that Sahaayak is an official
 government website.
 
+The canonical, source-audited specification for this package is
+[`docs/india-government-ui-ux-guide.md`](./india-government-ui-ux-guide.md).
+That guide incorporates GIGW 3.0, DBIM V3.0, UX4G Design System 3.0, privacy and
+emblem constraints, a representative live-site review, exact design tokens,
+page/component patterns, accessibility gates, and a current frontend gap audit.
+If a visual value or implementation detail below conflicts with that guide, the
+canonical guide takes precedence.
+
 ### Visual direction and trust rules
 
 Replace the current dark green, acid-lime, and orange presentation with a light,
-calm public-service theme. Do not paint the interface as a tricolor. Navy/indigo
-is the structural color, saffron is a restrained accent, and green is reserved
-for positive status. Proposed semantic tokens are a Sahaayak palette inspired by
-public-service conventions, not claimed UX4G token values:
+calm public-service theme. Do not paint the interface as a tricolor. Sahaayak
+adopts the single DBIM Blue primary group; green, yellow, red, and information
+blue are reserved for their functional status roles:
 
 | Token | Proposed value | Use |
 | --- | --- | --- |
-| `--color-brand-900` | `#12345B` | Header, high-emphasis surfaces |
-| `--color-brand-700` | `#1E4E85` | Primary controls and links |
-| `--color-brand-600` | `#245FAE` | Hover/interactive emphasis |
-| `--color-accent-saffron` | `#C65D00` | Small highlights, active markers |
-| `--color-success-700` | `#147A3E` | Verified/success status only |
-| `--color-warning-700` | `#8A4B00` | Stale data, caution, uncertainty |
-| `--color-danger-700` | `#B42318` | Errors and destructive actions |
-| `--color-info-700` | `#175CD3` | Informational status and focus |
-| `--color-text` | `#17202A` | Default text |
-| `--color-text-muted` | `#475467` | Secondary text |
-| `--color-border` | `#D0D5DD` | Borders and dividers |
+| `--color-brand-900` | `#162F6A` | Header/footer, high-emphasis surfaces |
+| `--color-brand-700` | `#214AAB` | Primary controls and links |
+| `--color-brand-500` | `#5279D7` | Large graphics; not normal text on white |
+| `--color-brand-200` | `#A3BBF3` | Borders and visual accents |
+| `--color-brand-100` | `#D2DFFF` | Selected and subtle brand backgrounds |
+| `--color-success` | `#198754` | Verified/success status only |
+| `--color-warning` | `#FFC107` | Caution background with dark text |
+| `--color-danger` | `#DC3545` | Errors and destructive actions |
+| `--color-info` | `#0D6EFD` | Informational status and focus |
+| `--color-text` | `#150202` | Default text |
+| `--color-text-muted` | `#606060` | Secondary text |
+| `--color-border` | `#C6C6C6` | Borders and dividers |
 | `--color-surface` | `#FFFFFF` | Primary surface |
-| `--color-surface-subtle` | `#F6F8FB` | Page/background grouping |
-| `--color-focus` | `#0B57D0` | 3px visible focus ring |
+| `--color-surface-subtle` | `#EBEAEA` | Page/background grouping |
+| `--color-focus` | `#0D6EFD` | 4px visible focus ring with offset |
 
 - Map these semantic variables into Tailwind v4 `@theme` and the shadcn
   component variables. Components consume roles such as `primary`, `surface`,
@@ -1039,9 +1047,8 @@ public-service conventions, not claimed UX4G token values:
   targets and user testing.
 - Use white space, borders, and typography before elevation. Keep shadows subtle
   and avoid glassmorphism, neon treatments, and animation-heavy decoration.
-- Use saffron in less than roughly 10% of a typical screen and never as the only
-  status indicator. Use green only for semantic success/verification, not for
-  generic branding.
+- Use green only for semantic success/verification, yellow only for warnings,
+  and red only for errors/destructive actions; none is a generic brand accent.
 - Show source organization, last-verified date, coverage label, privacy/help,
   and “independent guidance—not an official eligibility decision” in predictable
   locations. Trust should come from provenance rather than official-looking
