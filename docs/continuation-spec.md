@@ -22,6 +22,10 @@
 > languages remain intentionally inactive until native-speaker evidence,
 > localized content, and admin approval are supplied.
 
+> The source-freshness scan also runs as a dedicated Docker worker on a
+> configurable cadence. The admin page remains the review surface; the worker
+> only creates/refreshes deduplicated alerts and does not publish data.
+
 ---
 
 ## 0. How to use this document

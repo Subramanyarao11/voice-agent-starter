@@ -105,3 +105,16 @@ def test_admin_deployment_comparison_and_failure_simulation_are_dry_run_only(cli
         "email_failure",
     }
     assert "never calls a provider" in simulation_body["note"]
+
+
+def test_admin_provider_view_exposes_safe_usage_breakdowns(client):
+    response = client.get("/api/admin/providers", headers=ADMIN)
+    assert response.status_code == 200
+    providers = response.json()["providers"]
+    openai = next(provider for provider in providers if provider["name"] == "openai")
+    assert isinstance(openai["cost_by_operation"], dict)
+    assert isinstance(openai["observed_cost_by_operation"], dict)
+    assert isinstance(openai["voice_requests_by_language"], dict)
+    sarvam = next(provider for provider in providers if provider["name"] == "sarvam_bulbul")
+    assert isinstance(sarvam["tts_billed_characters_by_language"], dict)
+    assert "provider contract" in sarvam["cost_scope"]

@@ -46,6 +46,12 @@ Required production variables include `POSTGRES_PASSWORD`,
 or provider secrets that the deployment intends to activate. Use a secret
 manager rather than committing `.env`.
 
+Run the scheduled `freshness-worker` alongside the API and notification worker.
+Set `FRESHNESS_STALE_DAYS` and `FRESHNESS_SCAN_INTERVAL_SECONDS` explicitly in
+the deployment environment. It writes only redacted source-freshness alerts;
+reviewers still decide whether a source is refreshed or a benefit is
+republished.
+
 The production Keycloak overlay can be added after its hostname, TLS, and
 client redirect URI have been changed from localhost:
 

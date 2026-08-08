@@ -399,6 +399,39 @@ class OpenAIBudgetLedger:
             reserved = _decimal(ledger.get("reserved_usd"), field="reserved_usd")
             observed = _decimal(ledger.get("observed_usd"), field="observed_usd")
             calls = ledger["calls"]
+            by_operation: dict[str, dict[str, Any]] = {}
+            for call in calls:
+                operation = str(call.get("operation") or "unknown")[:96]
+                bucket = by_operation.setdefault(
+                    operation,
+                    {
+                        "calls": 0,
+                        "completed_calls": 0,
+                        "failed_calls": 0,
+                        "pending_calls": 0,
+                        "reserved_usd": Decimal("0"),
+                        "observed_usd": Decimal("0"),
+                    },
+                )
+                bucket["calls"] += 1
+                status = call.get("status")
+                if status == "completed":
+                    bucket["completed_calls"] += 1
+                elif status == "failed":
+                    bucket["failed_calls"] += 1
+                elif status == "reserved":
+                    bucket["pending_calls"] += 1
+                bucket["reserved_usd"] += _decimal(
+                    call.get("reserved_usd", "0"), field="call.reserved_usd"
+                )
+                if call.get("observed_usd") is not None:
+                    bucket["observed_usd"] += _decimal(
+                        call["observed_usd"], field="call.observed_usd"
+                    )
+
+            for bucket in by_operation.values():
+                bucket["reserved_usd"] = _money(bucket["reserved_usd"])
+                bucket["observed_usd"] = _money(bucket["observed_usd"])
             return {
                 "budget_usd": _money(budget),
                 "reserved_usd": _money(reserved),
@@ -408,6 +441,7 @@ class OpenAIBudgetLedger:
                 "completed_calls": sum(call.get("status") == "completed" for call in calls),
                 "failed_calls": sum(call.get("status") == "failed" for call in calls),
                 "pending_calls": sum(call.get("status") == "reserved" for call in calls),
+                "by_operation": by_operation,
                 "ledger_path": str(self.ledger_path),
             }
 

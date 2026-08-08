@@ -141,6 +141,14 @@ class Settings(BaseSettings):
     # and a recent verification date is never presented as authoritative.
     department_directory_stale_days: int = 180
 
+    # Source freshness is an operational control, not a request-side side
+    # effect. The dedicated worker scans on a bounded cadence and persists
+    # deduplicated alerts for the admin console. Keep the threshold and cadence
+    # deployment-configurable so a production policy does not depend on a
+    # developer remembering a manual command.
+    freshness_stale_days: int = 90
+    freshness_scan_interval_seconds: int = 3600
+
     # --- Infobip messaging seam --------------------------------------------
     # Every channel is off by default and gated twice: the master switch here
     # and a per-channel switch. A configured API key is never on its own taken

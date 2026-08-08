@@ -5,6 +5,8 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import math
+import time
 import uuid
 from datetime import UTC, datetime
 
@@ -55,7 +57,11 @@ def main() -> None:
     run_id = uuid.uuid4().hex[:12]
     started_at = datetime.now(UTC)
     results = [_run_case(runtime, case, run_id, keep=args.keep) for case in selected]
-    payload = {"passed": all(result["passed"] for result in results), "cases": results}
+    payload = {
+        "passed": all(result["passed"] for result in results),
+        "cases": results,
+        "metrics": _evaluation_metrics(results),
+    }
     completed_at = datetime.now(UTC)
     language_counts: dict[str, int] = {}
     for case in selected:
@@ -86,6 +92,7 @@ def _run_case(runtime: AgentRuntime, case: dict, run_id: str, *, keep: bool) -> 
     import asyncio
 
     async def run():
+        case_started = time.perf_counter()
         state = None
         for turn in case["turns"]:
             _, state = await runtime.run_turn(
@@ -105,12 +112,14 @@ def _run_case(runtime: AgentRuntime, case: dict, run_id: str, *, keep: bool) -> 
             passed = passed and bool(state and state.needs_escalation) is expected["escalated"]
         return {
             "id": case["id"],
+            "language": case["language"],
             "passed": passed,
             "session_id": state.session_id if state else None,
             "turns": len(case["turns"]),
             "match_ids": match_ids,
             "pending_slot": state.pending_slot.value if state and state.pending_slot else None,
             "escalated": bool(state and state.needs_escalation),
+            "duration_ms": round((time.perf_counter() - case_started) * 1000, 2),
         }
 
     result = asyncio.run(run())
@@ -118,6 +127,46 @@ def _run_case(runtime: AgentRuntime, case: dict, run_id: str, *, keep: bool) -> 
         _delete_session(result.get("session_id"))
         result.pop("session_id", None)
     return result
+
+
+def _evaluation_metrics(results: list[dict]) -> dict:
+    """Build bounded quality/latency rollups for the admin dashboard."""
+    durations = [float(result.get("duration_ms") or 0) for result in results]
+    by_language: dict[str, dict[str, float | int]] = {}
+    for result in results:
+        language = str(result.get("language") or "unknown")[:16]
+        bucket = by_language.setdefault(
+            language,
+            {"cases": 0, "passed": 0, "failed": 0, "duration_ms": 0.0},
+        )
+        bucket["cases"] += 1
+        bucket["passed"] += int(bool(result.get("passed")))
+        bucket["failed"] += int(not bool(result.get("passed")))
+        bucket["duration_ms"] += float(result.get("duration_ms") or 0)
+
+    for bucket in by_language.values():
+        cases = int(bucket["cases"])
+        bucket["pass_rate"] = round(int(bucket["passed"]) / cases, 4) if cases else 0.0
+        bucket["average_duration_ms"] = (
+            round(float(bucket.pop("duration_ms")) / cases, 2) if cases else 0.0
+        )
+
+    return {
+        "case_count": len(results),
+        "passed_count": sum(bool(result.get("passed")) for result in results),
+        "failed_count": sum(not bool(result.get("passed")) for result in results),
+        "average_duration_ms": round(sum(durations) / len(durations), 2) if durations else 0.0,
+        "p95_duration_ms": _percentile(durations, 0.95),
+        "by_language": by_language,
+    }
+
+
+def _percentile(values: list[float], percentile: float) -> float:
+    if not values:
+        return 0.0
+    ordered = sorted(values)
+    index = min(len(ordered) - 1, max(0, math.ceil(len(ordered) * percentile) - 1))
+    return round(ordered[index], 2)
 
 
 def _delete_session(session_id: str | None) -> None:

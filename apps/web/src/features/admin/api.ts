@@ -22,6 +22,11 @@ const providerStatusSchema = z.object({
   reserved_usd: z.number().nullable().optional(),
   observed_usd: z.number().nullable().optional(),
   remaining_usd: z.number().nullable().optional(),
+  cost_by_operation: z.record(z.string(), z.number()).default({}),
+  observed_cost_by_operation: z.record(z.string(), z.number()).default({}),
+  voice_requests_by_language: z.record(z.string(), z.number()).default({}),
+  tts_billed_characters_by_language: z.record(z.string(), z.number()).default({}),
+  cost_scope: z.string().default(""),
   controls_available: z.boolean().default(false),
   note: z.string().default(""),
 });

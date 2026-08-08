@@ -154,6 +154,13 @@ documented user/operator fallback, but never call a provider, send a message,
 or mutate policy. Execute an actual failure drill only in staging with provider
 mocks and an explicit change ticket.
 
+The provider cards also show OpenAI's conservative reserved and observed spend
+by operation from the local budget ledger, plus voice request counts by locale.
+Sarvam cards show request and TTS-character telemetry only; the provider
+contract does not expose a billing reconciliation value, so the console never
+turns those counts into a fabricated rupee or credit amount. Messaging spend
+remains the separate channel/language/provider breakdown under `/admin/messaging`.
+
 `/admin/system` records a redacted `DeploymentRevision` at API startup. The
 comparison view diffs the current release against the preceding snapshot using
 application/image identifiers, migration and data revisions, prompt/model
@@ -171,6 +178,14 @@ for an inspection request; changing the threshold does not change any benefit
 row. `POST /api/admin/freshness/scan` is intended for a scheduler, and
 `GET/POST /api/admin/freshness/alerts` lists and acknowledges/resolves alerts.
 
+The Compose stack now runs `freshness-worker` independently of the notification
+worker. It scans every `FRESHNESS_SCAN_INTERVAL_SECONDS` (one hour by default)
+with the `FRESHNESS_STALE_DAYS` threshold, persists the same deduplicated alert
+keys, and records only aggregate `worker/freshness` telemetry. It never
+publishes machine-reviewed rows or changes a benefit's review status. For a
+one-off host/cron run use `make freshness-worker`; use the worker's
+`--stale-days` and `--interval` options for an explicit deployment policy.
+
 `PUT /api/admin/benefits/{benefit_id}` replaces the public benefit fields and
 always deactivates the row, clears machine-review evidence, and returns it to
 `needs_review`. `GET /api/admin/benefits/{benefit_id}/versions` exposes the
@@ -180,9 +195,10 @@ version rather than deleting history. An expected content revision prevents a
 stale browser edit from overwriting a newer reviewer action.
 
 `make evaluate` runs the versioned, deterministic conversation suite without
-provider calls and persists a redacted `EvaluationRun`. The admin quality page
-shows pass/fail counts and language coverage; it does not treat a passing
-conversation test as human verification of a benefit.
+provider calls and persists a redacted `EvaluationRun`. Each run now includes
+bounded case latency and per-language pass-rate rollups; the admin quality page
+shows those alongside pass/fail counts and language coverage. These are software
+regression metrics, not human voice accuracy or benefit publication evidence.
 
 Feature-flag updates and provider-policy updates use append-only revisions.
 Rollback writes a new revision containing the prior snapshot, so the audit log

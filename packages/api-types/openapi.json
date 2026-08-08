@@ -7409,6 +7409,39 @@
             ],
             "title": "Remaining Usd"
           },
+          "cost_by_operation": {
+            "additionalProperties": {
+              "type": "number"
+            },
+            "type": "object",
+            "title": "Cost By Operation"
+          },
+          "observed_cost_by_operation": {
+            "additionalProperties": {
+              "type": "number"
+            },
+            "type": "object",
+            "title": "Observed Cost By Operation"
+          },
+          "voice_requests_by_language": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "type": "object",
+            "title": "Voice Requests By Language"
+          },
+          "tts_billed_characters_by_language": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "type": "object",
+            "title": "Tts Billed Characters By Language"
+          },
+          "cost_scope": {
+            "type": "string",
+            "title": "Cost Scope",
+            "default": ""
+          },
           "controls_available": {
             "type": "boolean",
             "title": "Controls Available",

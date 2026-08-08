@@ -56,6 +56,18 @@ at product, frontend, backend/AI, data, infrastructure, security, and QA levels.
 > prompt bundles, native-speaker evidence, voice/accessibility evidence, and an
 > explicit admin activation are present.
 
+> **Implementation update (2026-08-09, freshness):** Source freshness now has a
+> dedicated scheduled worker in Docker. It persists the same deduplicated,
+> admin-visible alerts as the manual scan, records aggregate worker telemetry,
+> and never publishes or changes review-gated rows.
+
+> **Implementation update (2026-08-09, operations):** OpenAI budget summaries
+> now retain safe operation-level reservation/observed breakdowns, provider
+> cards show voice activity by language, and deterministic evaluation runs
+> persist bounded latency and per-language pass-rate rollups. Sarvam billing
+> remains explicitly unreconciled until the provider exposes a usable usage
+> contract.
+
 ---
 
 ## 1. Executive recommendation

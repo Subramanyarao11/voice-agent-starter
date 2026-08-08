@@ -2856,6 +2856,27 @@ export interface components {
             observed_usd?: number | null;
             /** Remaining Usd */
             remaining_usd?: number | null;
+            /** Cost By Operation */
+            cost_by_operation?: {
+                [key: string]: number;
+            };
+            /** Observed Cost By Operation */
+            observed_cost_by_operation?: {
+                [key: string]: number;
+            };
+            /** Voice Requests By Language */
+            voice_requests_by_language?: {
+                [key: string]: number;
+            };
+            /** Tts Billed Characters By Language */
+            tts_billed_characters_by_language?: {
+                [key: string]: number;
+            };
+            /**
+             * Cost Scope
+             * @default
+             */
+            cost_scope: string;
             /**
              * Controls Available
              * @default false

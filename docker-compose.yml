@@ -82,5 +82,26 @@ services:
     command: >
       python scripts/14_run_notification_worker.py --forever
 
+  # Source freshness is scheduled separately from provider delivery. It is
+  # safe to run with all external channels disabled and only persists the
+  # deduplicated alerts consumed by the admin quality page.
+  freshness-worker:
+    build:
+      context: .
+      dockerfile: infra/python/Dockerfile
+    env_file: .env
+    environment:
+      DATABASE_URL: postgresql+psycopg://sahaayak:sahaayak@postgres:5432/sahaayak
+      REDIS_URL: redis://redis:6379/0
+    depends_on:
+      postgres:
+        condition: service_healthy
+    volumes:
+      - ./packages:/app/packages
+      - ./services:/app/services
+      - ./scripts:/app/scripts
+    command: >
+      python scripts/20_run_freshness_worker.py --forever
+
 volumes:
   pgdata:

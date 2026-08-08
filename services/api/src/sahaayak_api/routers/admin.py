@@ -127,6 +127,11 @@ class ProviderStatusOut(BaseModel):
     reserved_usd: float | None = None
     observed_usd: float | None = None
     remaining_usd: float | None = None
+    cost_by_operation: dict[str, float] = Field(default_factory=dict)
+    observed_cost_by_operation: dict[str, float] = Field(default_factory=dict)
+    voice_requests_by_language: dict[str, int] = Field(default_factory=dict)
+    tts_billed_characters_by_language: dict[str, int] = Field(default_factory=dict)
+    cost_scope: str = ""
     controls_available: bool = False
     note: str = ""
 
@@ -2398,6 +2403,15 @@ def _provider_statuses(
             reserved_usd=_float_or_none(budget.get("reserved_usd")),
             observed_usd=_float_or_none(budget.get("observed_usd")),
             remaining_usd=_float_or_none(budget.get("remaining_usd")),
+            cost_by_operation=_budget_cost_by_operation(budget.get("by_operation")),
+            observed_cost_by_operation=_budget_cost_by_operation(
+                budget.get("by_operation"), key="observed_usd"
+            ),
+            voice_requests_by_language=_counts_by_language(openai_events),
+            cost_scope=(
+                "OpenAI budget ledger lifetime; voice counts are "
+                "telemetry-window aggregates."
+            ),
             controls_available=True,
             note="Budget ledger is a conservative reservation view, not a provider invoice.",
         ),
@@ -2409,6 +2423,11 @@ def _provider_statuses(
             failures=sum(event.outcome == "error" for event in tts_events),
             cache_hits=tts_hits,
             cache_misses=max(0, len(tts_events) - tts_hits),
+            voice_requests_by_language=_counts_by_language(tts_events),
+            tts_billed_characters_by_language=_sum_metadata_by_language(
+                tts_events, "tts_billed_characters"
+            ),
+            cost_scope="Sarvam billing is not available from the current provider contract.",
             controls_available=True,
             note=(
                 "Sarvam credit reconciliation is not available from the current "
@@ -2421,6 +2440,8 @@ def _provider_statuses(
             health="configured" if settings.tts_enabled else "not configured",
             requests=len(sarvam_stt_events),
             failures=sum(event.outcome == "error" for event in sarvam_stt_events),
+            voice_requests_by_language=_counts_by_language(sarvam_stt_events),
+            cost_scope="Sarvam billing is not available from the current provider contract.",
             controls_available=True,
             note=(
                 "Used as the explicit Indian-language STT fallback where the OpenAI "
@@ -2457,6 +2478,45 @@ def _provider_statuses(
             ),
         ),
     ]
+
+
+def _counts_by_language(events: list[TelemetryEvent]) -> dict[str, int]:
+    counts = Counter(event.language_code for event in events if event.language_code)
+    return dict(sorted(counts.items()))
+
+
+def _sum_metadata_by_language(
+    events: list[TelemetryEvent], key: str
+) -> dict[str, int]:
+    totals: dict[str, int] = {}
+    for event in events:
+        if not event.language_code:
+            continue
+        value = event.safe_metadata.get(key)
+        if isinstance(value, bool):
+            continue
+        try:
+            amount = int(value or 0)
+        except (TypeError, ValueError):
+            continue
+        totals[event.language_code] = totals.get(event.language_code, 0) + max(0, amount)
+    return dict(sorted(totals.items()))
+
+
+def _budget_cost_by_operation(
+    raw: object, *, key: str = "reserved_usd"
+) -> dict[str, float]:
+    """Convert the local ledger's safe operation buckets for the dashboard."""
+    if not isinstance(raw, dict):
+        return {}
+    costs: dict[str, float] = {}
+    for operation, payload in raw.items():
+        if not isinstance(operation, str) or not isinstance(payload, dict):
+            continue
+        value = _float_or_none(payload.get(key))
+        if value is not None:
+            costs[operation] = value
+    return dict(sorted(costs.items()))
 
 
 def _provider_policy_outs(db: Session) -> list[ProviderPolicyOut]:

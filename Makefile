@@ -2,7 +2,7 @@
 .PHONY: help setup up down infra api web lint fmt test check types seed validate-data migrate \
 pipeline extract prefilter structure spotcheck jobs jobs-state jobs-ncs evaluate retention rate-limit-smoke \
 notifications notifications-dry-run freshness-scan language-release-check language-ui-check \
-language-voice-smoke logs-api ps clean
+language-voice-smoke freshness-worker logs-api ps clean
 
 help: ## Show every available target
 	@grep -hE '^[a-zA-Z_-]+:.*?## ' $(MAKEFILE_LIST) \
@@ -70,6 +70,9 @@ notifications-dry-run: ## Show which reminders are due without sending anything
 
 freshness-scan: ## Scan active sources and persist deduplicated freshness alerts
 	uv run python scripts/15_scan_source_freshness.py
+
+freshness-worker: ## Run one scheduled source-freshness scan
+	uv run python scripts/20_run_freshness_worker.py
 
 language-release-check: ## Validate a locale's prompt bundle and review evidence
 	uv run python scripts/17_validate_language_release.py --all

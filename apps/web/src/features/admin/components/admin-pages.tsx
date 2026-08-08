@@ -312,6 +312,21 @@ function ProvidersPage({ token, role }: { token: string; role: string }) {
                 {provider.budget_usd != null && <Stat label="Budget remaining" value={`$${provider.remaining_usd?.toFixed(2) ?? "—"}`} tone="good" />}
                 {provider.cache_hits > 0 && <Stat label="Cache hits" value={provider.cache_hits} tone="good" />}
               </div>
+              {Object.keys(provider.cost_by_operation).length > 0 && (
+                <div className="rounded-lg border border-paper/10 bg-ink/20 px-3 py-2 text-xs">
+                  <p className="font-semibold text-paper/65">Reserved by operation</p>
+                  <p className="mt-1 leading-5 text-paper/45">{formatUsdBreakdown(provider.cost_by_operation)}</p>
+                  <p className="mt-1 leading-5 text-paper/40">Observed: {formatUsdBreakdown(provider.observed_cost_by_operation)}</p>
+                </div>
+              )}
+              {Object.keys(provider.voice_requests_by_language).length > 0 && (
+                <div className="rounded-lg border border-paper/10 bg-ink/20 px-3 py-2 text-xs">
+                  <p className="font-semibold text-paper/65">Voice activity by language</p>
+                  <p className="mt-1 leading-5 text-paper/45">{formatCountBreakdown(provider.voice_requests_by_language)} requests</p>
+                  {Object.keys(provider.tts_billed_characters_by_language).length > 0 && <p className="mt-1 leading-5 text-paper/40">TTS characters: {formatCountBreakdown(provider.tts_billed_characters_by_language)}</p>}
+                </div>
+              )}
+              {provider.cost_scope && <p className="text-[0.68rem] leading-5 text-paper/35">{provider.cost_scope}</p>}
               <p className="text-xs leading-5 text-paper/45">{provider.note}</p>
             </CardContent>
           </Card>
@@ -424,7 +439,7 @@ function QualityPage({ token, role }: { token: string; role: string }) {
       <PageIntro title="Data freshness and evaluations" description={`Freshness threshold ${freshness.data.stale_after_days} days · generated ${formatTime(freshness.data.generated_at)}. Machine-structured rows remain visible but are not publication evidence.`} />
       <Card className="border-paper/10 bg-paper/[0.04] text-paper"><CardHeader><CardTitle className="text-paper">Source freshness alerts</CardTitle><p className="text-sm leading-6 text-paper/50">Alerts are deduplicated by benefit and source condition. Acknowledging an alert records ownership; it is automatically resolved when the next scan sees fresh evidence.</p></CardHeader><CardContent className="space-y-3">{freshness.data.alerts.map((alert) => <article key={alert.id} className="flex flex-wrap items-start justify-between gap-3 rounded-xl border border-orange/20 bg-orange/[0.05] p-4"><div><div className="flex flex-wrap items-center gap-2"><Badge variant="warning">{alert.severity}</Badge><Badge variant="outline" className="border-orange/30 text-orange">{alert.status}</Badge><span className="font-mono text-xs text-paper/40">{alert.alert_type}</span></div><p className="mt-2 text-sm text-paper/75">{alert.message}</p><p className="mt-1 text-xs text-paper/40">{alert.dataset} · last seen {formatTime(alert.last_seen_at)}</p></div>{(role === "reviewer" || role === "admin") && <div className="flex gap-2"><Button type="button" size="sm" variant="outline" disabled={updateAlert.isPending || alert.status === "acknowledged"} onClick={() => updateAlert.mutate({alertId: alert.id, status: "acknowledged", reason: "Acknowledged from the freshness console"})}>Acknowledge</Button><Button type="button" size="sm" disabled={updateAlert.isPending} onClick={() => updateAlert.mutate({alertId: alert.id, status: "resolved", reason: "Resolved from the freshness console"})}>Resolve</Button></div>}</article>)}{!freshness.data.alerts.length && <EmptyState label="No open or acknowledged source freshness alerts." />}</CardContent></Card>
       <Card className="border-paper/10 bg-paper/[0.04] text-paper"><CardContent className="overflow-x-auto p-0"><table className="w-full min-w-[920px] text-left text-sm"><caption className="sr-only">Data freshness by source dataset</caption><thead className="border-b border-paper/10 text-xs uppercase tracking-[0.12em] text-paper/40"><tr><th className="px-5 py-4">Dataset</th><th className="px-5 py-4">Status</th><th className="px-5 py-4">Rows</th><th className="px-5 py-4">Active</th><th className="px-5 py-4">Human verified</th><th className="px-5 py-4">Stale / expired</th><th className="px-5 py-4">Latest check</th></tr></thead><tbody>{freshness.data.sources.map((source) => <tr key={source.dataset} className="border-b border-paper/5 last:border-0"><td className="px-5 py-4 font-semibold">{source.dataset}</td><td className="px-5 py-4"><Badge variant={source.status === "healthy" ? "success" : "warning"}>{source.status}</Badge></td><td className="px-5 py-4">{source.total_rows}</td><td className="px-5 py-4">{source.active_rows}</td><td className="px-5 py-4">{source.human_verified_rows}</td><td className="px-5 py-4">{source.stale_rows} / {source.expired_rows}</td><td className="px-5 py-4 text-xs text-paper/50">{source.latest_verified_date ?? "not checked"}</td></tr>)}</tbody></table>{!freshness.data.sources.length && <EmptyState label="No benefit or job source rows are loaded." />}</CardContent></Card>
-      <div className="grid gap-4">{evaluations.data.map((run) => <Card key={run.id} className="border-paper/10 bg-paper/[0.04] text-paper"><CardContent className="flex flex-wrap items-center justify-between gap-4 p-5"><div><div className="flex items-center gap-2"><Badge variant={run.passed ? "success" : "warning"}>{run.passed ? "passed" : "failed"}</Badge><span className="font-semibold">{run.suite_name}</span></div><p className="mt-2 text-xs text-paper/45">suite {run.suite_version} · {formatTime(run.completed_at ?? run.started_at)} · languages {Object.entries(run.language_counts).map(([language, count]) => `${language} ${count}`).join(", ") || "—"}</p></div><div className="text-right"><p className="font-mono text-2xl text-acid">{run.passed_count}/{run.case_count}</p><p className="text-xs text-paper/45">cases passed</p></div></CardContent></Card>)}{!evaluations.data.length && <Card className="border-paper/10 bg-paper/[0.04] text-paper"><CardContent><EmptyState label="No evaluation runs recorded yet. Run make evaluate to create evidence." /></CardContent></Card>}</div>
+      <div className="grid gap-4">{evaluations.data.map((run) => { const metrics = evaluationMetrics(run.report_json); return <Card key={run.id} className="border-paper/10 bg-paper/[0.04] text-paper"><CardContent className="flex flex-wrap items-center justify-between gap-4 p-5"><div><div className="flex items-center gap-2"><Badge variant={run.passed ? "success" : "warning"}>{run.passed ? "passed" : "failed"}</Badge><span className="font-semibold">{run.suite_name}</span></div><p className="mt-2 text-xs text-paper/45">suite {run.suite_version} · {formatTime(run.completed_at ?? run.started_at)} · languages {Object.entries(run.language_counts).map(([language, count]) => `${language} ${count}`).join(", ") || "—"}</p>{metrics && <p className="mt-1 text-xs text-paper/40">Average {Math.round(metrics.average_duration_ms)} ms · P95 {Math.round(metrics.p95_duration_ms)} ms · {formatPercent(metrics.pass_rate)} overall pass rate</p>}</div><div className="text-right"><p className="font-mono text-2xl text-acid">{run.passed_count}/{run.case_count}</p><p className="text-xs text-paper/45">cases passed</p></div></CardContent></Card>; })}{!evaluations.data.length && <Card className="border-paper/10 bg-paper/[0.04] text-paper"><CardContent><EmptyState label="No evaluation runs recorded yet. Run make evaluate to create evidence." /></CardContent></Card>}</div>
     </div>
   );
 }
@@ -831,4 +846,16 @@ function outcomeBadge(outcome: string) { if (outcome === "success") return <Badg
 function formatTime(value: string) { const date = new Date(value); return Number.isNaN(date.valueOf()) ? value : date.toLocaleString([], {dateStyle: "medium", timeStyle: "short"}); }
 function formatNumber(value: number) { return new Intl.NumberFormat().format(value); }
 function formatMinor(value: number) { return new Intl.NumberFormat(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2}).format(value / 100); }
+function formatUsdBreakdown(values: Record<string, number>) { const entries = Object.entries(values); return entries.length ? entries.map(([key, value]) => `${key} $${value.toFixed(4)}`).join(" · ") : "not reported"; }
+function formatCountBreakdown(values: Record<string, number>) { const entries = Object.entries(values); return entries.length ? entries.map(([key, value]) => `${key} ${formatNumber(value)}`).join(" · ") : "none"; }
 function formatPercent(value: number) { return `${(value * 100).toFixed(value > 0 && value < 0.1 ? 1 : 0)}%`; }
+function evaluationMetrics(report: Record<string, unknown>) {
+  const raw = report.metrics;
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) return null;
+  const metrics = raw as Record<string, unknown>;
+  const average = metrics.average_duration_ms;
+  const p95 = metrics.p95_duration_ms;
+  const passRate = metrics.passed_count && metrics.case_count ? Number(metrics.passed_count) / Number(metrics.case_count) : null;
+  if (typeof average !== "number" || typeof p95 !== "number" || passRate == null || !Number.isFinite(passRate)) return null;
+  return {average_duration_ms: average, p95_duration_ms: p95, pass_rate: passRate};
+}

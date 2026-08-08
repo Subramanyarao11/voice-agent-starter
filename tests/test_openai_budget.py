@@ -38,6 +38,9 @@ def test_reservations_persist_and_stop_before_the_cap(tmp_path):
     assert summary["observed_usd"] == "0.000045"
     assert summary["remaining_usd"] == "4.000000"
     assert summary["completed_calls"] == 1
+    assert summary["by_operation"]["test:first"]["calls"] == 1
+    assert summary["by_operation"]["test:first"]["reserved_usd"] == "6.000000"
+    assert summary["by_operation"]["test:first"]["observed_usd"] == "0.000045"
 
 
 def test_failed_requests_keep_their_reservation(tmp_path):
