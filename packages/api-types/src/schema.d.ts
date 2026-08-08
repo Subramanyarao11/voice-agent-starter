@@ -2045,6 +2045,25 @@ export interface components {
              */
             deployed_at: string;
         };
+        /** DirectoryCoverageOut */
+        DirectoryCoverageOut: {
+            /** State Code */
+            state_code: string;
+            /** State Name */
+            state_name: string;
+            /** Total */
+            total: number;
+            /** Approved */
+            approved: number;
+            /** Active Approved */
+            active_approved: number;
+            /** Pending */
+            pending: number;
+            /** Stale */
+            stale: number;
+            /** Districts */
+            districts: number;
+        };
         /** DirectoryDecisionRequest */
         DirectoryDecisionRequest: {
             /** Reason */
@@ -2090,6 +2109,10 @@ export interface components {
             source_record_id: string;
             /** Source Last Verified */
             source_last_verified: string | null;
+            /** Source Kind */
+            source_kind: string;
+            /** Source Scope */
+            source_scope: string;
             /** Approval Status */
             approval_status: string;
             /** Is Active */
@@ -2126,6 +2149,16 @@ export interface components {
             status_counts: {
                 [key: string]: number;
             };
+            /** Source Counts */
+            source_counts: {
+                [key: string]: number;
+            };
+            /** Stale Count */
+            stale_count: number;
+            /** Active Approved Count */
+            active_approved_count: number;
+            /** Coverage By State */
+            coverage_by_state: components["schemas"]["DirectoryCoverageOut"][];
         };
         /**
          * Domain

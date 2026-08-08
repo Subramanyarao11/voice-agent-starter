@@ -6,7 +6,7 @@ from datetime import UTC, datetime, timedelta
 
 from sqlmodel import Session, select
 
-from sahaayak_common import Benefit, SourceFreshnessAlert, new_id
+from sahaayak_common import Benefit, DepartmentDirectoryEntry, SourceFreshnessAlert, new_id
 from sahaayak_contracts import VerificationStatus
 
 
@@ -92,6 +92,54 @@ def scan_source_freshness(
                 "metadata": base_metadata,
             }
 
+    # Directory rows are a separate public-source dataset, but they use the
+    # same deduplicated alert lifecycle. Pending/rejected rows stay out of the
+    # operational alert stream because they are not eligible for routing.
+    directory_rows = db.exec(
+        select(DepartmentDirectoryEntry).where(
+            DepartmentDirectoryEntry.approval_status == "approved",
+            DepartmentDirectoryEntry.is_active.is_(True),
+        )
+    ).all()
+    directory_cutoff = now - timedelta(days=stale_days)
+    for row in directory_rows:
+        metadata = {
+            "directory_entry_id": row.id,
+            "state_code": row.state_code,
+            "district_name": row.district_name,
+            "department_name": row.department_name[:240],
+            "source_url": row.source_url,
+            "source_last_verified": (
+                row.source_last_verified.isoformat() if row.source_last_verified else None
+            ),
+        }
+        if not row.source_url:
+            key = f"directory:{row.id}:missing_source"
+            expected[key] = {
+                "benefit_id": None,
+                "dataset": "department_directory",
+                "alert_type": "missing_source",
+                "severity": "critical",
+                "message": f"{row.department_name} has no official directory source URL.",
+                "metadata": metadata,
+            }
+        elif (
+            row.source_last_verified is None
+            or _aware(row.source_last_verified) < directory_cutoff
+        ):
+            key = f"directory:{row.id}:stale_source"
+            expected[key] = {
+                "benefit_id": None,
+                "dataset": "department_directory",
+                "alert_type": "stale_source",
+                "severity": "critical",
+                "message": (
+                    f"{row.department_name} has not been checked within the "
+                    f"{stale_days}-day directory freshness window."
+                ),
+                "metadata": metadata,
+            }
+
     for key, payload in expected.items():
         alert = by_key.get(key)
         if alert is None:
@@ -134,3 +182,7 @@ def scan_source_freshness(
         .where(SourceFreshnessAlert.status.in_(("open", "acknowledged")))
         .order_by(SourceFreshnessAlert.severity.desc(), SourceFreshnessAlert.last_seen_at.desc())
     ).all()
+
+
+def _aware(value: datetime) -> datetime:
+    return value.replace(tzinfo=UTC) if value.tzinfo is None else value.astimezone(UTC)

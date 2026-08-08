@@ -88,6 +88,9 @@ migrate: ## Apply all Alembic migrations to the configured database
 
 pipeline: extract prefilter structure ## Run the full myScheme ingestion pipeline
 
+directory-india-gov: ## Fetch official India.gov department/district directory rows into a pending snapshot
+	uv run python scripts/21_ingest_india_gov_directory.py --all-states
+
 extract: ## Step 1 — download myScheme PDFs and extract raw text
 	uv run --group pipeline python scripts/01_download_and_extract.py
 

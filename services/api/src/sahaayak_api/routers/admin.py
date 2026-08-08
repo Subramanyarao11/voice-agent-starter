@@ -1218,7 +1218,7 @@ def admin_freshness(
         )
         latest_import = max(
             (
-                run.completed_at
+                _aware_directory_datetime(run.completed_at)
                 for run in imports
                 if run.completed_at and dataset.casefold() in run.source_name.casefold()
             ),
@@ -1253,11 +1253,57 @@ def admin_freshness(
             )
         )
 
+    directory_rows = db.exec(select(DepartmentDirectoryEntry)).all()
+    if directory_rows:
+        directory_verified = [
+            _aware_directory_datetime(row.source_last_verified).date()
+            for row in directory_rows
+            if row.source_last_verified
+        ]
+        directory_stale = sum(
+            row.source_last_verified is None
+            or _aware_directory_datetime(row.source_last_verified)
+            < now - timedelta(days=stale_days)
+            for row in directory_rows
+        )
+        directory_missing_source = sum(not row.source_url for row in directory_rows)
+        directory_active = sum(
+            row.approval_status == "approved" and row.is_active for row in directory_rows
+        )
+        directory_latest_update = max(
+            (
+                _aware_directory_datetime(row.updated_at)
+                for row in directory_rows
+                if row.updated_at
+            ),
+            default=None,
+        )
+        source_reports.append(
+            FreshnessSourceOut(
+                dataset="department_directory",
+                total_rows=len(directory_rows),
+                active_rows=directory_active,
+                human_verified_rows=directory_active,
+                machine_structured_rows=sum(
+                    row.approval_status == "pending" for row in directory_rows
+                ),
+                stale_rows=directory_stale,
+                expired_rows=0,
+                missing_source_rows=directory_missing_source,
+                oldest_verified_date=min(directory_verified, default=None),
+                latest_verified_date=max(directory_verified, default=None),
+                latest_import_at=directory_latest_update,
+                status=("warning" if directory_stale or directory_missing_source else "healthy"),
+            )
+        )
+
     freshness_values = [
         value
         for report in source_reports
         for value in (
-            report.latest_import_at,
+            _aware_directory_datetime(report.latest_import_at)
+            if report.latest_import_at
+            else None,
             datetime.combine(
                 report.latest_verified_date,
                 datetime.min.time(),
@@ -2675,6 +2721,10 @@ def _freshness_alert_out(row: SourceFreshnessAlert) -> FreshnessAlertOut:
         resolved_by=row.resolved_by,
         safe_metadata=dict(row.safe_metadata or {}),
     )
+
+
+def _aware_directory_datetime(value: datetime) -> datetime:
+    return value.replace(tzinfo=UTC) if value.tzinfo is None else value.astimezone(UTC)
 
 
 def _benefit_issue_report_out(

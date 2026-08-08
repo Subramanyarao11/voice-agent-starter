@@ -11,7 +11,7 @@ from sqlmodel import Session, select
 
 from sahaayak_api.admin_auth import AdminPrincipal, require_admin_role
 from sahaayak_api.telemetry import make_audit_event
-from sahaayak_common import DepartmentDirectoryEntry, get_session, settings
+from sahaayak_common import DepartmentDirectoryEntry, State, get_session, settings
 
 router = APIRouter(prefix="/api/admin/departments", tags=["admin"])
 
@@ -36,6 +36,8 @@ class DirectoryEntryOut(BaseModel):
     source_url: str
     source_record_id: str
     source_last_verified: datetime | None
+    source_kind: str
+    source_scope: str
     approval_status: str
     is_active: bool
     stale: bool
@@ -44,12 +46,27 @@ class DirectoryEntryOut(BaseModel):
     updated_at: datetime
 
 
+class DirectoryCoverageOut(BaseModel):
+    state_code: str
+    state_name: str
+    total: int
+    approved: int
+    active_approved: int
+    pending: int
+    stale: int
+    districts: int
+
+
 class DirectoryListOut(BaseModel):
     generated_at: datetime
     stale_after_days: int
     entries: list[DirectoryEntryOut]
     total: int
     status_counts: dict[str, int]
+    source_counts: dict[str, int]
+    stale_count: int
+    active_approved_count: int
+    coverage_by_state: list[DirectoryCoverageOut]
 
 
 class DirectoryDecisionRequest(BaseModel):
@@ -79,20 +96,31 @@ def list_directory_entries(
         statement = statement.where(
             DepartmentDirectoryEntry.district_name == district_name.strip()[:120]
         )
-    rows = db.exec(
-        statement.order_by(DepartmentDirectoryEntry.updated_at.desc()).limit(limit)
+    matching_rows = db.exec(
+        statement.order_by(DepartmentDirectoryEntry.updated_at.desc())
     ).all()
+    rows = matching_rows[:limit]
     all_rows = db.exec(select(DepartmentDirectoryEntry)).all()
     counts: dict[str, int] = {}
+    source_counts: dict[str, int] = {}
     for row in all_rows:
         counts[row.approval_status] = counts.get(row.approval_status, 0) + 1
+        source_name = row.source_name or "Unattributed source"
+        source_counts[source_name] = source_counts.get(source_name, 0) + 1
     now = datetime.now(UTC)
+    coverage = _coverage_by_state(all_rows, db=db, now=now)
     return DirectoryListOut(
         generated_at=now,
         stale_after_days=max(1, settings.department_directory_stale_days),
         entries=[_entry_out(row, now=now) for row in rows],
-        total=len(rows),
+        total=len(matching_rows),
         status_counts=counts,
+        source_counts=source_counts,
+        stale_count=sum(_is_stale(row, now) for row in all_rows),
+        active_approved_count=sum(
+            row.approval_status == "approved" and row.is_active for row in all_rows
+        ),
+        coverage_by_state=coverage,
     )
 
 
@@ -188,6 +216,7 @@ def _is_stale(row: DepartmentDirectoryEntry, now: datetime) -> bool:
 
 def _entry_out(row: DepartmentDirectoryEntry, *, now: datetime | None = None) -> DirectoryEntryOut:
     current = now or datetime.now(UTC)
+    metadata = row.safe_metadata or {}
     return DirectoryEntryOut(
         id=row.id,
         entry_key=row.entry_key,
@@ -208,6 +237,8 @@ def _entry_out(row: DepartmentDirectoryEntry, *, now: datetime | None = None) ->
         source_url=row.source_url,
         source_record_id=row.source_record_id,
         source_last_verified=row.source_last_verified,
+        source_kind=str(metadata.get("source_kind") or "manual_import"),
+        source_scope=str(metadata.get("source_scope") or "unspecified"),
         approval_status=row.approval_status,
         is_active=row.is_active,
         stale=_is_stale(row, current),
@@ -215,3 +246,33 @@ def _entry_out(row: DepartmentDirectoryEntry, *, now: datetime | None = None) ->
         created_at=row.created_at,
         updated_at=row.updated_at,
     )
+
+
+def _coverage_by_state(
+    rows: list[DepartmentDirectoryEntry],
+    *,
+    db: Session,
+    now: datetime,
+) -> list[DirectoryCoverageOut]:
+    state_names = {state.code: state.name for state in db.exec(select(State)).all()}
+    grouped: dict[str, list[DepartmentDirectoryEntry]] = {}
+    for row in rows:
+        grouped.setdefault(row.state_code, []).append(row)
+
+    coverage: list[DirectoryCoverageOut] = []
+    for state_code, state_rows in grouped.items():
+        coverage.append(
+            DirectoryCoverageOut(
+                state_code=state_code,
+                state_name=state_names.get(state_code, state_code),
+                total=len(state_rows),
+                approved=sum(row.approval_status == "approved" for row in state_rows),
+                active_approved=sum(
+                    row.approval_status == "approved" and row.is_active for row in state_rows
+                ),
+                pending=sum(row.approval_status == "pending" for row in state_rows),
+                stale=sum(_is_stale(row, now) for row in state_rows),
+                districts=len({row.district_name for row in state_rows if row.district_name}),
+            )
+        )
+    return sorted(coverage, key=lambda item: (-item.total, item.state_code))

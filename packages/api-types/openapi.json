@@ -5350,6 +5350,54 @@
         ],
         "title": "DeploymentOut"
       },
+      "DirectoryCoverageOut": {
+        "properties": {
+          "state_code": {
+            "type": "string",
+            "title": "State Code"
+          },
+          "state_name": {
+            "type": "string",
+            "title": "State Name"
+          },
+          "total": {
+            "type": "integer",
+            "title": "Total"
+          },
+          "approved": {
+            "type": "integer",
+            "title": "Approved"
+          },
+          "active_approved": {
+            "type": "integer",
+            "title": "Active Approved"
+          },
+          "pending": {
+            "type": "integer",
+            "title": "Pending"
+          },
+          "stale": {
+            "type": "integer",
+            "title": "Stale"
+          },
+          "districts": {
+            "type": "integer",
+            "title": "Districts"
+          }
+        },
+        "type": "object",
+        "required": [
+          "state_code",
+          "state_name",
+          "total",
+          "approved",
+          "active_approved",
+          "pending",
+          "stale",
+          "districts"
+        ],
+        "title": "DirectoryCoverageOut"
+      },
       "DirectoryDecisionRequest": {
         "properties": {
           "reason": {
@@ -5451,6 +5499,14 @@
             ],
             "title": "Source Last Verified"
           },
+          "source_kind": {
+            "type": "string",
+            "title": "Source Kind"
+          },
+          "source_scope": {
+            "type": "string",
+            "title": "Source Scope"
+          },
           "approval_status": {
             "type": "string",
             "title": "Approval Status"
@@ -5499,6 +5555,8 @@
           "source_url",
           "source_record_id",
           "source_last_verified",
+          "source_kind",
+          "source_scope",
           "approval_status",
           "is_active",
           "stale",
@@ -5536,6 +5594,28 @@
             },
             "type": "object",
             "title": "Status Counts"
+          },
+          "source_counts": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "type": "object",
+            "title": "Source Counts"
+          },
+          "stale_count": {
+            "type": "integer",
+            "title": "Stale Count"
+          },
+          "active_approved_count": {
+            "type": "integer",
+            "title": "Active Approved Count"
+          },
+          "coverage_by_state": {
+            "items": {
+              "$ref": "#/components/schemas/DirectoryCoverageOut"
+            },
+            "type": "array",
+            "title": "Coverage By State"
           }
         },
         "type": "object",
@@ -5544,7 +5624,11 @@
           "stale_after_days",
           "entries",
           "total",
-          "status_counts"
+          "status_counts",
+          "source_counts",
+          "stale_count",
+          "active_approved_count",
+          "coverage_by_state"
         ],
         "title": "DirectoryListOut"
       },

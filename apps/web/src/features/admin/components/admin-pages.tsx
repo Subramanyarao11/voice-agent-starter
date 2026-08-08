@@ -237,12 +237,127 @@ function DirectoryPage({ token, role }: { token: string; role: string }) {
   if (query.isError || !query.data) return <ErrorPanel error={query.error} />;
   const canReview = role === "reviewer" || role === "admin";
   const mutationError = approve.error ?? deactivate.error;
-  return <div className="space-y-6">
-    <PageIntro title="Department directory" description="Source-attested district and pincode routing records. Imports remain inactive until a reviewer approves a recent official source." />
-    {mutationError && <div role="alert" className="rounded-xl border border-orange/30 bg-orange/10 px-4 py-3 text-sm text-orange">{toUserMessage(mutationError)}</div>}
-    <div className="grid gap-4 sm:grid-cols-3"><MetricCard label="Directory rows" value={String(query.data.total)} detail="loaded in this view" /><MetricCard label="Approved" value={String(query.data.status_counts.approved ?? 0)} detail="eligible for runtime routing" /><MetricCard label="Pending review" value={String(query.data.status_counts.pending ?? 0)} detail="not used by callers" tone="warning" /></div>
-    <Card className="border-paper/10 bg-paper/[0.04] text-paper"><CardHeader><CardTitle className="text-paper">Review and provenance</CardTitle><p className="text-sm leading-6 text-paper/50">The runtime prefers exact pincode, then pincode prefix, then district. Stale or unapproved records fall back to a clearly labelled state/domain helpdesk.</p></CardHeader><CardContent className="space-y-3">{query.data.entries.map((entry) => <article key={entry.id} className="rounded-xl border border-paper/10 bg-ink/20 p-4"><div className="flex flex-wrap items-start justify-between gap-3"><div><div className="flex flex-wrap items-center gap-2"><Badge variant={entry.approval_status === "approved" && entry.is_active ? "success" : "warning"}>{entry.approval_status}{entry.is_active ? " · active" : " · inactive"}</Badge>{entry.stale && <Badge variant="warning">stale</Badge>}<span className="font-mono text-xs text-paper/40">{entry.id}</span></div><h3 className="mt-2 font-semibold">{entry.department_name}</h3><p className="mt-1 text-sm text-paper/65">{entry.state_code} · {entry.district_name || "statewide"} · {entry.pincode || (entry.pincode_prefix ? `${entry.pincode_prefix}xxx` : "district")}</p></div>{canReview && <div className="flex flex-wrap gap-2">{entry.approval_status !== "approved" && <Button size="sm" disabled={approve.isPending || deactivate.isPending || entry.stale} onClick={() => approve.mutate({entryId: entry.id, reason: "Verified official department source in the directory review queue"})}>Approve</Button>}{entry.is_active && <Button size="sm" variant="outline" disabled={approve.isPending || deactivate.isPending} onClick={() => deactivate.mutate({entryId: entry.id, reason: "Deactivated from the department directory review queue"})}>Deactivate</Button>}</div>}</div><div className="mt-3 flex flex-wrap gap-x-5 gap-y-1 text-xs text-paper/45"><span>{entry.service_domain}</span><span>{entry.help_centre_name || "Help centre name not supplied"}</span><span>Verified {entry.source_last_verified ? formatTime(entry.source_last_verified) : "never"}</span>{entry.source_url && <a className="text-acid underline-offset-4 hover:underline" href={entry.source_url} target="_blank" rel="noreferrer">Official source</a>}</div></article>)}{!query.data.entries.length && <EmptyState label="No directory rows imported. Run the official directory import script, then review the pending rows here." />}</CardContent></Card>
-  </div>;
+  return (
+    <div className="space-y-6">
+      <PageIntro
+        title="Department directory"
+        description="Official India.gov department and district records are imported as source-attested candidates. Imports remain inactive until a reviewer approves a recent source."
+      />
+      {mutationError && (
+        <div role="alert" className="rounded-xl border border-orange/30 bg-orange/10 px-4 py-3 text-sm text-orange">
+          {toUserMessage(mutationError)}
+        </div>
+      )}
+      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        <MetricCard
+          label="Directory rows"
+          value={String(query.data.total)}
+          detail={`${query.data.coverage_by_state.length} state/UT sources in coverage`}
+        />
+        <MetricCard
+          label="Approved and active"
+          value={String(query.data.active_approved_count)}
+          detail="eligible for runtime routing"
+        />
+        <MetricCard
+          label="Pending review"
+          value={String(query.data.status_counts.pending ?? 0)}
+          detail="never used by callers"
+          tone="warning"
+        />
+        <MetricCard
+          label="Stale records"
+          value={String(query.data.stale_count)}
+          detail={`freshness window ${query.data.stale_after_days} days`}
+          tone={query.data.stale_count ? "warning" : "default"}
+        />
+      </div>
+      <Card className="border-paper/10 bg-paper/[0.04] text-paper">
+        <CardHeader>
+          <CardTitle className="text-paper">Coverage and provenance</CardTitle>
+          <p className="text-sm leading-6 text-paper/50">
+            India.gov provides official state, department, directorate, and district portal records. It does not by itself prove that a particular scheme is handled by a particular office. Pincode routing remains disabled until a source explicitly attests a pincode or an approved district match is appropriate.
+          </p>
+        </CardHeader>
+        <CardContent className="space-y-5">
+          <div className="grid gap-4 lg:grid-cols-2">
+            <div>
+              <h3 className="text-xs font-semibold uppercase tracking-[0.12em] text-paper/45">Imported by source</h3>
+              <div className="mt-3 space-y-2">
+                {Object.entries(query.data.source_counts).map(([source, count]) => (
+                  <div key={source} className="flex items-center justify-between gap-4 text-sm">
+                    <span className="truncate text-paper/70">{source}</span>
+                    <span className="font-mono text-acid">{count}</span>
+                  </div>
+                ))}
+                {!Object.keys(query.data.source_counts).length && <EmptyState label="No source runs recorded." />}
+              </div>
+            </div>
+            <div>
+              <h3 className="text-xs font-semibold uppercase tracking-[0.12em] text-paper/45">Sync workflow</h3>
+              <p className="mt-3 text-sm leading-6 text-paper/60">
+                Fetch a fresh snapshot with <code className="rounded bg-ink px-1.5 py-0.5 text-xs text-acid">make directory-india-gov</code>, then import it with the directory importer. Unchanged approved source records retain approval; changed records return to this queue.
+              </p>
+            </div>
+          </div>
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-[760px] text-left text-sm">
+              <caption className="sr-only">Department directory coverage by state and union territory</caption>
+              <thead className="border-b border-paper/10 text-xs uppercase tracking-[0.12em] text-paper/40">
+                <tr><th className="px-3 py-3">State/UT</th><th className="px-3 py-3">Rows</th><th className="px-3 py-3">Approved</th><th className="px-3 py-3">Pending</th><th className="px-3 py-3">Districts</th><th className="px-3 py-3">Stale</th></tr>
+              </thead>
+              <tbody>
+                {query.data.coverage_by_state.map((item) => (
+                  <tr key={item.state_code} className="border-b border-paper/5 last:border-0">
+                    <td className="px-3 py-3"><span className="font-mono text-xs text-acid">{item.state_code}</span> <span className="ml-2">{item.state_name}</span></td>
+                    <td className="px-3 py-3">{item.total}</td>
+                    <td className="px-3 py-3">{item.active_approved}/{item.approved}</td>
+                    <td className="px-3 py-3">{item.pending}</td>
+                    <td className="px-3 py-3">{item.districts}</td>
+                    <td className="px-3 py-3">{item.stale ? <span className="text-orange">{item.stale}</span> : "—"}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+            {!query.data.coverage_by_state.length && <EmptyState label="No directory coverage yet." />}
+          </div>
+        </CardContent>
+      </Card>
+      <Card className="border-paper/10 bg-paper/[0.04] text-paper">
+        <CardHeader>
+          <CardTitle className="text-paper">Review and provenance</CardTitle>
+          <p className="text-sm leading-6 text-paper/50">The runtime prefers exact pincode, then pincode prefix, then district. Stale or unapproved records fall back to a clearly labelled state/domain helpdesk.</p>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          {query.data.entries.map((entry) => (
+            <article key={entry.id} className="rounded-xl border border-paper/10 bg-ink/20 p-4">
+              <div className="flex flex-wrap items-start justify-between gap-3">
+                <div>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <Badge variant={entry.approval_status === "approved" && entry.is_active ? "success" : "warning"}>{entry.approval_status}{entry.is_active ? " · active" : " · inactive"}</Badge>
+                    {entry.stale && <Badge variant="warning">stale</Badge>}
+                    <span className="font-mono text-xs text-paper/40">{entry.id}</span>
+                  </div>
+                  <h3 className="mt-2 font-semibold">{entry.department_name}</h3>
+                  <p className="mt-1 text-sm text-paper/65">{entry.state_code} · {entry.district_name || "statewide"} · {entry.pincode || (entry.pincode_prefix ? `${entry.pincode_prefix}xxx` : "district")}</p>
+                </div>
+                {canReview && <div className="flex flex-wrap gap-2">{entry.approval_status !== "approved" && <Button size="sm" disabled={approve.isPending || deactivate.isPending || entry.stale} onClick={() => approve.mutate({entryId: entry.id, reason: "Verified official department source in the directory review queue"})}>Approve</Button>}{entry.is_active && <Button size="sm" variant="outline" disabled={approve.isPending || deactivate.isPending} onClick={() => deactivate.mutate({entryId: entry.id, reason: "Deactivated from the department directory review queue"})}>Deactivate</Button>}</div>}
+              </div>
+              <div className="mt-3 flex flex-wrap gap-x-5 gap-y-1 text-xs text-paper/45">
+                <span>{entry.source_kind} · {entry.source_scope}</span>
+                <span>{entry.service_domain}</span>
+                <span>{entry.help_centre_name || "Help centre name not supplied"}</span>
+                <span>Verified {entry.source_last_verified ? formatTime(entry.source_last_verified) : "never"}</span>
+                {entry.source_url && <a className="text-acid underline-offset-4 hover:underline" href={entry.source_url} target="_blank" rel="noreferrer">Official source</a>}
+                {entry.website_url && <a className="text-acid underline-offset-4 hover:underline" href={entry.website_url} target="_blank" rel="noreferrer">Public portal</a>}
+              </div>
+            </article>
+          ))}
+          {!query.data.entries.length && <EmptyState label="No directory rows imported. Run the official directory import script, then review the pending rows here." />}
+        </CardContent>
+      </Card>
+    </div>
+  );
 }
 
 function BenefitsPage({ token, role }: { token: string; role: string }) {

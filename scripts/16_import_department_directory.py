@@ -18,8 +18,10 @@ import json
 from datetime import UTC, datetime
 from pathlib import Path
 
-from sahaay_agent.bootstrap import ensure_reference_data
-from sahaay_common import (
+from sqlmodel import select
+
+from sahaayak_agent.bootstrap import ensure_reference_data
+from sahaayak_common import (
     DepartmentDirectoryEntry,
     State,
     get_logger,
@@ -27,7 +29,6 @@ from sahaay_common import (
     new_id,
     session_scope,
 )
-from sqlmodel import select
 
 log = get_logger(__name__)
 ALLOWED_DOMAINS = {"scheme", "scholarship", "job", "citizen_support"}
@@ -100,8 +101,8 @@ def _normalise(raw: object, *, index: int) -> dict:
     source_name = str(raw.get("source_name", "")).strip()[:160]
     source_url = str(raw.get("source_url", "")).strip()[:500]
     department_name = str(raw.get("department_name", "")).strip()[:200]
-    if not state_code or not district_name or not department_name:
-        raise ValueError("state_code, district_name, and department_name are required")
+    if not state_code or not department_name:
+        raise ValueError("state_code and department_name are required")
     if service_domain not in ALLOWED_DOMAINS:
         raise ValueError(f"service_domain must be one of {sorted(ALLOWED_DOMAINS)}")
     if pincode and (len(pincode) != 6 or not pincode.isdigit()):
@@ -161,16 +162,47 @@ def _update_row(row: DepartmentDirectoryEntry, data: dict) -> bool:
     comparable = {
         key: value
         for key, value in data.items()
-        if key not in {"entry_key", "updated_at", "approval_status", "is_active"}
+        if key
+        not in {
+            "entry_key",
+            "updated_at",
+            "approval_status",
+            "is_active",
+            "source_last_verified",
+        }
     }
-    changed = any(getattr(row, key) != value for key, value in comparable.items())
+    changed = any(
+        _comparable_value(key, getattr(row, key), value) is False
+        for key, value in comparable.items()
+    )
     for key, value in data.items():
-        if key not in {"entry_key"}:
+        if key not in {"entry_key", "approval_status", "is_active"}:
             setattr(row, key, value)
     if changed:
         row.approval_status = "pending"
         row.is_active = False
     return changed
+
+
+def _comparable_value(key: str, existing: object, incoming: object) -> bool:
+    """Compare source content without treating a fresh fetch as an edit.
+
+    Public directory adapters refresh ``source_last_verified`` on every
+    successful fetch. Approval should survive that refresh when the source
+    record itself has not changed; a changed source snapshot still returns to
+    the review queue. The stable hash in ``safe_metadata`` is preferred for
+    adapter-produced rows and ordinary JSON imports continue to compare their
+    metadata directly.
+    """
+    if key != "safe_metadata":
+        return existing == incoming
+    existing_metadata = existing if isinstance(existing, dict) else {}
+    incoming_metadata = incoming if isinstance(incoming, dict) else {}
+    existing_hash = existing_metadata.get("source_snapshot_hash")
+    incoming_hash = incoming_metadata.get("source_snapshot_hash")
+    if existing_hash and incoming_hash:
+        return existing_hash == incoming_hash
+    return existing_metadata == incoming_metadata
 
 
 def _entry_key(**values: str) -> str:

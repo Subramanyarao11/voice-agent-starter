@@ -267,6 +267,8 @@ const directoryEntrySchema = z.object({
   source_url: z.string(),
   source_record_id: z.string(),
   source_last_verified: z.string().nullable(),
+  source_kind: z.string(),
+  source_scope: z.string(),
   approval_status: z.string(),
   is_active: z.boolean(),
   stale: z.boolean(),
@@ -281,6 +283,21 @@ const directoryListSchema = z.object({
   entries: z.array(directoryEntrySchema),
   total: z.number(),
   status_counts: z.record(z.string(), z.number()),
+  source_counts: z.record(z.string(), z.number()),
+  stale_count: z.number(),
+  active_approved_count: z.number(),
+  coverage_by_state: z.array(
+    z.object({
+      state_code: z.string(),
+      state_name: z.string(),
+      total: z.number(),
+      approved: z.number(),
+      active_approved: z.number(),
+      pending: z.number(),
+      stale: z.number(),
+      districts: z.number(),
+    }),
+  ),
 });
 
 const providerPolicySchema = z.object({

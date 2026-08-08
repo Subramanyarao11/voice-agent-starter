@@ -53,6 +53,9 @@ _STATE_NAMES = {
     "CH": "Chandigarh",
     "AN": "Andaman and Nicobar Islands",
     "GA": "Goa",
+    # India.gov's current state/UT directory code is ND. Keep DN as a
+    # backwards-compatible alias for older manually imported rows.
+    "ND": "Dadra and Nagar Haveli and Daman and Diu",
     "DN": "Dadra and Nagar Haveli and Daman and Diu",
     "AR": "Arunachal Pradesh",
     "CT": "Chhattisgarh",
@@ -164,6 +167,20 @@ def _resolve_directory_route(
     if not matching_rows:
         return None
 
+    # Several state-wide departments can be valid source records without any
+    # one of them being the right destination for an arbitrary citizen. Use a
+    # specific district/postal match whenever one exists; otherwise accept a
+    # state-wide directory route only when it is unambiguous. This prevents a
+    # caller who only supplied a pincode from being sent to whichever imported
+    # state department happened to sort first.
+    specific_rows = [
+        row for row in matching_rows if row.district_name or row.pincode or row.pincode_prefix
+    ]
+    if specific_rows:
+        matching_rows = specific_rows
+    elif len(matching_rows) != 1:
+        return None
+
     selected = max(
         matching_rows,
         key=lambda row: _directory_match_score(
@@ -196,9 +213,10 @@ def _directory_entry_matches(
     if district and _normalise_text(entry.district_name) == district:
         return True
     return (
-        not pincode
-        and not district
-        and not entry.district_name
+        # A source-attested state-wide department is a valid last directory
+        # choice when a more specific district/postal record is unavailable.
+        # Exact pincode/prefix/district rows still outrank it in the score.
+        not entry.district_name
         and not entry.pincode
         and not entry.pincode_prefix
     )
