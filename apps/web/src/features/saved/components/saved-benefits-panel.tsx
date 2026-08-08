@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 
 import { Link } from "@tanstack/react-router";
-import { Bell, BookmarkCheck, ExternalLink, X } from "lucide-react";
+import { Bell, BookmarkCheck, CheckSquare, ExternalLink, X } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -10,10 +10,12 @@ import { useNotificationChannelsQuery } from "@/features/contacts/queries";
 import {
   useCancelReminderMutation,
   useCreateReminderMutation,
+  useApplicationTasksQuery,
   useRemindersQuery,
   useRemoveSavedBenefitMutation,
+  useUpdateApplicationTaskMutation,
 } from "@/features/saved/queries";
-import type { Reminder, SavedBenefit } from "@/lib/api";
+import type { ApplicationTask, Reminder, SavedBenefit } from "@/lib/api";
 
 type SavedBenefitsPanelProps = {
   sessionId: string;
@@ -39,6 +41,8 @@ export function SavedBenefitsPanel({
   const reminderMutation = useCreateReminderMutation(sessionId, accessToken);
   const cancelReminderMutation = useCancelReminderMutation(sessionId, accessToken);
   const remindersQuery = useRemindersQuery(sessionId, accessToken);
+  const tasksQuery = useApplicationTasksQuery(sessionId, accessToken);
+  const taskMutation = useUpdateApplicationTaskMutation(sessionId, accessToken);
   const channelsQuery = useNotificationChannelsQuery(sessionId, accessToken);
   const [selectedChannel, setSelectedChannel] = useState("in_app");
   const [notice, setNotice] = useState("");
@@ -52,7 +56,7 @@ export function SavedBenefitsPanel({
     if (!selected?.available) setSelectedChannel("in_app");
   }, [channels, selectedChannel]);
 
-  if (savedBenefits.length === 0 && !remindersQuery.data?.length) return null;
+  if (savedBenefits.length === 0 && !remindersQuery.data?.length && !tasksQuery.data?.length) return null;
 
   const scheduleReminder = (benefitId: string) => {
     const due = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
@@ -212,8 +216,69 @@ export function SavedBenefitsPanel({
           </p>
         </div>
       )}
+      {tasksQuery.data && tasksQuery.data.length > 0 && (
+        <ApplicationTasksPanel
+          tasks={tasksQuery.data}
+          pending={taskMutation.isPending}
+          onStatusChange={(taskId, status) => taskMutation.mutate({taskId, status})}
+        />
+      )}
       {notice && <p className="text-xs text-acid" role="status">{notice}</p>}
     </section>
+  );
+}
+
+function ApplicationTasksPanel({
+  tasks,
+  pending,
+  onStatusChange,
+}: {
+  tasks: ApplicationTask[];
+  pending: boolean;
+  onStatusChange: (taskId: string, status: "pending" | "completed" | "skipped") => void;
+}) {
+  const grouped = tasks.reduce<Record<string, ApplicationTask[]>>((result, task) => {
+    (result[task.benefit_id] ??= []).push(task);
+    return result;
+  }, {});
+  return (
+    <Card className="border-blue/20 bg-blue/[0.05] text-paper">
+      <CardContent className="space-y-4 p-5">
+        <div className="flex items-center gap-2 text-acid">
+          <CheckSquare className="size-4" aria-hidden="true" />
+          <h2 className="font-semibold">Application checklist</h2>
+        </div>
+        <p className="text-xs leading-5 text-paper/55">
+          These tasks come from the saved benefit’s source-backed document and application fields. Completing a task is your personal progress, not an official submission.
+        </p>
+        {Object.entries(grouped).map(([benefitId, benefitTasks]) => (
+          <div key={benefitId} className="space-y-2 border-t border-paper/10 pt-3 first:border-t-0 first:pt-0">
+            <p className="text-sm font-semibold text-paper">{benefitTasks[0]?.benefit_name ?? benefitId}</p>
+            <ul className="space-y-2">
+              {benefitTasks.map((task) => (
+                <li key={task.id} className="flex flex-wrap items-start justify-between gap-3 rounded-lg border border-paper/10 bg-ink/20 px-3 py-3">
+                  <label className="flex min-w-0 items-start gap-3">
+                    <input
+                      type="checkbox"
+                      checked={task.status === "completed"}
+                      onChange={(event) => onStatusChange(task.id, event.target.checked ? "completed" : "pending")}
+                      disabled={pending}
+                      className="mt-1 size-4 accent-acid"
+                      aria-label={`${task.status === "completed" ? "Reopen" : "Complete"} ${task.title}`}
+                    />
+                    <span>
+                      <span className={`block text-sm font-medium ${task.status === "completed" ? "text-paper/45 line-through" : "text-paper"}`}>{task.title}</span>
+                      <span className="mt-1 block text-xs leading-5 text-paper/50">{task.description}</span>
+                    </span>
+                  </label>
+                  <Badge variant="outline" className="border-paper/15 text-paper/45">{task.kind === "document" ? "document" : "application"}</Badge>
+                </li>
+              ))}
+            </ul>
+          </div>
+        ))}
+      </CardContent>
+    </Card>
   );
 }
 

@@ -5,13 +5,14 @@ from __future__ import annotations
 from datetime import UTC, datetime, timedelta
 from typing import Literal
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from pydantic import BaseModel, Field
 from sqlmodel import Session, select
 
 from sahaayak_api.browser_auth import BrowserSessionPrincipal, require_browser_session
 from sahaayak_api.notifications import check_channel
 from sahaayak_common import (
+    ApplicationTask,
     Benefit,
     ConsentEvent,
     ContactPoint,
@@ -44,6 +45,22 @@ class SavedBenefitOut(BaseModel):
     job_metadata: dict = {}
 
 
+class ApplicationTaskOut(BaseModel):
+    id: str
+    benefit_id: str
+    benefit_name: str
+    kind: str
+    title: str
+    description: str
+    position: int
+    status: str
+    due_at: datetime | None
+    completed_at: datetime | None
+    source_revision: int
+    created_at: datetime
+    updated_at: datetime
+
+
 class SaveBenefitRequest(BaseModel):
     benefit_id: str = Field(min_length=1, max_length=160)
 
@@ -72,6 +89,10 @@ class ReminderOut(BaseModel):
     # Masked only, and null for in-app reminders.
     contact_display_suffix: str = ""
     delivery_status: str = ""
+
+
+class ApplicationTaskUpdate(BaseModel):
+    status: Literal["pending", "completed", "skipped"]
 
 
 @router.get("/{session_id}/saved-benefits", response_model=list[SavedBenefitOut])
@@ -109,6 +130,8 @@ def save_benefit(
         )
     ).first()
     if existing is not None:
+        _ensure_application_tasks(db, principal.session_id, benefit)
+        db.commit()
         return _saved_out(db, existing, benefit=benefit)  # type: ignore[return-value]
     row = SavedBenefit(
         id=new_id("saved"),
@@ -116,6 +139,7 @@ def save_benefit(
         benefit_id=benefit.id,
     )
     db.add(row)
+    _ensure_application_tasks(db, principal.session_id, benefit)
     db.commit()
     db.refresh(row)
     return _saved_out(db, row, benefit=benefit)  # type: ignore[return-value]
@@ -136,8 +160,79 @@ def remove_saved_benefit(
         )
     ).first()
     if row is not None:
+        for task in db.exec(
+            select(ApplicationTask).where(
+                ApplicationTask.session_id == principal.session_id,
+                ApplicationTask.benefit_id == benefit_id,
+            )
+        ).all():
+            db.delete(task)
         db.delete(row)
         db.commit()
+
+
+@router.get("/{session_id}/tasks", response_model=list[ApplicationTaskOut])
+def list_application_tasks(
+    session_id: str,
+    benefit_id: str | None = Query(default=None, min_length=1, max_length=160),
+    db: Session = Depends(get_session),
+    principal: BrowserSessionPrincipal = Depends(require_browser_session),
+) -> list[ApplicationTaskOut]:
+    _require_own_session(session_id, principal)
+    saved_query = select(SavedBenefit).where(SavedBenefit.session_id == principal.session_id)
+    if benefit_id:
+        saved_query = saved_query.where(SavedBenefit.benefit_id == benefit_id)
+    saved_rows = db.exec(saved_query).all()
+    for saved in saved_rows:
+        benefit = db.get(Benefit, saved.benefit_id)
+        if benefit is not None:
+            _ensure_application_tasks(db, principal.session_id, benefit)
+    db.commit()
+    task_query = select(ApplicationTask).where(ApplicationTask.session_id == principal.session_id)
+    if benefit_id:
+        task_query = task_query.where(ApplicationTask.benefit_id == benefit_id)
+    rows = db.exec(
+        task_query.order_by(
+            ApplicationTask.benefit_id,
+            ApplicationTask.position,
+            ApplicationTask.created_at,
+        )
+    ).all()
+    return [_task_out(db, row) for row in rows]
+
+
+@router.post("/{session_id}/tasks/{task_id}", response_model=ApplicationTaskOut)
+def update_application_task(
+    session_id: str,
+    task_id: str,
+    payload: ApplicationTaskUpdate,
+    db: Session = Depends(get_session),
+    principal: BrowserSessionPrincipal = Depends(require_browser_session),
+) -> ApplicationTaskOut:
+    _require_own_session(session_id, principal)
+    row = db.exec(
+        select(ApplicationTask).where(
+            ApplicationTask.id == task_id,
+            ApplicationTask.session_id == principal.session_id,
+        )
+    ).first()
+    if row is None:
+        raise HTTPException(status_code=404, detail="Application task not found")
+    saved = db.exec(
+        select(SavedBenefit).where(
+            SavedBenefit.session_id == principal.session_id,
+            SavedBenefit.benefit_id == row.benefit_id,
+        )
+    ).first()
+    if saved is None:
+        raise HTTPException(status_code=404, detail="Saved benefit not found")
+    row.status = payload.status
+    row.completed_at = datetime.now(UTC) if payload.status == "completed" else None
+    row.updated_at = datetime.now(UTC)
+    db.add(row)
+    db.commit()
+    db.refresh(row)
+    return _task_out(db, row)
 
 
 @router.get("/{session_id}/reminders", response_model=list[ReminderOut])
@@ -191,6 +286,8 @@ def create_reminder(
         session_id=principal.session_id,
         template_key=TEMPLATE_KEY,
         locale=principal.language_code,
+        state_code=principal.state_code,
+        respect_rollout=True,
     )
     if not availability.available:
         # 409 rather than 400: the request is well-formed, the channel is not
@@ -264,6 +361,85 @@ def _saved_out(
         verification_status=benefit.verification_status.value,
         saved_at=row.created_at,
         job_metadata=dict(benefit.job_metadata or {}),
+    )
+
+
+def _ensure_application_tasks(db: Session, session_id: str, benefit: Benefit) -> None:
+    """Materialize source documents/application guidance without overwriting progress."""
+    specs: list[tuple[str, str, str]] = []
+    seen_documents: set[str] = set()
+    for document in benefit.documents_required or []:
+        title = document.strip()
+        normalized = title.casefold()
+        if title and normalized not in seen_documents:
+            specs.append(("document", title, "Collect or confirm this document before applying."))
+            seen_documents.add(normalized)
+
+    process_lines = [
+        line.strip().lstrip("-•").strip()
+        for line in (benefit.application_process or "").splitlines()
+        if line.strip()
+    ]
+    if process_lines:
+        if len(process_lines) == 1:
+            specs.append(("application_step", "Complete application", process_lines[0]))
+        else:
+            specs.extend(
+                (
+                    "application_step",
+                    f"Application step {index}",
+                    line,
+                )
+                for index, line in enumerate(process_lines, 1)
+            )
+
+    for position, (kind, title, description) in enumerate(specs):
+        existing = db.exec(
+            select(ApplicationTask).where(
+                ApplicationTask.session_id == session_id,
+                ApplicationTask.benefit_id == benefit.id,
+                ApplicationTask.kind == kind,
+                ApplicationTask.title == title,
+            )
+        ).first()
+        if existing is None:
+            db.add(
+                ApplicationTask(
+                    id=new_id("task"),
+                    session_id=session_id,
+                    benefit_id=benefit.id,
+                    kind=kind,
+                    title=title,
+                    description=description,
+                    position=position,
+                    source_revision=benefit.content_revision,
+                )
+            )
+        else:
+            existing.position = position
+            existing.source_revision = benefit.content_revision
+            if existing.status == "pending":
+                existing.description = description
+            existing.updated_at = datetime.now(UTC)
+            db.add(existing)
+
+
+def _task_out(db: Session, row: ApplicationTask) -> ApplicationTaskOut:
+    benefit = db.get(Benefit, row.benefit_id)
+    return ApplicationTaskOut(
+        id=row.id,
+        benefit_id=row.benefit_id,
+        benefit_name=benefit.name if benefit else row.benefit_id,
+        kind=row.kind,
+        title=row.title,
+        description=row.description,
+        position=row.position,
+        status=row.status,
+        due_at=row.due_at,
+        completed_at=row.completed_at,
+        source_revision=row.source_revision,
+        created_at=row.created_at,
+        updated_at=row.updated_at,
     )
 
 

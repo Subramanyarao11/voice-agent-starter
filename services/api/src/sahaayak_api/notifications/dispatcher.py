@@ -33,6 +33,7 @@ from sahaayak_common import (
     NotificationDelivery,
     decrypt_destination,
     evaluate_budget,
+    feature_flag_enabled,
     get_effective_provider_policy,
     get_logger,
     new_id,
@@ -66,6 +67,7 @@ GATE_CONTACT_REVOKED = Gate("contact_revoked")
 GATE_CONSENT_MISSING = Gate("consent_missing")
 GATE_CONSENT_WITHDRAWN = Gate("consent_withdrawn")
 GATE_CONSENT_PURPOSE = Gate("consent_purpose_mismatch")
+GATE_FEATURE_ROLLOUT_DISABLED = Gate("feature_rollout_disabled")
 GATE_POLICY_DISABLED = Gate("policy_disabled")
 GATE_CIRCUIT_OPEN = Gate("circuit_open")
 GATE_PROVIDER_NOT_CONFIGURED = Gate("provider_not_configured")
@@ -85,6 +87,8 @@ GATE_MESSAGES: dict[str, str] = {
     GATE_CONSENT_MISSING: "Agree to receive messages on this channel first.",
     GATE_CONSENT_WITHDRAWN: "You opted out of messages on this channel.",
     GATE_CONSENT_PURPOSE: "This contact was not approved for benefit reminders.",
+    GATE_FEATURE_ROLLOUT_DISABLED: "External reminders are being rolled out gradually. "
+    "In-app reminders still work.",
     GATE_POLICY_DISABLED: "This channel is currently switched off. In-app reminders still work.",
     GATE_CIRCUIT_OPEN: "This channel is paused after repeated failures. In-app reminders "
     "still work.",
@@ -127,6 +131,8 @@ def check_channel(
     template_key: str = "",
     locale: str = "en",
     consent_purpose: str = "reminders",
+    state_code: str | None = None,
+    respect_rollout: bool = False,
 ) -> ChannelAvailability:
     """Whether one message could be sent on one channel right now."""
     if channel is NotificationChannel.IN_APP:
@@ -148,6 +154,19 @@ def check_channel(
     )
     if gate is not GATE_OK:
         return ChannelAvailability(channel, False, gate)
+
+    if respect_rollout and not feature_flag_enabled(
+        "infobip_reminders",
+        subject=session_id,
+        language_code=locale,
+        state_code=state_code,
+    ):
+        return ChannelAvailability(
+            channel,
+            False,
+            GATE_FEATURE_ROLLOUT_DISABLED,
+            fallback_provider="in_app",
+        )
 
     policy = channel_policy(channel)
     if not policy.get("enabled", False):
@@ -226,6 +245,8 @@ def available_channels(
     session_id: str,
     template_key: str = "",
     locale: str = "en",
+    state_code: str | None = None,
+    respect_rollout: bool = False,
 ) -> list[ChannelAvailability]:
     """Availability of every channel, for the reminder form to render."""
     return [
@@ -236,6 +257,8 @@ def available_channels(
             session_id=session_id,
             template_key=template_key,
             locale=locale,
+            state_code=state_code,
+            respect_rollout=respect_rollout,
         )
         for channel in NotificationChannel
     ]

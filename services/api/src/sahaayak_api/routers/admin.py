@@ -25,31 +25,42 @@ from sqlmodel import Session, select
 
 from sahaayak_agent.prompts import supported_languages
 from sahaayak_api.admin_auth import AdminPrincipal, require_admin_role
+from sahaayak_api.benefit_freshness import scan_source_freshness
 from sahaayak_api.routers.health import HealthReport, health
 from sahaayak_api.telemetry import make_audit_event
 from sahaayak_common import (
+    CORE_LANGUAGE_CODES,
     DEFAULT_PROVIDER_POLICIES,
     AuditEvent,
     Benefit,
     BenefitIssueReport,
+    BenefitVersion,
     ConversationTurnLog,
     DataImportRun,
+    DeploymentRevision,
     EscalationTicket,
     EvaluationRun,
     FeatureFlag,
     FeatureFlagRevision,
     Language,
+    LanguageReadinessReview,
     OpenAIBudgetLedger,
     ProviderPolicy,
     ProviderPolicyRevision,
+    SourceFreshnessAlert,
     State,
     TelemetryEvent,
     UserSession,
+    apply_benefit_snapshot,
+    benefit_snapshot,
+    feature_flag_enabled,
+    get_effective_provider_policy,
     get_logger,
     get_session,
+    record_benefit_version,
     settings,
 )
-from sahaayak_contracts import VerificationStatus
+from sahaayak_contracts import Domain, EligibilityCriteria, VerificationStatus
 
 log = get_logger(__name__)
 router = APIRouter(prefix="/api/admin", tags=["admin"])
@@ -236,6 +247,14 @@ class BenefitReviewOut(BaseModel):
     domain: str
     name: str
     state_code: str | None
+    category: str
+    description: str
+    eligibility_initial: dict
+    eligibility_renewal: dict | None
+    benefits_text: str
+    documents_required: list[str]
+    application_process: str
+    source_url: str
     verification_status: str
     is_active: bool
     source_title: str
@@ -247,7 +266,9 @@ class BenefitReviewOut(BaseModel):
     last_verified_date: date | None
     valid_from: date | None
     valid_until: date | None
+    localized_summary: dict
     job_metadata: dict
+    content_revision: int
 
 
 class ReviewQueueOut(BaseModel):
@@ -261,6 +282,54 @@ class BenefitReviewRequest(BaseModel):
     verification_status: VerificationStatus
     reason: str = Field(min_length=3, max_length=500)
     activate: bool | None = None
+
+
+class BenefitEditRequest(BaseModel):
+    """Full public-content replacement; publication remains a separate action."""
+
+    expected_revision: int | None = Field(default=None, ge=0)
+    domain: Domain
+    name: str = Field(min_length=2, max_length=240)
+    state_code: str | None = Field(default=None, max_length=16)
+    category: str = Field(default="", max_length=240)
+    description: str = Field(default="", max_length=20_000)
+    eligibility_initial: dict[str, Any] = Field(default_factory=dict)
+    eligibility_renewal: dict[str, Any] | None = None
+    benefits_text: str = Field(default="", max_length=20_000)
+    documents_required: list[str] = Field(default_factory=list, max_length=100)
+    application_process: str = Field(default="", max_length=20_000)
+    source_url: str = Field(default="", max_length=2_000)
+    source_title: str = Field(default="", max_length=500)
+    source_document_url: str = Field(default="", max_length=2_000)
+    source_excerpt: str | None = Field(default=None, max_length=30_000)
+    valid_from: date | None = None
+    valid_until: date | None = None
+    localized_summary: dict[str, str] = Field(default_factory=dict)
+    job_metadata: dict[str, Any] | None = None
+    reason: str = Field(min_length=3, max_length=500)
+
+
+class BenefitVersionOut(BaseModel):
+    id: str
+    benefit_id: str
+    version: int
+    action: str
+    actor_id: str
+    actor_role: str
+    reason: str
+    snapshot: dict
+    created_at: datetime
+
+
+class BenefitVersionListOut(BaseModel):
+    benefit_id: str
+    current_revision: int
+    versions: list[BenefitVersionOut]
+
+
+class BenefitRollbackRequest(BaseModel):
+    version: int = Field(ge=1)
+    reason: str = Field(min_length=3, max_length=500)
 
 
 class BenefitIssueReportOut(BaseModel):
@@ -332,6 +401,29 @@ class FreshnessOut(BaseModel):
     stale_after_days: int
     data_fresh_at: datetime | None
     sources: list[FreshnessSourceOut]
+    alerts: list[FreshnessAlertOut]
+    alert_counts: dict[str, int]
+
+
+class FreshnessAlertOut(BaseModel):
+    id: str
+    alert_key: str
+    benefit_id: str | None
+    dataset: str
+    alert_type: str
+    severity: str
+    status: str
+    message: str
+    first_seen_at: datetime
+    last_seen_at: datetime
+    resolved_at: datetime | None
+    resolved_by: str | None
+    safe_metadata: dict
+
+
+class FreshnessAlertUpdate(BaseModel):
+    status: Literal["acknowledged", "resolved"]
+    reason: str = Field(min_length=3, max_length=500)
 
 
 class FeatureFlagOut(BaseModel):
@@ -394,13 +486,42 @@ class LanguageReadinessOut(BaseModel):
     active: bool
     prompt_ready: bool
     interface_status: str
+    interface_review_status: str
     data_status: str
     localized_benefits: int
     active_benefits: int
     stt_provider: str
     tts_provider: str
     voice_status: str
+    voice_review_status: str
+    native_speaker_status: str
+    prompt_status: str
+    content_status: str
+    understanding_status: str
+    accessibility_status: str
+    evidence_url: str
+    review_notes: str
+    reviewed_by: str | None
+    reviewed_at: datetime | None
+    activated_at: datetime | None
     rollout_status: str
+
+
+LanguageReviewStatus = Literal["pending", "approved", "rejected"]
+
+
+class LanguageReviewUpdateRequest(BaseModel):
+    native_speaker_status: LanguageReviewStatus = "pending"
+    interface_status: LanguageReviewStatus = "pending"
+    prompt_status: LanguageReviewStatus = "pending"
+    content_status: LanguageReviewStatus = "pending"
+    understanding_status: LanguageReviewStatus = "pending"
+    voice_status: LanguageReviewStatus = "pending"
+    accessibility_status: LanguageReviewStatus = "pending"
+    evidence_url: str = Field(default="", max_length=500)
+    review_notes: str = Field(min_length=3, max_length=2_000)
+    attestation: bool = False
+    activate: bool = False
 
 
 class AuditEventOut(BaseModel):
@@ -423,9 +544,64 @@ class SystemOut(BaseModel):
     generated_at: datetime
     git_commit_sha: str
     migration_revision: str | None
+    deployment_id: str | None = None
     database_mode: str
     configuration: dict[str, bool]
     deployment_notes: list[str]
+
+
+class DeploymentOut(BaseModel):
+    id: str
+    release_key: str
+    environment: str
+    app_version: str
+    git_commit_sha: str
+    image_digest: str
+    migration_revision: str | None
+    data_revision: str
+    prompt_version: str
+    model_versions: dict
+    active_flags: dict
+    configuration: dict
+    deployed_at: datetime
+
+
+class DeploymentChangeOut(BaseModel):
+    field: str
+    previous: Any = None
+    current: Any = None
+
+
+class DeploymentComparisonOut(BaseModel):
+    generated_at: datetime
+    current: DeploymentOut | None
+    previous: DeploymentOut | None
+    history: list[DeploymentOut]
+    changes: list[DeploymentChangeOut]
+    note: str
+
+
+class ProviderFailureSimulationOut(BaseModel):
+    scenario: str
+    provider: str
+    policy_provider: str | None
+    flag_key: str
+    flag_enabled: bool
+    policy_enabled: bool
+    circuit_state: str
+    configured: bool
+    current_posture: str
+    expected_path: list[str]
+    user_facing_fallback: str
+    operator_action: str
+
+
+class ProviderFailureSimulationListOut(BaseModel):
+    generated_at: datetime
+    language_code: str
+    state_code: str
+    simulations: list[ProviderFailureSimulationOut]
+    note: str
 
 
 @router.get("/me", response_model=AdminMeOut)
@@ -681,6 +857,7 @@ def review_benefit(
         "verification_status": _wire(row.verification_status),
         "is_active": row.is_active,
         "verified_by": row.verified_by,
+        "content_revision": row.content_revision,
     }
     row.verification_status = payload.verification_status
     if payload.activate is not None:
@@ -688,9 +865,18 @@ def review_benefit(
     if payload.verification_status is VerificationStatus.HUMAN_VERIFIED:
         row.verified_by = principal.actor_id
         row.verified_at = datetime.now(UTC)
+        row.last_verified_date = date.today()
     else:
         row.verified_by = None
         row.verified_at = None
+    record_benefit_version(
+        db,
+        row,
+        action="review",
+        actor_id=principal.actor_id,
+        actor_role=principal.role,
+        reason=payload.reason,
+    )
     db.add(row)
     db.add(
         make_audit_event(
@@ -704,6 +890,197 @@ def review_benefit(
                 "verification_status": _wire(row.verification_status),
                 "is_active": row.is_active,
                 "verified_by": row.verified_by,
+                "content_revision": row.content_revision,
+            },
+        )
+    )
+    db.commit()
+    db.refresh(row)
+    return _benefit_review_out(row)
+
+
+@router.put("/benefits/{benefit_id}", response_model=BenefitReviewOut)
+def edit_benefit(
+    benefit_id: str,
+    payload: BenefitEditRequest,
+    db: Session = Depends(get_session),
+    principal: AdminPrincipal = Depends(require_admin_role("reviewer", "admin")),
+) -> BenefitReviewOut:
+    """Replace public benefit content while forcing a fresh review.
+
+    Editing never silently republishes a row. Even a reviewer correcting a
+    spelling mistake gets a new version, clears machine evidence, and moves
+    the benefit back to the inactive review queue.
+    """
+    row = db.get(Benefit, benefit_id)
+    if row is None:
+        raise HTTPException(status_code=404, detail="Benefit not found")
+    if payload.expected_revision is not None and payload.expected_revision != row.content_revision:
+        raise HTTPException(
+            status_code=409,
+            detail=(
+                f"Benefit changed since it was loaded (current revision {row.content_revision}); "
+                "reload before editing."
+            ),
+        )
+    if payload.state_code and db.get(State, payload.state_code) is None:
+        raise HTTPException(status_code=400, detail="Unknown state code")
+    if payload.valid_from and payload.valid_until and payload.valid_until < payload.valid_from:
+        raise HTTPException(status_code=400, detail="valid_until cannot be before valid_from")
+    try:
+        eligibility_initial = EligibilityCriteria.model_validate(
+            payload.eligibility_initial
+        ).model_dump(mode="json")
+        eligibility_renewal = (
+            EligibilityCriteria.model_validate(payload.eligibility_renewal).model_dump(mode="json")
+            if payload.eligibility_renewal is not None
+            else None
+        )
+    except Exception as exc:
+        raise HTTPException(
+            status_code=422,
+            detail=f"Eligibility criteria are invalid: {exc}",
+        ) from exc
+
+    before_snapshot = benefit_snapshot(row)
+    before = {
+        "name": row.name,
+        "verification_status": _wire(row.verification_status),
+        "is_active": row.is_active,
+        "content_revision": row.content_revision,
+    }
+    row.domain = payload.domain
+    row.name = payload.name.strip()
+    row.state_code = payload.state_code
+    row.category = payload.category.strip()
+    row.description = payload.description.strip()
+    row.eligibility_initial = eligibility_initial
+    row.eligibility_renewal = eligibility_renewal
+    row.benefits_text = payload.benefits_text.strip()
+    row.documents_required = [
+        value.strip() for value in payload.documents_required if value.strip()
+    ]
+    row.application_process = payload.application_process.strip()
+    row.source_url = payload.source_url.strip()
+    row.source_title = payload.source_title.strip()
+    row.source_document_url = payload.source_document_url.strip()
+    row.source_excerpt = payload.source_excerpt.strip() if payload.source_excerpt else None
+    row.valid_from = payload.valid_from
+    row.valid_until = payload.valid_until
+    row.localized_summary = {
+        key.strip().lower(): value.strip()
+        for key, value in payload.localized_summary.items()
+        if key.strip() and value.strip()
+    }
+    row.job_metadata = dict(payload.job_metadata) if payload.job_metadata is not None else None
+    row.source_content_hash = None
+    row.automated_review = {}
+    row.verification_status = VerificationStatus.NEEDS_REVIEW
+    row.verified_by = None
+    row.verified_at = None
+    row.is_active = False
+    record_benefit_version(
+        db,
+        row,
+        action="edit",
+        actor_id=principal.actor_id,
+        actor_role=principal.role,
+        reason=payload.reason,
+    )
+    db.add(
+        make_audit_event(
+            principal=principal,
+            action="benefit.edit",
+            target_type="benefit",
+            target_id=row.id,
+            reason=payload.reason,
+            safe_before=before,
+            safe_after={
+                "name": row.name,
+                "verification_status": _wire(row.verification_status),
+                "is_active": row.is_active,
+                "content_revision": row.content_revision,
+                "previous_snapshot_sha256": hashlib.sha256(
+                    json.dumps(before_snapshot, sort_keys=True, default=str).encode("utf-8")
+                ).hexdigest(),
+            },
+        )
+    )
+    db.commit()
+    db.refresh(row)
+    return _benefit_review_out(row)
+
+
+@router.get("/benefits/{benefit_id}/versions", response_model=BenefitVersionListOut)
+def benefit_versions(
+    benefit_id: str,
+    db: Session = Depends(get_session),
+    _principal: AdminPrincipal = Depends(require_admin_role(*READ_ROLES)),
+) -> BenefitVersionListOut:
+    row = db.get(Benefit, benefit_id)
+    if row is None:
+        raise HTTPException(status_code=404, detail="Benefit not found")
+    versions = db.exec(
+        select(BenefitVersion)
+        .where(BenefitVersion.benefit_id == benefit_id)
+        .order_by(BenefitVersion.version.desc())
+        .limit(100)
+    ).all()
+    return BenefitVersionListOut(
+        benefit_id=benefit_id,
+        current_revision=row.content_revision,
+        versions=[BenefitVersionOut.model_validate(version.model_dump()) for version in versions],
+    )
+
+
+@router.post("/benefits/{benefit_id}/rollback", response_model=BenefitReviewOut)
+def rollback_benefit(
+    benefit_id: str,
+    payload: BenefitRollbackRequest,
+    db: Session = Depends(get_session),
+    principal: AdminPrincipal = Depends(require_admin_role("admin")),
+) -> BenefitReviewOut:
+    row = db.get(Benefit, benefit_id)
+    if row is None:
+        raise HTTPException(status_code=404, detail="Benefit not found")
+    target = db.exec(
+        select(BenefitVersion).where(
+            BenefitVersion.benefit_id == benefit_id,
+            BenefitVersion.version == payload.version,
+        )
+    ).first()
+    if target is None:
+        raise HTTPException(status_code=404, detail="Benefit version not found")
+    if target.version == row.content_revision:
+        raise HTTPException(status_code=400, detail="Benefit is already at that version")
+
+    before = {
+        "version": row.content_revision,
+        "verification_status": _wire(row.verification_status),
+        "is_active": row.is_active,
+    }
+    apply_benefit_snapshot(row, dict(target.snapshot))
+    record_benefit_version(
+        db,
+        row,
+        action="rollback",
+        actor_id=principal.actor_id,
+        actor_role=principal.role,
+        reason=payload.reason,
+    )
+    db.add(
+        make_audit_event(
+            principal=principal,
+            action="benefit.rollback",
+            target_type="benefit",
+            target_id=row.id,
+            reason=payload.reason,
+            safe_before=before,
+            safe_after={
+                "restored_version": target.version,
+                "new_version": row.content_revision,
+                "verification_status": _wire(row.verification_status),
+                "is_active": row.is_active,
             },
         )
     )
@@ -794,6 +1171,8 @@ def admin_freshness(
 ) -> FreshnessOut:
     now = datetime.now(UTC)
     cutoff = date.today() - timedelta(days=stale_days)
+    scan_source_freshness(db, stale_days=stale_days, now=now)
+    db.commit()
     rows = db.exec(select(Benefit)).all()
     imports = db.exec(select(DataImportRun)).all()
     grouped: dict[str, list[Benefit]] = {}
@@ -873,12 +1252,94 @@ def admin_freshness(
         )
         if value
     ]
+    active_alerts = db.exec(
+        select(SourceFreshnessAlert)
+        .where(SourceFreshnessAlert.status.in_(("open", "acknowledged")))
+        .order_by(SourceFreshnessAlert.severity.desc(), SourceFreshnessAlert.last_seen_at.desc())
+        .limit(500)
+    ).all()
+    alert_counts = Counter(alert.status for alert in active_alerts)
     return FreshnessOut(
         generated_at=now,
         stale_after_days=stale_days,
         data_fresh_at=max(freshness_values, default=None),
         sources=source_reports,
+        alerts=[_freshness_alert_out(alert) for alert in active_alerts],
+        alert_counts=dict(alert_counts),
     )
+
+
+@router.post("/freshness/scan", response_model=FreshnessOut)
+def scan_admin_freshness(
+    stale_days: int = Query(default=90, ge=1, le=730),
+    db: Session = Depends(get_session),
+    principal: AdminPrincipal = Depends(require_admin_role("reviewer", "admin")),
+) -> FreshnessOut:
+    """Run an explicit source scan from the admin console or a scheduler."""
+    scan_source_freshness(db, stale_days=stale_days)
+    db.add(
+        make_audit_event(
+            principal=principal,
+            action="source_freshness.scan",
+            target_type="source_freshness",
+            target_id="all",
+            reason=f"Ran source freshness scan with a {stale_days}-day threshold",
+            safe_after={"stale_days": stale_days},
+        )
+    )
+    db.commit()
+    return admin_freshness(stale_days=stale_days, db=db, _principal=principal)
+
+
+@router.get("/freshness/alerts", response_model=list[FreshnessAlertOut])
+def admin_freshness_alerts(
+    status: Literal["open", "acknowledged", "resolved"] | None = None,
+    limit: int = Query(default=200, ge=1, le=1_000),
+    db: Session = Depends(get_session),
+    _principal: AdminPrincipal = Depends(require_admin_role(*READ_ROLES)),
+) -> list[FreshnessAlertOut]:
+    filters = [SourceFreshnessAlert.status == status] if status else []
+    rows = db.exec(
+        select(SourceFreshnessAlert)
+        .where(*filters)
+        .order_by(SourceFreshnessAlert.last_seen_at.desc())
+        .limit(limit)
+    ).all()
+    return [_freshness_alert_out(row) for row in rows]
+
+
+@router.post("/freshness/alerts/{alert_id}", response_model=FreshnessAlertOut)
+def update_freshness_alert(
+    alert_id: str,
+    payload: FreshnessAlertUpdate,
+    db: Session = Depends(get_session),
+    principal: AdminPrincipal = Depends(require_admin_role("reviewer", "admin")),
+) -> FreshnessAlertOut:
+    row = db.get(SourceFreshnessAlert, alert_id)
+    if row is None:
+        raise HTTPException(status_code=404, detail="Freshness alert not found")
+    before = {"status": row.status, "severity": row.severity}
+    row.status = payload.status
+    if payload.status == "resolved":
+        row.resolved_at = datetime.now(UTC)
+        row.resolved_by = principal.actor_id
+    else:
+        row.resolved_at = None
+        row.resolved_by = None
+    db.add(
+        make_audit_event(
+            principal=principal,
+            action="source_freshness_alert.update",
+            target_type="source_freshness_alert",
+            target_id=row.id,
+            reason=payload.reason,
+            safe_before=before,
+            safe_after={"status": row.status, "severity": row.severity},
+        )
+    )
+    db.commit()
+    db.refresh(row)
+    return _freshness_alert_out(row)
 
 
 @router.get("/providers", response_model=ProviderListOut)
@@ -1202,6 +1663,9 @@ def admin_languages(
     rows = db.exec(select(Language).order_by(Language.code)).all()
     result: list[LanguageReadinessOut] = []
     for language in rows:
+        review = db.get(LanguageReadinessReview, language.code)
+        if review is None:
+            review = LanguageReadinessReview(language_code=language.code)
         state_codes = [
             state.code
             for state in db.exec(
@@ -1222,6 +1686,7 @@ def admin_languages(
         active_count = len(benefit_rows)
         prompt_ready = language.code in supported_languages()
         voice_ready = settings.llm_enabled and settings.tts_enabled
+        review_ready = _language_review_ready(review)
         result.append(
             LanguageReadinessOut(
                 code=language.code,
@@ -1230,6 +1695,7 @@ def admin_languages(
                 active=language.is_active,
                 prompt_ready=prompt_ready,
                 interface_status="catalogued" if language.is_active else "inactive",
+                interface_review_status=review.interface_status,
                 data_status="localized"
                 if localized_count
                 else ("available" if active_count else "no active data"),
@@ -1238,12 +1704,138 @@ def admin_languages(
                 stt_provider=language.stt_provider,
                 tts_provider=language.tts_provider,
                 voice_status="ready" if voice_ready and language.is_active else "not ready",
+                voice_review_status=review.voice_status,
                 rollout_status="active"
-                if language.is_active and prompt_ready and active_count
+                if language.is_active
+                and prompt_ready
+                and active_count
+                and (language.code in CORE_LANGUAGE_CODES or review_ready)
                 else "not ready",
+                native_speaker_status=review.native_speaker_status,
+                prompt_status=review.prompt_status,
+                content_status=review.content_status,
+                understanding_status=review.understanding_status,
+                accessibility_status=review.accessibility_status,
+                evidence_url=review.evidence_url,
+                review_notes=review.review_notes,
+                reviewed_by=review.reviewed_by,
+                reviewed_at=review.reviewed_at,
+                activated_at=review.activated_at,
             )
         )
     return result
+
+
+@router.put("/languages/{code}/review", response_model=LanguageReadinessOut)
+def update_language_review(
+    code: str,
+    payload: LanguageReviewUpdateRequest,
+    db: Session = Depends(get_session),
+    principal: AdminPrincipal = Depends(require_admin_role("reviewer", "admin")),
+) -> LanguageReadinessOut:
+    language = db.get(Language, code.strip().lower())
+    if language is None:
+        raise HTTPException(status_code=404, detail="Language not found")
+    if not payload.attestation:
+        raise HTTPException(
+            status_code=400,
+            detail="The reviewer must explicitly attest that the evidence was checked",
+        )
+    statuses = payload.model_dump(
+        exclude={"evidence_url", "review_notes", "attestation", "activate"}
+    )
+    if payload.prompt_status == "approved" and language.code not in supported_languages():
+        raise HTTPException(
+            status_code=409,
+            detail=(
+                "Install and validate the complete prompt catalog before approving "
+                "prompt readiness"
+            ),
+        )
+    if (
+        any(status == "approved" for status in statuses.values())
+        and not payload.evidence_url.strip()
+    ):
+        raise HTTPException(
+            status_code=400,
+            detail="An evidence URL is required when marking a language gate approved",
+        )
+    if payload.activate and principal.role != "admin":
+        raise HTTPException(status_code=403, detail="Only an admin can activate a language")
+    review = db.get(LanguageReadinessReview, language.code)
+    if review is None:
+        review = LanguageReadinessReview(language_code=language.code)
+    before = {
+        key: getattr(review, key)
+        for key in (
+            "native_speaker_status",
+            "interface_status",
+            "prompt_status",
+            "content_status",
+            "understanding_status",
+            "voice_status",
+            "accessibility_status",
+        )
+    }
+    before_active = language.is_active
+    for key, value in statuses.items():
+        setattr(review, key, value)
+    review.evidence_url = payload.evidence_url.strip()
+    review.review_notes = payload.review_notes.strip()
+    review.reviewed_by = principal.actor_id
+    review.reviewed_at = datetime.now(UTC)
+    review.updated_at = review.reviewed_at
+    review_ready = _language_review_ready(review)
+    if any(value == "rejected" for value in statuses.values()):
+        language.is_active = False
+        review.activated_at = None
+    elif payload.activate:
+        if not review_ready:
+            raise HTTPException(
+                status_code=409,
+                detail="All language release gates must be approved before activation",
+            )
+        if language.code not in supported_languages():
+            raise HTTPException(
+                status_code=409,
+                detail="A complete prompt catalog must be installed before activation",
+            )
+        language.is_active = True
+        review.activated_at = datetime.now(UTC)
+    db.add(language)
+    db.add(review)
+    db.add(
+        make_audit_event(
+            principal=principal,
+            action="language.review",
+            target_type="language",
+            target_id=language.code,
+            reason=payload.review_notes,
+            safe_before={**before, "active": before_active},
+            safe_after={**statuses, "active": language.is_active, "release_ready": review_ready},
+        )
+    )
+    db.commit()
+    db.refresh(language)
+    db.refresh(review)
+    return next(
+        item for item in admin_languages(db=db, _principal=principal) if item.code == language.code
+    )
+
+
+def _language_review_ready(review: LanguageReadinessReview) -> bool:
+    return all(
+        status == "approved"
+        for status in (
+            review.native_speaker_status,
+            review.interface_status,
+            review.prompt_status,
+            review.content_status,
+            review.understanding_status,
+            review.voice_status,
+            review.accessibility_status,
+        )
+    )
 
 
 @router.get("/audit-events", response_model=list[AuditEventOut])
@@ -1327,6 +1919,11 @@ def admin_system(
     db: Session = Depends(get_session),
     _principal: AdminPrincipal = Depends(require_admin_role(*READ_ROLES)),
 ) -> SystemOut:
+    latest_deployment = db.exec(
+        select(DeploymentRevision)
+        .order_by(DeploymentRevision.deployed_at.desc())
+        .limit(1)
+    ).first()
     migration_revision = None
     try:
         migration_revision = db.exec(
@@ -1345,6 +1942,7 @@ def admin_system(
         generated_at=datetime.now(UTC),
         git_commit_sha=os.getenv("GIT_COMMIT_SHA", "unknown"),
         migration_revision=str(migration_revision) if migration_revision else None,
+        deployment_id=latest_deployment.id if latest_deployment is not None else None,
         database_mode="sqlite" if settings.using_sqlite else "postgres",
         configuration={
             "redis_configured": bool(settings.redis_url),
@@ -1371,6 +1969,230 @@ def admin_system(
     )
 
 
+@router.get("/system/deployments/compare", response_model=DeploymentComparisonOut)
+def admin_deployment_compare(
+    limit: int = Query(default=20, ge=2, le=100),
+    db: Session = Depends(get_session),
+    _principal: AdminPrincipal = Depends(require_admin_role(*READ_ROLES)),
+) -> DeploymentComparisonOut:
+    rows = db.exec(
+        select(DeploymentRevision)
+        .order_by(DeploymentRevision.deployed_at.desc())
+        .limit(limit)
+    ).all()
+    history = [_deployment_out(row) for row in rows]
+    current = history[0] if history else None
+    previous = history[1] if len(history) > 1 else None
+    changes: list[DeploymentChangeOut] = []
+    if current is not None and previous is not None:
+        fields = (
+            "environment",
+            "app_version",
+            "git_commit_sha",
+            "image_digest",
+            "migration_revision",
+            "data_revision",
+            "prompt_version",
+            "model_versions",
+            "active_flags",
+            "configuration",
+        )
+        current_values = current.model_dump()
+        previous_values = previous.model_dump()
+        changes = [
+            DeploymentChangeOut(
+                field=field,
+                previous=previous_values[field],
+                current=current_values[field],
+            )
+            for field in fields
+            if previous_values[field] != current_values[field]
+        ]
+        note = (
+            "Comparison is against the immediately preceding recorded release. "
+            "Use migration and data revisions together when deciding whether a rollback is safe."
+        )
+    elif current is not None:
+        note = (
+            "Only one release has been recorded in this environment. A second deployment "
+            "will create the first comparable baseline."
+        )
+    else:
+        note = (
+            "No deployment snapshot is recorded yet; restart the API after migrations are applied."
+        )
+    return DeploymentComparisonOut(
+        generated_at=datetime.now(UTC),
+        current=current,
+        previous=previous,
+        history=history,
+        changes=changes,
+        note=note,
+    )
+
+
+@router.get("/providers/simulations", response_model=ProviderFailureSimulationListOut)
+def admin_provider_failure_simulations(
+    language_code: str = Query(default="en", min_length=2, max_length=12),
+    state_code: str = Query(default="KA", min_length=2, max_length=3),
+    _principal: AdminPrincipal = Depends(require_admin_role(*READ_ROLES)),
+) -> ProviderFailureSimulationListOut:
+    """Show failure paths without making a provider request or changing state."""
+    language = language_code.strip().lower()
+    state = state_code.strip().upper()
+    specs = (
+        {
+            "scenario": "stt_failure",
+            "provider": "openai_whisper",
+            "policy_provider": "stt",
+            "flag_key": "provider_stt",
+            "configured": settings.llm_enabled,
+            "user_facing_fallback": (
+                "Keep text input and uploaded-audio retry available; do not submit an empty turn."
+            ),
+            "operator_action": (
+                "Check OpenAI/Whisper health, budget posture, and the STT policy circuit."
+            ),
+        },
+        {
+            "scenario": "tts_failure",
+            "provider": "sarvam_bulbul",
+            "policy_provider": "tts",
+            "flag_key": "provider_tts",
+            "configured": settings.tts_enabled,
+            "user_facing_fallback": (
+                "Return the structured text answer and offer a retry; never hide the result "
+                "behind audio."
+            ),
+            "operator_action": (
+                "Check Sarvam credentials/credits, cache hit rate, and the TTS policy circuit."
+            ),
+        },
+        {
+            "scenario": "rag_failure",
+            "provider": "openai_vector_store",
+            "policy_provider": "rag",
+            "flag_key": "provider_rag",
+            "configured": settings.llm_enabled and bool(settings.resolved_openai_vector_store_id),
+            "user_facing_fallback": (
+                "Use the structured matcher only for bounded results and clearly disclose "
+                "source limitations."
+            ),
+            "operator_action": (
+                "Check vector-store availability, retrieval telemetry, and the RAG policy circuit."
+            ),
+        },
+        {
+            "scenario": "sms_failure",
+            "provider": "infobip_sms",
+            "policy_provider": "sms",
+            "flag_key": "infobip_reminders",
+            "configured": settings.infobip_channel_ready("sms"),
+            "user_facing_fallback": (
+                "Keep the in-app reminder, preserve consent, and suppress an unconfirmed "
+                "external send."
+            ),
+            "operator_action": (
+                "Check Infobip sender approval, templates, webhook delivery reports, and "
+                "SMS consent."
+            ),
+        },
+        {
+            "scenario": "whatsapp_failure",
+            "provider": "infobip_whatsapp",
+            "policy_provider": "whatsapp",
+            "flag_key": "infobip_reminders",
+            "configured": settings.infobip_channel_ready("whatsapp"),
+            "user_facing_fallback": (
+                "Keep the in-app reminder; do not silently fall back to SMS without separate "
+                "consent."
+            ),
+            "operator_action": (
+                "Check WhatsApp template approval, sender status, webhook reports, and "
+                "opt-out state."
+            ),
+        },
+        {
+            "scenario": "email_failure",
+            "provider": "infobip_email",
+            "policy_provider": "email",
+            "flag_key": "infobip_reminders",
+            "configured": settings.infobip_channel_ready("email"),
+            "user_facing_fallback": (
+                "Keep the in-app reminder and show that email delivery is pending or unavailable."
+            ),
+            "operator_action": (
+                "Check sender/domain approval, templates, webhook delivery reports, and "
+                "email consent."
+            ),
+        },
+    )
+    simulations: list[ProviderFailureSimulationOut] = []
+    for spec in specs:
+        policy = get_effective_provider_policy(str(spec["policy_provider"]), language)
+        flag_enabled = feature_flag_enabled(
+            str(spec["flag_key"]),
+            subject=f"admin-simulation:{spec['scenario']}:{language}:{state}",
+            language_code=language,
+            state_code=state,
+        )
+        policy_enabled = bool(policy.get("enabled", True))
+        circuit_state = str(policy.get("circuit_state", "closed"))
+        configured = bool(spec["configured"])
+        if not flag_enabled:
+            posture = "blocked by feature flag"
+        elif not policy_enabled:
+            posture = "blocked by provider policy"
+        elif circuit_state != "closed":
+            posture = f"circuit {circuit_state}"
+        elif not configured:
+            posture = "not configured"
+        else:
+            posture = "ready for controlled drill"
+        expected_path = [
+            f"Inject a simulated {spec['provider']} failure in a staging drill only.",
+            (
+                f"Runtime flag {spec['flag_key']} is "
+                f"{'enabled' if flag_enabled else 'off'} for {language}/{state}."
+            ),
+            (
+                f"Provider policy is {'enabled' if policy_enabled else 'disabled'} "
+                f"with circuit {circuit_state}."
+            ),
+            (
+                "Contain the failure and surface the documented fallback without sending "
+                "another paid request."
+            ),
+        ]
+        simulations.append(
+            ProviderFailureSimulationOut(
+                scenario=str(spec["scenario"]),
+                provider=str(spec["provider"]),
+                policy_provider=str(spec["policy_provider"]),
+                flag_key=str(spec["flag_key"]),
+                flag_enabled=flag_enabled,
+                policy_enabled=policy_enabled,
+                circuit_state=circuit_state,
+                configured=configured,
+                current_posture=posture,
+                expected_path=expected_path,
+                user_facing_fallback=str(spec["user_facing_fallback"]),
+                operator_action=str(spec["operator_action"]),
+            )
+        )
+    return ProviderFailureSimulationListOut(
+        generated_at=datetime.now(UTC),
+        language_code=language,
+        state_code=state,
+        simulations=simulations,
+        note=(
+            "Dry-run projection only: this endpoint never calls a provider, changes a policy, "
+            "or sends a notification. Execute drills in staging with provider mocks and an "
+            "explicit change ticket."
+        ),
+    )
+
+
 def _feature_flag_snapshot(row: FeatureFlag) -> dict[str, Any]:
     return {
         "enabled": row.enabled,
@@ -1378,6 +2200,24 @@ def _feature_flag_snapshot(row: FeatureFlag) -> dict[str, Any]:
         "target_languages": list(row.target_languages),
         "target_states": list(row.target_states),
     }
+
+
+def _deployment_out(row: DeploymentRevision) -> DeploymentOut:
+    return DeploymentOut(
+        id=row.id,
+        release_key=row.release_key,
+        environment=row.environment,
+        app_version=row.app_version,
+        git_commit_sha=row.git_commit_sha,
+        image_digest=row.image_digest,
+        migration_revision=row.migration_revision,
+        data_revision=row.data_revision,
+        prompt_version=row.prompt_version,
+        model_versions=dict(row.model_versions or {}),
+        active_flags=dict(row.active_flags or {}),
+        configuration=dict(row.configuration or {}),
+        deployed_at=row.deployed_at,
+    )
 
 
 def _feature_flag_out(row: FeatureFlag) -> FeatureFlagOut:
@@ -1443,6 +2283,16 @@ def _benefit_review_out(row: Benefit) -> BenefitReviewOut:
         domain=_wire(row.domain),
         name=row.name,
         state_code=row.state_code,
+        category=row.category,
+        description=row.description,
+        eligibility_initial=dict(row.eligibility_initial or {}),
+        eligibility_renewal=(
+            dict(row.eligibility_renewal) if row.eligibility_renewal is not None else None
+        ),
+        benefits_text=row.benefits_text,
+        documents_required=list(row.documents_required or []),
+        application_process=row.application_process,
+        source_url=row.source_url,
         verification_status=_wire(row.verification_status),
         is_active=row.is_active,
         source_title=row.source_title,
@@ -1454,7 +2304,27 @@ def _benefit_review_out(row: Benefit) -> BenefitReviewOut:
         last_verified_date=row.last_verified_date,
         valid_from=row.valid_from,
         valid_until=row.valid_until,
+        localized_summary=dict(row.localized_summary or {}),
         job_metadata=dict(row.job_metadata or {}),
+        content_revision=row.content_revision,
+    )
+
+
+def _freshness_alert_out(row: SourceFreshnessAlert) -> FreshnessAlertOut:
+    return FreshnessAlertOut(
+        id=row.id,
+        alert_key=row.alert_key,
+        benefit_id=row.benefit_id,
+        dataset=row.dataset,
+        alert_type=row.alert_type,
+        severity=row.severity,
+        status=row.status,
+        message=row.message,
+        first_seen_at=row.first_seen_at,
+        last_seen_at=row.last_seen_at,
+        resolved_at=row.resolved_at,
+        resolved_by=row.resolved_by,
+        safe_metadata=dict(row.safe_metadata or {}),
     )
 
 

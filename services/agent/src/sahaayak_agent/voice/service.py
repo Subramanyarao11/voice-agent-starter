@@ -12,7 +12,13 @@ import hashlib
 
 from sahaayak_agent.languages import get_profile
 from sahaayak_agent.voice.base import STTProvider, TTSProvider, VoiceUnavailable
-from sahaayak_common import get_cache, get_effective_provider_policy, get_logger, settings
+from sahaayak_common import (
+    get_cache,
+    get_effective_provider_policy,
+    get_logger,
+    provider_rollout_enabled,
+    settings,
+)
 from sahaayak_contracts import LanguageProfile, SynthesisResult, TranscriptionResult
 
 log = get_logger(__name__)
@@ -49,6 +55,7 @@ class VoiceService:
     ) -> None:
         self._stt = stt
         self._tts = tts
+        self._realtime_stt = None
         self._stt_ready = stt is not None
         self._tts_ready = tts is not None
 
@@ -76,12 +83,29 @@ class VoiceService:
     def tts_available(self) -> bool:
         return self._tts_ready or settings.tts_enabled
 
+    @property
+    def realtime_stt_available(self) -> bool:
+        return settings.openai_realtime_stt_enabled and self.stt_available
+
     async def transcribe(
-        self, audio: bytes, *, language_code: str, filename: str = "audio.wav"
+        self,
+        audio: bytes,
+        *,
+        language_code: str,
+        filename: str = "audio.wav",
+        subject: str = "",
+        state_code: str | None = None,
     ) -> TranscriptionResult:
         if not self.stt_available:
             raise VoiceUnavailable("no speech-to-text provider is configured")
         profile = get_profile(language_code)
+        if not provider_rollout_enabled(
+            "stt",
+            subject=subject,
+            language_code=profile.code,
+            state_code=state_code,
+        ):
+            raise VoiceUnavailable("speech-to-text is temporarily paused by operations")
         policy = get_effective_provider_policy("stt", profile.code)
         if not policy["enabled"] or policy["circuit_state"] == "open":
             raise VoiceUnavailable("speech-to-text is temporarily paused by operations")
@@ -89,11 +113,55 @@ class VoiceService:
             raise VoiceUnavailable("the selected speech-to-text provider is not available")
         return await self._get_stt().transcribe(audio, profile=profile, filename=filename)
 
-    async def speak(self, text: str, *, language_code: str) -> SynthesisResult:
+    async def start_realtime_transcription(
+        self,
+        *,
+        language_code: str,
+        subject: str = "",
+        state_code: str | None = None,
+        on_delta=None,
+    ):
+        """Open an opt-in PCM transcription session for a browser WebSocket."""
+        if not self.realtime_stt_available:
+            raise VoiceUnavailable("realtime speech-to-text is not enabled")
+        profile = get_profile(language_code)
+        if not provider_rollout_enabled(
+            "stt",
+            subject=subject,
+            language_code=profile.code,
+            state_code=state_code,
+        ):
+            raise VoiceUnavailable("speech-to-text is temporarily paused by operations")
+        policy = get_effective_provider_policy("stt", profile.code)
+        if not policy["enabled"] or policy["circuit_state"] == "open":
+            raise VoiceUnavailable("speech-to-text is temporarily paused by operations")
+        if policy["primary_provider"] not in {"openai_whisper", "openai_realtime_transcribe"}:
+            raise VoiceUnavailable("the selected speech-to-text provider is not available")
+        if self._realtime_stt is None:
+            from sahaayak_agent.voice.openai_realtime_stt import OpenAIRealtimeSTT
+
+            self._realtime_stt = OpenAIRealtimeSTT()
+        return await self._realtime_stt.start_session(profile=profile, on_delta=on_delta)
+
+    async def speak(
+        self,
+        text: str,
+        *,
+        language_code: str,
+        subject: str = "",
+        state_code: str | None = None,
+    ) -> SynthesisResult:
         if not self.tts_available:
             raise VoiceUnavailable("no text-to-speech provider is configured")
 
         profile = get_profile(language_code)
+        if not provider_rollout_enabled(
+            "tts",
+            subject=subject,
+            language_code=profile.code,
+            state_code=state_code,
+        ):
+            raise VoiceUnavailable("text-to-speech is temporarily paused by operations")
         policy = get_effective_provider_policy("tts", profile.code)
         if not policy["enabled"] or policy["circuit_state"] == "open":
             raise VoiceUnavailable("text-to-speech is temporarily paused by operations")

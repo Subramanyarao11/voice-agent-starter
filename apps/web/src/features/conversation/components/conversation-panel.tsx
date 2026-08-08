@@ -7,6 +7,7 @@ import { useAudioReply } from "@/hooks/use-audio-reply";
 import { Button } from "@/components/ui/button";
 import { Composer } from "@/features/conversation/components/composer";
 import { MessageList } from "@/features/conversation/components/message-list";
+import { TranscriptEditor } from "@/features/conversation/components/transcript-editor";
 
 type ConversationPanelProps = {
   messages: ConversationMessage[];
@@ -21,7 +22,11 @@ type ConversationPanelProps = {
   voiceInputAvailable: boolean;
   textToSpeechAvailable: boolean;
   recorderError: string | null;
+  transcriptDraft: string | null;
   onDraftChange: (draft: string) => void;
+  onTranscriptChange: (transcript: string) => void;
+  onSubmitTranscript: (transcript: string) => void;
+  onCancelTranscript: () => void;
   onSubmit: (event?: FormEvent<HTMLFormElement>) => void;
   onSuggestion: (suggestion: string) => void;
   onStartRecording: () => void;
@@ -71,7 +76,11 @@ export function ConversationPanel({
   voiceInputAvailable,
   textToSpeechAvailable,
   recorderError,
+  transcriptDraft,
   onDraftChange,
+  onTranscriptChange,
+  onSubmitTranscript,
+  onCancelTranscript,
   onSubmit,
   onSuggestion,
   onStartRecording,
@@ -99,7 +108,19 @@ export function ConversationPanel({
         </Button>
       </div>
 
-      <MessageList messages={messages} isSending={isSending} onSuggestion={onSuggestion} />
+      <MessageList
+        messages={messages}
+        isSending={isSending && transcriptDraft === null}
+        onSuggestion={onSuggestion}
+      />
+      {transcriptDraft !== null && (
+        <TranscriptEditor
+          value={transcriptDraft}
+          onChange={onTranscriptChange}
+          onSubmit={() => onSubmitTranscript(transcriptDraft)}
+          onCancel={onCancelTranscript}
+        />
+      )}
       <AudioReply source={audioSource} />
       <Composer
         draft={draft}

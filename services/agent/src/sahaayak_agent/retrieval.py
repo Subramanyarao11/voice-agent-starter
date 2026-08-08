@@ -19,6 +19,7 @@ from sahaayak_common import (
     BudgetReservation,
     OpenAIBudgetLedger,
     get_effective_provider_policy,
+    provider_rollout_enabled,
     settings,
 )
 from sahaayak_contracts import RagAnswerResponse, RetrievedSource
@@ -162,11 +163,24 @@ class OpenAIRetrieval:
         )
 
     async def search(
-        self, query: str, *, max_results: int | None = None
+        self,
+        query: str,
+        *,
+        max_results: int | None = None,
+        subject: str = "",
+        language_code: str | None = None,
+        state_code: str | None = None,
     ) -> list[RetrievedSource]:
         query = query.strip()
         if not query:
             return []
+        if not provider_rollout_enabled(
+            "rag",
+            subject=subject,
+            language_code=language_code,
+            state_code=state_code,
+        ):
+            raise RagUnavailable("RAG is temporarily paused by operations")
         policy = get_effective_provider_policy("rag")
         if not policy["enabled"] or policy["circuit_state"] == "open":
             raise RagUnavailable("RAG is temporarily paused by operations")
@@ -223,8 +237,16 @@ class OpenAIRetrieval:
         *,
         max_results: int | None = None,
         language_code: str | None = None,
+        subject: str = "",
+        state_code: str | None = None,
     ) -> RagAnswerResponse:
-        sources = await self.search(query, max_results=max_results)
+        sources = await self.search(
+            query,
+            max_results=max_results,
+            subject=subject,
+            language_code=language_code,
+            state_code=state_code,
+        )
         if not sources:
             return RagAnswerResponse(
                 query=query,

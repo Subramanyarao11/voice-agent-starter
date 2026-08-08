@@ -162,6 +162,14 @@ const reviewSchema = z.object({
   domain: z.string(),
   name: z.string(),
   state_code: z.string().nullable(),
+  category: z.string(),
+  description: z.string(),
+  eligibility_initial: z.record(z.string(), z.unknown()),
+  eligibility_renewal: z.record(z.string(), z.unknown()).nullable(),
+  benefits_text: z.string(),
+  documents_required: z.array(z.string()),
+  application_process: z.string(),
+  source_url: z.string(),
   verification_status: z.string(),
   is_active: z.boolean(),
   source_title: z.string(),
@@ -173,7 +181,9 @@ const reviewSchema = z.object({
   last_verified_date: z.string().nullable(),
   valid_from: z.string().nullable(),
   valid_until: z.string().nullable(),
+  localized_summary: z.record(z.string(), z.string()),
   job_metadata: z.record(z.string(), z.unknown()).default(() => ({})),
+  content_revision: z.number(),
 });
 
 const reviewQueueSchema = z.object({
@@ -220,6 +230,9 @@ const ticketSchema = z.object({
   department: z.string(),
   routing_location: z.string(),
   routing_source: z.string(),
+  routing_directory_entry_id: z.string().nullable().optional(),
+  routing_source_url: z.string().default(""),
+  routing_verified_at: z.string().nullable().optional(),
   operator_notes: z.array(ticketNoteSchema),
   created_at: z.string(),
   updated_at: z.string().nullable(),
@@ -227,6 +240,42 @@ const ticketSchema = z.object({
   resolved_by: z.string().nullable(),
   resolution_code: z.string().nullable(),
   resolution_note: z.string(),
+});
+
+const directoryEntrySchema = z.object({
+  id: z.string(),
+  entry_key: z.string(),
+  state_code: z.string(),
+  district_code: z.string(),
+  district_name: z.string(),
+  service_domain: z.string(),
+  pincode: z.string(),
+  pincode_prefix: z.string(),
+  department_code: z.string(),
+  department_name: z.string(),
+  help_centre_name: z.string(),
+  address: z.string(),
+  phone: z.string(),
+  email: z.string(),
+  website_url: z.string(),
+  source_name: z.string(),
+  source_url: z.string(),
+  source_record_id: z.string(),
+  source_last_verified: z.string().nullable(),
+  approval_status: z.string(),
+  is_active: z.boolean(),
+  stale: z.boolean(),
+  priority: z.number(),
+  created_at: z.string(),
+  updated_at: z.string(),
+});
+
+const directoryListSchema = z.object({
+  generated_at: z.string(),
+  stale_after_days: z.number(),
+  entries: z.array(directoryEntrySchema),
+  total: z.number(),
+  status_counts: z.record(z.string(), z.number()),
 });
 
 const providerPolicySchema = z.object({
@@ -260,12 +309,24 @@ const languageReadinessSchema = z.object({
   active: z.boolean(),
   prompt_ready: z.boolean(),
   interface_status: z.string(),
+  interface_review_status: z.string(),
   data_status: z.string(),
   localized_benefits: z.number(),
   active_benefits: z.number(),
   stt_provider: z.string(),
   tts_provider: z.string(),
   voice_status: z.string(),
+  voice_review_status: z.string(),
+  native_speaker_status: z.string(),
+  prompt_status: z.string(),
+  content_status: z.string(),
+  understanding_status: z.string(),
+  accessibility_status: z.string(),
+  evidence_url: z.string(),
+  review_notes: z.string(),
+  reviewed_by: z.string().nullable(),
+  reviewed_at: z.string().nullable(),
+  activated_at: z.string().nullable(),
   rollout_status: z.string(),
 });
 
@@ -332,6 +393,42 @@ const freshnessSchema = z.object({
       status: z.string(),
     }),
   ),
+  alerts: z.array(
+    z.object({
+      id: z.string(),
+      alert_key: z.string(),
+      benefit_id: z.string().nullable(),
+      dataset: z.string(),
+      alert_type: z.string(),
+      severity: z.string(),
+      status: z.string(),
+      message: z.string(),
+      first_seen_at: z.string(),
+      last_seen_at: z.string(),
+      resolved_at: z.string().nullable(),
+      resolved_by: z.string().nullable(),
+      safe_metadata: z.record(z.string(), z.unknown()),
+    }),
+  ),
+  alert_counts: z.record(z.string(), z.number()),
+});
+
+const benefitVersionSchema = z.object({
+  id: z.string(),
+  benefit_id: z.string(),
+  version: z.number(),
+  action: z.string(),
+  actor_id: z.string(),
+  actor_role: z.string(),
+  reason: z.string(),
+  snapshot: z.record(z.string(), z.unknown()),
+  created_at: z.string(),
+});
+
+const benefitVersionListSchema = z.object({
+  benefit_id: z.string(),
+  current_revision: z.number(),
+  versions: z.array(benefitVersionSchema),
 });
 
 const featureFlagSchema = z.object({
@@ -373,9 +470,64 @@ const systemSchema = z.object({
   generated_at: z.string(),
   git_commit_sha: z.string(),
   migration_revision: z.string().nullable(),
+  deployment_id: z.string().nullable().optional(),
   database_mode: z.string(),
   configuration: z.record(z.string(), z.boolean()),
   deployment_notes: z.array(z.string()),
+});
+
+const deploymentSchema = z.object({
+  id: z.string(),
+  release_key: z.string(),
+  environment: z.string(),
+  app_version: z.string(),
+  git_commit_sha: z.string(),
+  image_digest: z.string(),
+  migration_revision: z.string().nullable(),
+  data_revision: z.string(),
+  prompt_version: z.string(),
+  model_versions: z.record(z.string(), z.unknown()),
+  active_flags: z.record(z.string(), z.unknown()),
+  configuration: z.record(z.string(), z.unknown()),
+  deployed_at: z.string(),
+});
+
+const deploymentComparisonSchema = z.object({
+  generated_at: z.string(),
+  current: deploymentSchema.nullable(),
+  previous: deploymentSchema.nullable(),
+  history: z.array(deploymentSchema),
+  changes: z.array(
+    z.object({
+      field: z.string(),
+      previous: z.unknown(),
+      current: z.unknown(),
+    }),
+  ),
+  note: z.string(),
+});
+
+const providerFailureSimulationSchema = z.object({
+  scenario: z.string(),
+  provider: z.string(),
+  policy_provider: z.string().nullable(),
+  flag_key: z.string(),
+  flag_enabled: z.boolean(),
+  policy_enabled: z.boolean(),
+  circuit_state: z.string(),
+  configured: z.boolean(),
+  current_posture: z.string(),
+  expected_path: z.array(z.string()),
+  user_facing_fallback: z.string(),
+  operator_action: z.string(),
+});
+
+const providerFailureSimulationListSchema = z.object({
+  generated_at: z.string(),
+  language_code: z.string(),
+  state_code: z.string(),
+  simulations: z.array(providerFailureSimulationSchema),
+  note: z.string(),
 });
 
 export type AdminMe = z.infer<typeof adminMeSchema>;
@@ -386,14 +538,21 @@ export type ReviewQueue = z.infer<typeof reviewQueueSchema>;
 export type BenefitIssueReport = z.infer<typeof benefitIssueReportSchema>;
 export type ReviewItem = z.infer<typeof reviewSchema>;
 export type AdminTicket = z.infer<typeof ticketSchema>;
+export type AdminDirectoryEntry = z.infer<typeof directoryEntrySchema>;
+export type AdminDirectory = z.infer<typeof directoryListSchema>;
 export type ProviderList = z.infer<typeof providerListSchema>;
 export type LanguageReadiness = z.infer<typeof languageReadinessSchema>;
 export type AuditEvent = z.infer<typeof auditEventSchema>;
 export type ImportRun = z.infer<typeof importRunSchema>;
 export type AdminSystem = z.infer<typeof systemSchema>;
+export type DeploymentComparison = z.infer<typeof deploymentComparisonSchema>;
+export type ProviderFailureSimulationList = z.infer<typeof providerFailureSimulationListSchema>;
 export type ProviderPolicy = ProviderList["policies"][number];
 export type AdminNotifications = z.infer<typeof notificationOverviewSchema>;
 export type AdminFreshness = z.infer<typeof freshnessSchema>;
+export type FreshnessAlert = AdminFreshness["alerts"][number];
+export type BenefitVersion = z.infer<typeof benefitVersionSchema>;
+export type BenefitVersionList = z.infer<typeof benefitVersionListSchema>;
 export type AdminEvaluation = z.infer<typeof evaluationRunSchema>;
 export type FeatureFlag = z.infer<typeof featureFlagSchema>;
 export type FeatureFlagList = z.infer<typeof featureFlagListSchema>;
@@ -463,6 +622,73 @@ export function reviewAdminBenefit(
   }));
 }
 
+export type BenefitEditPayload = {
+  expected_revision?: number;
+  domain: string;
+  name: string;
+  state_code: string | null;
+  category: string;
+  description: string;
+  eligibility_initial: Record<string, unknown>;
+  eligibility_renewal: Record<string, unknown> | null;
+  benefits_text: string;
+  documents_required: string[];
+  application_process: string;
+  source_url: string;
+  source_title: string;
+  source_document_url: string;
+  source_excerpt: string | null;
+  valid_from: string | null;
+  valid_until: string | null;
+  localized_summary: Record<string, string>;
+  job_metadata: Record<string, unknown> | null;
+  reason: string;
+};
+
+export function updateAdminBenefit(
+  token: string,
+  benefitId: string,
+  payload: BenefitEditPayload,
+): Promise<ReviewItem> {
+  return request(
+    `/api/admin/benefits/${encodeURIComponent(benefitId)}`,
+    reviewSchema,
+    adminInit(token, {method: "PUT", body: JSON.stringify(payload)}),
+  );
+}
+
+export function getAdminBenefitVersions(token: string, benefitId: string): Promise<BenefitVersionList> {
+  return request(
+    `/api/admin/benefits/${encodeURIComponent(benefitId)}/versions`,
+    benefitVersionListSchema,
+    adminInit(token),
+  );
+}
+
+export function rollbackAdminBenefit(
+  token: string,
+  benefitId: string,
+  payload: { version: number; reason: string },
+): Promise<ReviewItem> {
+  return request(
+    `/api/admin/benefits/${encodeURIComponent(benefitId)}/rollback`,
+    reviewSchema,
+    adminInit(token, {method: "POST", body: JSON.stringify(payload)}),
+  );
+}
+
+export function updateFreshnessAlert(
+  token: string,
+  alertId: string,
+  payload: { status: "acknowledged" | "resolved"; reason: string },
+): Promise<FreshnessAlert> {
+  return request(
+    `/api/admin/freshness/alerts/${encodeURIComponent(alertId)}`,
+    freshnessSchema.shape.alerts.element,
+    adminInit(token, {method: "POST", body: JSON.stringify(payload)}),
+  );
+}
+
 export function getAdminEscalations(token: string): Promise<AdminTicket[]> {
   return request("/api/escalations?status=active&limit=100", z.array(ticketSchema), adminInit(token));
 }
@@ -507,8 +733,41 @@ export function resolveAdminEscalation(
   );
 }
 
+export function getAdminDirectory(token: string): Promise<AdminDirectory> {
+  return request("/api/admin/departments?status=all&limit=500", directoryListSchema, adminInit(token));
+}
+
+export function approveAdminDirectoryEntry(token: string, entryId: string, reason: string): Promise<AdminDirectoryEntry> {
+  return request(
+    `/api/admin/departments/${encodeURIComponent(entryId)}/approve`,
+    directoryEntrySchema,
+    adminInit(token, {method: "POST", body: JSON.stringify({reason})}),
+  );
+}
+
+export function deactivateAdminDirectoryEntry(token: string, entryId: string, reason: string): Promise<AdminDirectoryEntry> {
+  return request(
+    `/api/admin/departments/${encodeURIComponent(entryId)}/deactivate`,
+    directoryEntrySchema,
+    adminInit(token, {method: "POST", body: JSON.stringify({reason})}),
+  );
+}
+
 export function getAdminProviders(token: string): Promise<ProviderList> {
   return request("/api/admin/providers", providerListSchema, adminInit(token));
+}
+
+export function getAdminProviderFailureSimulations(
+  token: string,
+  languageCode = "en",
+  stateCode = "KA",
+): Promise<ProviderFailureSimulationList> {
+  const query = new URLSearchParams({language_code: languageCode, state_code: stateCode});
+  return request(
+    `/api/admin/providers/simulations?${query.toString()}`,
+    providerFailureSimulationListSchema,
+    adminInit(token),
+  );
 }
 
 export function getAdminNotifications(token: string, hours = 24): Promise<AdminNotifications> {
@@ -612,6 +871,32 @@ export function getAdminLanguages(token: string): Promise<LanguageReadiness[]> {
   return request("/api/admin/languages", z.array(languageReadinessSchema), adminInit(token));
 }
 
+export type LanguageReviewUpdate = {
+  native_speaker_status: "pending" | "approved" | "rejected";
+  interface_status: "pending" | "approved" | "rejected";
+  prompt_status: "pending" | "approved" | "rejected";
+  content_status: "pending" | "approved" | "rejected";
+  understanding_status: "pending" | "approved" | "rejected";
+  voice_status: "pending" | "approved" | "rejected";
+  accessibility_status: "pending" | "approved" | "rejected";
+  evidence_url: string;
+  review_notes: string;
+  attestation: boolean;
+  activate: boolean;
+};
+
+export function updateAdminLanguageReview(
+  token: string,
+  code: string,
+  payload: LanguageReviewUpdate,
+): Promise<LanguageReadiness> {
+  return request(
+    `/api/admin/languages/${encodeURIComponent(code)}/review`,
+    languageReadinessSchema,
+    adminInit(token, {method: "PUT", body: JSON.stringify(payload)}),
+  );
+}
+
 export function getAdminAuditEvents(token: string): Promise<AuditEvent[]> {
   return request("/api/admin/audit-events?limit=100", z.array(auditEventSchema), adminInit(token));
 }
@@ -636,4 +921,12 @@ export function getAdminImports(token: string): Promise<ImportRun[]> {
 
 export function getAdminSystem(token: string): Promise<AdminSystem> {
   return request("/api/admin/system", systemSchema, adminInit(token));
+}
+
+export function getAdminDeploymentComparison(token: string): Promise<DeploymentComparison> {
+  return request(
+    "/api/admin/system/deployments/compare?limit=20",
+    deploymentComparisonSchema,
+    adminInit(token),
+  );
 }

@@ -11,6 +11,7 @@ import {
   useAdminAuditQuery,
   useAdminBenefitReportsQuery,
   useAdminConversationsQuery,
+  useAdminDirectoryQuery,
   useAdminEscalationsQuery,
   useAdminImportsQuery,
   useAdminLanguagesQuery,
@@ -20,6 +21,9 @@ import {
   useAdminFeatureFlagsQuery,
   useAdminMeQuery,
   useAdminOverviewQuery,
+  useAdminBenefitVersionsQuery,
+  useAdminDeploymentComparisonQuery,
+  useAdminProviderFailureSimulationsQuery,
   useAdminProvidersQuery,
   useAdminReviewsQuery,
   useAdminSystemQuery,
@@ -31,14 +35,40 @@ import {
   useRouteAdminEscalationMutation,
   useResolveAdminEscalationMutation,
   useReviewAdminBenefitMutation,
+  useRollbackAdminBenefitMutation,
+  useUpdateAdminBenefitMutation,
+  useUpdateFreshnessAlertMutation,
   useUpdateAdminProviderPolicyMutation,
   useUpdateAdminFeatureFlagMutation,
   useUpdateAdminBenefitReportMutation,
+  useUpdateAdminLanguageReviewMutation,
+  useApproveAdminDirectoryMutation,
+  useDeactivateAdminDirectoryMutation,
   useDownloadAdminAuditMutation,
 } from "@/features/admin/queries";
 import type { AdminView } from "@/features/admin/components/admin-shell";
-import type { ProviderPolicy, ProviderPolicyUpdate } from "@/features/admin/api";
+import type {
+  LanguageReviewUpdate,
+  ProviderPolicy,
+  ProviderPolicyUpdate,
+} from "@/features/admin/api";
 import { toUserMessage } from "@/lib/api";
+
+type LanguageReviewStatus = LanguageReviewUpdate["native_speaker_status"];
+type LanguageReviewStatuses = Pick<
+  LanguageReviewUpdate,
+  | "native_speaker_status"
+  | "interface_status"
+  | "prompt_status"
+  | "content_status"
+  | "understanding_status"
+  | "voice_status"
+  | "accessibility_status"
+>;
+
+function normalizeLanguageReviewStatus(value: string): LanguageReviewStatus {
+  return value === "approved" || value === "rejected" ? value : "pending";
+}
 
 export function AdminPage({ view }: { view: AdminView }) {
   const token = useAdminSessionStore((state) => state.token);
@@ -53,6 +83,8 @@ export function AdminPage({ view }: { view: AdminView }) {
       return <TelemetryPage token={token} />;
     case "escalations":
       return <EscalationsPage token={token} role={meQuery.data?.role ?? "observer"} />;
+    case "directory":
+      return <DirectoryPage token={token} role={meQuery.data?.role ?? "observer"} />;
     case "benefits":
       return <BenefitsPage token={token} role={meQuery.data?.role ?? "observer"} />;
     case "providers":
@@ -60,11 +92,11 @@ export function AdminPage({ view }: { view: AdminView }) {
     case "messaging":
       return <MessagingPage token={token} />;
     case "quality":
-      return <QualityPage token={token} />;
+      return <QualityPage token={token} role={meQuery.data?.role ?? "observer"} />;
     case "flags":
       return <FeatureFlagsPage token={token} role={meQuery.data?.role ?? "observer"} />;
     case "languages":
-      return <LanguagesPage token={token} />;
+      return <LanguagesPage token={token} role={meQuery.data?.role ?? "observer"} />;
     case "audit":
       return <AuditPage token={token} />;
     case "system":
@@ -190,10 +222,27 @@ function EscalationCard({
   return <Card className="border-paper/10 bg-paper/[0.04] text-paper"><CardContent className="space-y-5 p-5">
     <div className="flex flex-wrap items-start justify-between gap-4"><div><div className="flex flex-wrap items-center gap-2"><Badge variant="warning">{ticket.reason}</Badge><Badge variant={ticket.status === "claimed" ? "success" : "outline"}>{ticket.status}</Badge>{ticket.sla_breached && <Badge variant="warning">SLA overdue</Badge>}<span className="font-mono text-xs text-paper/40">{ticket.id}</span></div><p className="mt-3 max-w-3xl text-sm leading-6 text-paper/70">{ticket.transcript_excerpt || "Sensitive context is redacted for this role."}</p><p className="mt-2 text-xs text-paper/40">Created {formatTime(ticket.created_at)} · session {ticket.session_id}{ticket.assigned_to ? ` · owner ${ticket.assigned_to}` : ""}</p></div>{canOperate && ticket.status === "open" && <Button size="sm" variant="outline" disabled={busy} onClick={onClaim}>{busy ? "Claiming…" : "Claim ticket"}</Button>}</div>
     <div className="grid gap-3 rounded-xl border border-paper/10 bg-ink/20 p-4 text-sm sm:grid-cols-3"><div><p className="text-xs uppercase tracking-[0.12em] text-paper/40">Department</p><p className="mt-1 font-semibold">{ticket.department}</p></div><div><p className="text-xs uppercase tracking-[0.12em] text-paper/40">Location hint</p><p className="mt-1 text-paper/70">{ticket.routing_location || "Not stated"}</p></div><div><p className="text-xs uppercase tracking-[0.12em] text-paper/40">SLA</p><p className={ticket.sla_breached ? "mt-1 font-semibold text-orange" : "mt-1 text-paper/70"}>{ticket.sla_due_at ? formatTime(ticket.sla_due_at) : "Legacy ticket — no deadline"}</p></div></div>
+    {ticket.routing_source === "authoritative_directory" && <p className="text-xs leading-5 text-acid/80">Matched from the approved department directory{ticket.routing_verified_at ? ` · verified ${formatTime(ticket.routing_verified_at)}` : ""}{ticket.routing_source_url && <> · <a className="underline underline-offset-4 hover:text-acid" href={ticket.routing_source_url} target="_blank" rel="noreferrer">source</a></>}</p>}
     {fallbackRoute && <p className="text-xs leading-5 text-orange/80">Fallback route based on state and conversation domain. Confirm the real department or help centre before referring the caller.</p>}
     {!!ticket.operator_notes.length && <div className="space-y-2"><p className="text-xs uppercase tracking-[0.12em] text-paper/40">Operator notes</p>{ticket.operator_notes.map((item) => <div key={item.id} className="rounded-lg border border-paper/10 bg-paper/[0.03] px-3 py-2 text-sm"><p className="text-paper/75">{item.text}</p><p className="mt-1 text-xs text-paper/40">{item.actor_id} · {formatTime(item.created_at)}</p></div>)}</div>}
     {canOperate && <div className="grid gap-4 border-t border-paper/10 pt-4 lg:grid-cols-3"><div className="space-y-2"><label className="text-xs font-semibold uppercase tracking-[0.12em] text-paper/50" htmlFor={`route-${ticket.id}`}>Department route</label><input id={`route-${ticket.id}`} value={department} onChange={(event) => setDepartment(event.target.value)} className="h-10 w-full rounded-lg border border-paper/15 bg-background/40 px-3 text-sm text-paper outline-none focus:ring-2 focus:ring-ring" maxLength={160} /><input aria-label="District or pincode routing hint" value={routingLocation} onChange={(event) => setRoutingLocation(event.target.value)} placeholder="District or pincode hint" className="h-10 w-full rounded-lg border border-paper/15 bg-background/40 px-3 text-sm text-paper outline-none focus:ring-2 focus:ring-ring" maxLength={120} /><Button size="sm" variant="outline" disabled={busy || department.trim().length < 2} onClick={() => onRoute(department.trim(), routingLocation.trim())}>Save route</Button></div><div className="space-y-2"><label className="text-xs font-semibold uppercase tracking-[0.12em] text-paper/50" htmlFor={`note-${ticket.id}`}>Add note</label><Textarea id={`note-${ticket.id}`} value={note} onChange={(event) => setNote(event.target.value)} maxLength={2000} placeholder="Record only operational facts; do not paste unnecessary personal data." /><Button size="sm" variant="outline" disabled={busy || note.trim().length < 1} onClick={() => { onNote(note.trim()); setNote(""); }}>Add note</Button></div><div className="space-y-2"><label className="text-xs font-semibold uppercase tracking-[0.12em] text-paper/50" htmlFor={`resolution-${ticket.id}`}>Resolution</label><select id={`resolution-${ticket.id}`} value={resolutionCode} onChange={(event) => setResolutionCode(event.target.value)} className="h-10 w-full rounded-lg border border-paper/15 bg-background/40 px-3 text-sm text-paper outline-none focus:ring-2 focus:ring-ring"><option value="answered">Answered</option><option value="referred">Referred</option><option value="no_action">No action</option><option value="duplicate">Duplicate</option><option value="unreachable">Could not reach</option></select><Textarea value={resolutionNote} onChange={(event) => setResolutionNote(event.target.value)} maxLength={2000} placeholder="Optional resolution summary" /><Button size="sm" disabled={busy || ticket.status === "resolved"} onClick={() => onResolve(resolutionCode, resolutionNote.trim())}>Resolve ticket</Button></div></div>}
   </CardContent></Card>;
+}
+
+function DirectoryPage({ token, role }: { token: string; role: string }) {
+  const query = useAdminDirectoryQuery(token);
+  const approve = useApproveAdminDirectoryMutation(token);
+  const deactivate = useDeactivateAdminDirectoryMutation(token);
+  if (query.isPending) return <Loading label="Loading department directory…" />;
+  if (query.isError || !query.data) return <ErrorPanel error={query.error} />;
+  const canReview = role === "reviewer" || role === "admin";
+  const mutationError = approve.error ?? deactivate.error;
+  return <div className="space-y-6">
+    <PageIntro title="Department directory" description="Source-attested district and pincode routing records. Imports remain inactive until a reviewer approves a recent official source." />
+    {mutationError && <div role="alert" className="rounded-xl border border-orange/30 bg-orange/10 px-4 py-3 text-sm text-orange">{toUserMessage(mutationError)}</div>}
+    <div className="grid gap-4 sm:grid-cols-3"><MetricCard label="Directory rows" value={String(query.data.total)} detail="loaded in this view" /><MetricCard label="Approved" value={String(query.data.status_counts.approved ?? 0)} detail="eligible for runtime routing" /><MetricCard label="Pending review" value={String(query.data.status_counts.pending ?? 0)} detail="not used by callers" tone="warning" /></div>
+    <Card className="border-paper/10 bg-paper/[0.04] text-paper"><CardHeader><CardTitle className="text-paper">Review and provenance</CardTitle><p className="text-sm leading-6 text-paper/50">The runtime prefers exact pincode, then pincode prefix, then district. Stale or unapproved records fall back to a clearly labelled state/domain helpdesk.</p></CardHeader><CardContent className="space-y-3">{query.data.entries.map((entry) => <article key={entry.id} className="rounded-xl border border-paper/10 bg-ink/20 p-4"><div className="flex flex-wrap items-start justify-between gap-3"><div><div className="flex flex-wrap items-center gap-2"><Badge variant={entry.approval_status === "approved" && entry.is_active ? "success" : "warning"}>{entry.approval_status}{entry.is_active ? " · active" : " · inactive"}</Badge>{entry.stale && <Badge variant="warning">stale</Badge>}<span className="font-mono text-xs text-paper/40">{entry.id}</span></div><h3 className="mt-2 font-semibold">{entry.department_name}</h3><p className="mt-1 text-sm text-paper/65">{entry.state_code} · {entry.district_name || "statewide"} · {entry.pincode || (entry.pincode_prefix ? `${entry.pincode_prefix}xxx` : "district")}</p></div>{canReview && <div className="flex flex-wrap gap-2">{entry.approval_status !== "approved" && <Button size="sm" disabled={approve.isPending || deactivate.isPending || entry.stale} onClick={() => approve.mutate({entryId: entry.id, reason: "Verified official department source in the directory review queue"})}>Approve</Button>}{entry.is_active && <Button size="sm" variant="outline" disabled={approve.isPending || deactivate.isPending} onClick={() => deactivate.mutate({entryId: entry.id, reason: "Deactivated from the department directory review queue"})}>Deactivate</Button>}</div>}</div><div className="mt-3 flex flex-wrap gap-x-5 gap-y-1 text-xs text-paper/45"><span>{entry.service_domain}</span><span>{entry.help_centre_name || "Help centre name not supplied"}</span><span>Verified {entry.source_last_verified ? formatTime(entry.source_last_verified) : "never"}</span>{entry.source_url && <a className="text-acid underline-offset-4 hover:underline" href={entry.source_url} target="_blank" rel="noreferrer">Official source</a>}</div></article>)}{!query.data.entries.length && <EmptyState label="No directory rows imported. Run the official directory import script, then review the pending rows here." />}</CardContent></Card>
+  </div>;
 }
 
 function BenefitsPage({ token, role }: { token: string; role: string }) {
@@ -201,6 +250,8 @@ function BenefitsPage({ token, role }: { token: string; role: string }) {
   const imports = useAdminImportsQuery(token);
   const reports = useAdminBenefitReportsQuery(token);
   const mutation = useReviewAdminBenefitMutation(token);
+  const editMutation = useUpdateAdminBenefitMutation(token);
+  const rollbackMutation = useRollbackAdminBenefitMutation(token);
   const reportMutation = useUpdateAdminBenefitReportMutation(token);
   if (query.isPending) return <Loading label="Loading benefit review queue…" />;
   if (query.isError || !query.data) return <ErrorPanel error={query.error} />;
@@ -208,7 +259,7 @@ function BenefitsPage({ token, role }: { token: string; role: string }) {
   return (
     <div className="space-y-6"><PageIntro title="Benefits, provenance, and review" description="Machine-structured rows stay inactive until a reviewer records a decision. Every change creates an immutable audit event." />
       <div className="grid gap-4 sm:grid-cols-3">{Object.entries(query.data.status_counts).map(([status, count]) => <MetricCard key={status} label={status.replaceAll("_", " ")} value={String(count)} detail="rows in corpus" tone={status === "needs_review" ? "warning" : "default"} />)}</div>
-      <div className="grid gap-4">{query.data.items.map((item) => <ReviewCard key={item.id} item={item} canReview={canReview} onSubmit={(input) => mutation.mutate({benefitId: item.id, ...input})} pending={mutation.isPending} />)}</div>
+      <div className="grid gap-4">{query.data.items.map((item) => <ReviewCard key={item.id} token={token} item={item} canReview={canReview} canRollback={role === "admin"} onSubmit={(input) => mutation.mutate({benefitId: item.id, ...input})} onEdit={(payload) => editMutation.mutate({benefitId: item.id, payload})} onRollback={(version, reason) => rollbackMutation.mutate({benefitId: item.id, version, reason})} pending={mutation.isPending || editMutation.isPending || rollbackMutation.isPending} />)}</div>
       {!query.data.items.length && <EmptyState label="No benefits are currently waiting for human review." />}
       <Card className="border-paper/10 bg-paper/[0.04] text-paper"><CardHeader><CardTitle className="text-paper">Import history</CardTitle></CardHeader><CardContent className="space-y-3">{imports.data?.map((run) => <div key={run.id} className="flex flex-wrap justify-between gap-3 border-b border-paper/10 pb-3 text-sm last:border-0"><div><p className="font-semibold">{run.source_name}</p><p className="text-xs text-paper/45">{run.model_name || "No model recorded"} · prompt {run.prompt_version || "—"}</p></div><span className="text-xs text-paper/55">{run.accepted_count}/{run.input_count} accepted · {formatTime(run.started_at)}</span></div>)}{imports.data && !imports.data.length && <EmptyState label="No import manifests recorded." />}</CardContent></Card>
       <IssueReportsPanel reports={reports.data ?? []} loading={reports.isPending} canResolve={role === "operator" || role === "admin"} pending={reportMutation.isPending} onUpdate={(reportId, status) => reportMutation.mutate({ reportId, status, reason: "Reviewed from the benefits operations queue" })} />
@@ -234,12 +285,90 @@ function IssueReportsPanel({
 
 function ProvidersPage({ token, role }: { token: string; role: string }) {
   const query = useAdminProvidersQuery(token);
+  const simulations = useAdminProviderFailureSimulationsQuery(token);
   const update = useUpdateAdminProviderPolicyMutation(token);
   const rollback = useRollbackAdminProviderPolicyMutation(token);
-  if (query.isPending) return <Loading label="Loading provider posture…" />;
+  if (query.isPending || simulations.isPending) return <Loading label="Loading provider posture…" />;
   if (query.isError || !query.data) return <ErrorPanel error={query.error} />;
+  if (simulations.isError || !simulations.data) return <ErrorPanel error={simulations.error} />;
   const canManage = role === "admin";
-  return <div className="space-y-6"><PageIntro title="Providers, spend, and fallback" description="Configuration and request-level posture are visible here. Cost values are estimates where the provider does not expose a reconciliation API." /><div className="grid gap-4 lg:grid-cols-2">{query.data.providers.map((provider) => <Card key={provider.name} className="border-paper/10 bg-paper/[0.04] text-paper"><CardHeader className="flex-row items-center justify-between space-y-0"><CardTitle className="text-paper">{provider.name}</CardTitle>{provider.configured ? <Badge variant="success">{provider.health}</Badge> : <Badge variant="warning">not configured</Badge>}</CardHeader><CardContent className="space-y-3"><div className="grid grid-cols-2 gap-3 text-sm"><Stat label="Requests" value={provider.requests} /><Stat label="Failures" value={provider.failures} tone={provider.failures ? "warning" : "default"} />{provider.budget_usd != null && <Stat label="Budget remaining" value={`$${provider.remaining_usd?.toFixed(2) ?? "—"}`} tone="good" />}{provider.cache_hits > 0 && <Stat label="Cache hits" value={provider.cache_hits} tone="good" />}</div><p className="text-xs leading-5 text-paper/45">{provider.note}</p></CardContent></Card>)}</div><Card className="border-paper/10 bg-paper/[0.04] text-paper"><CardHeader><CardTitle className="text-paper">Audited provider policies</CardTitle><p className="text-sm leading-6 text-paper/50">{query.data.controls_note}</p></CardHeader><CardContent className="grid gap-4">{query.data.policies.map((policy) => <ProviderPolicyCard key={`${policy.id}-${policy.revision}`} policy={policy} canManage={canManage} onUpdate={(input) => update.mutate(input)} onRollback={(input) => rollback.mutate(input)} pending={update.isPending || rollback.isPending} />)}</CardContent></Card>{!canManage && <p className="rounded-xl border border-paper/10 bg-paper/[0.03] px-4 py-3 text-sm leading-6 text-paper/50">Your role can inspect effective policy posture, but only an admin can change or roll back provider routing.</p>}</div>;
+  return (
+    <div className="space-y-6">
+      <PageIntro
+        title="Providers, spend, and fallback"
+        description="Configuration and request-level posture are visible here. Cost values are estimates where the provider does not expose a reconciliation API."
+      />
+      <div className="grid gap-4 lg:grid-cols-2">
+        {query.data.providers.map((provider) => (
+          <Card key={provider.name} className="border-paper/10 bg-paper/[0.04] text-paper">
+            <CardHeader className="flex-row items-center justify-between space-y-0">
+              <CardTitle className="text-paper">{provider.name}</CardTitle>
+              {provider.configured ? <Badge variant="success">{provider.health}</Badge> : <Badge variant="warning">not configured</Badge>}
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <div className="grid grid-cols-2 gap-3 text-sm">
+                <Stat label="Requests" value={provider.requests} />
+                <Stat label="Failures" value={provider.failures} tone={provider.failures ? "warning" : "default"} />
+                {provider.budget_usd != null && <Stat label="Budget remaining" value={`$${provider.remaining_usd?.toFixed(2) ?? "—"}`} tone="good" />}
+                {provider.cache_hits > 0 && <Stat label="Cache hits" value={provider.cache_hits} tone="good" />}
+              </div>
+              <p className="text-xs leading-5 text-paper/45">{provider.note}</p>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+      <ProviderFailureDrills data={simulations.data} />
+      <Card className="border-paper/10 bg-paper/[0.04] text-paper">
+        <CardHeader>
+          <CardTitle className="text-paper">Audited provider policies</CardTitle>
+          <p className="text-sm leading-6 text-paper/50">{query.data.controls_note}</p>
+        </CardHeader>
+        <CardContent className="grid gap-4">
+          {query.data.policies.map((policy) => (
+            <ProviderPolicyCard
+              key={`${policy.id}-${policy.revision}`}
+              policy={policy}
+              canManage={canManage}
+              onUpdate={(input) => update.mutate(input)}
+              onRollback={(input) => rollback.mutate(input)}
+              pending={update.isPending || rollback.isPending}
+            />
+          ))}
+        </CardContent>
+      </Card>
+      {!canManage && <p className="rounded-xl border border-paper/10 bg-paper/[0.03] px-4 py-3 text-sm leading-6 text-paper/50">Your role can inspect effective policy posture, but only an admin can change or roll back provider routing.</p>}
+    </div>
+  );
+}
+
+function ProviderFailureDrills({ data }: { data: import("@/features/admin/api").ProviderFailureSimulationList }) {
+  return (
+    <Card className="border-paper/10 bg-paper/[0.04] text-paper">
+      <CardHeader>
+        <CardTitle className="text-paper">Provider failure drills</CardTitle>
+        <p className="text-sm leading-6 text-paper/50">Dry-run containment paths for {data.language_code}/{data.state_code}. This dashboard never calls a provider or sends a notification.</p>
+      </CardHeader>
+      <CardContent className="overflow-x-auto p-0">
+        <table className="w-full min-w-[1040px] text-left text-sm">
+          <caption className="sr-only">Provider failure simulation paths</caption>
+          <thead className="border-b border-paper/10 text-xs uppercase tracking-[0.12em] text-paper/40">
+            <tr><th className="px-5 py-4">Scenario</th><th className="px-5 py-4">Current gate</th><th className="px-5 py-4">Fallback</th><th className="px-5 py-4">Drill path</th></tr>
+          </thead>
+          <tbody>
+            {data.simulations.map((simulation) => (
+              <tr key={simulation.scenario} className="border-b border-paper/5 align-top last:border-0">
+                <td className="px-5 py-4"><p className="font-semibold">{simulation.scenario.replaceAll("_", " ")}</p><p className="mt-1 font-mono text-xs text-paper/40">{simulation.provider}</p></td>
+                <td className="px-5 py-4"><Badge variant={simulation.current_posture === "ready for controlled drill" ? "success" : "warning"}>{simulation.current_posture}</Badge><p className="mt-2 text-xs text-paper/45">flag {simulation.flag_enabled ? "on" : "off"} · policy {simulation.policy_enabled ? "on" : "off"} · circuit {simulation.circuit_state} · {simulation.configured ? "configured" : "not configured"}</p></td>
+                <td className="max-w-xs px-5 py-4 text-xs leading-5 text-paper/60">{simulation.user_facing_fallback}</td>
+                <td className="px-5 py-4"><details><summary className="cursor-pointer text-xs font-semibold text-acid">View expected path</summary><ol className="mt-2 list-decimal space-y-1 pl-5 text-xs leading-5 text-paper/55">{simulation.expected_path.map((step) => <li key={step}>{step}</li>)}</ol><p className="mt-3 text-xs leading-5 text-paper/45"><span className="font-semibold text-paper/65">Operator:</span> {simulation.operator_action}</p></details></td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+        <p className="border-t border-paper/10 px-5 py-4 text-xs leading-5 text-paper/40">{data.note}</p>
+      </CardContent>
+    </Card>
+  );
 }
 
 function MessagingPage({ token }: { token: string }) {
@@ -282,9 +411,10 @@ function CostBreakdown({ title, values, currency }: { title: string; values: Rec
   return <Card className="border-paper/10 bg-paper/[0.04] text-paper"><CardHeader><CardTitle className="text-paper">{title}</CardTitle></CardHeader><CardContent className="space-y-2">{Object.entries(values).map(([key, value]) => <div key={key} className="flex items-center justify-between gap-4 border-b border-paper/5 py-2 text-sm last:border-0"><span className="text-paper/60">{key}</span><span className="font-mono text-acid">{formatMinor(value)} {currency}</span></div>)}{!Object.keys(values).length && <EmptyState label="No billable delivery data in this window." />}</CardContent></Card>;
 }
 
-function QualityPage({ token }: { token: string }) {
+function QualityPage({ token, role }: { token: string; role: string }) {
   const freshness = useAdminFreshnessQuery(token);
   const evaluations = useAdminEvaluationsQuery(token);
+  const updateAlert = useUpdateFreshnessAlertMutation(token);
   if (freshness.isPending || evaluations.isPending) return <Loading label="Loading freshness and evaluation evidence…" />;
   if (freshness.isError) return <ErrorPanel error={freshness.error} />;
   if (evaluations.isError) return <ErrorPanel error={evaluations.error} />;
@@ -292,6 +422,7 @@ function QualityPage({ token }: { token: string }) {
   return (
     <div className="space-y-6">
       <PageIntro title="Data freshness and evaluations" description={`Freshness threshold ${freshness.data.stale_after_days} days · generated ${formatTime(freshness.data.generated_at)}. Machine-structured rows remain visible but are not publication evidence.`} />
+      <Card className="border-paper/10 bg-paper/[0.04] text-paper"><CardHeader><CardTitle className="text-paper">Source freshness alerts</CardTitle><p className="text-sm leading-6 text-paper/50">Alerts are deduplicated by benefit and source condition. Acknowledging an alert records ownership; it is automatically resolved when the next scan sees fresh evidence.</p></CardHeader><CardContent className="space-y-3">{freshness.data.alerts.map((alert) => <article key={alert.id} className="flex flex-wrap items-start justify-between gap-3 rounded-xl border border-orange/20 bg-orange/[0.05] p-4"><div><div className="flex flex-wrap items-center gap-2"><Badge variant="warning">{alert.severity}</Badge><Badge variant="outline" className="border-orange/30 text-orange">{alert.status}</Badge><span className="font-mono text-xs text-paper/40">{alert.alert_type}</span></div><p className="mt-2 text-sm text-paper/75">{alert.message}</p><p className="mt-1 text-xs text-paper/40">{alert.dataset} · last seen {formatTime(alert.last_seen_at)}</p></div>{(role === "reviewer" || role === "admin") && <div className="flex gap-2"><Button type="button" size="sm" variant="outline" disabled={updateAlert.isPending || alert.status === "acknowledged"} onClick={() => updateAlert.mutate({alertId: alert.id, status: "acknowledged", reason: "Acknowledged from the freshness console"})}>Acknowledge</Button><Button type="button" size="sm" disabled={updateAlert.isPending} onClick={() => updateAlert.mutate({alertId: alert.id, status: "resolved", reason: "Resolved from the freshness console"})}>Resolve</Button></div>}</article>)}{!freshness.data.alerts.length && <EmptyState label="No open or acknowledged source freshness alerts." />}</CardContent></Card>
       <Card className="border-paper/10 bg-paper/[0.04] text-paper"><CardContent className="overflow-x-auto p-0"><table className="w-full min-w-[920px] text-left text-sm"><caption className="sr-only">Data freshness by source dataset</caption><thead className="border-b border-paper/10 text-xs uppercase tracking-[0.12em] text-paper/40"><tr><th className="px-5 py-4">Dataset</th><th className="px-5 py-4">Status</th><th className="px-5 py-4">Rows</th><th className="px-5 py-4">Active</th><th className="px-5 py-4">Human verified</th><th className="px-5 py-4">Stale / expired</th><th className="px-5 py-4">Latest check</th></tr></thead><tbody>{freshness.data.sources.map((source) => <tr key={source.dataset} className="border-b border-paper/5 last:border-0"><td className="px-5 py-4 font-semibold">{source.dataset}</td><td className="px-5 py-4"><Badge variant={source.status === "healthy" ? "success" : "warning"}>{source.status}</Badge></td><td className="px-5 py-4">{source.total_rows}</td><td className="px-5 py-4">{source.active_rows}</td><td className="px-5 py-4">{source.human_verified_rows}</td><td className="px-5 py-4">{source.stale_rows} / {source.expired_rows}</td><td className="px-5 py-4 text-xs text-paper/50">{source.latest_verified_date ?? "not checked"}</td></tr>)}</tbody></table>{!freshness.data.sources.length && <EmptyState label="No benefit or job source rows are loaded." />}</CardContent></Card>
       <div className="grid gap-4">{evaluations.data.map((run) => <Card key={run.id} className="border-paper/10 bg-paper/[0.04] text-paper"><CardContent className="flex flex-wrap items-center justify-between gap-4 p-5"><div><div className="flex items-center gap-2"><Badge variant={run.passed ? "success" : "warning"}>{run.passed ? "passed" : "failed"}</Badge><span className="font-semibold">{run.suite_name}</span></div><p className="mt-2 text-xs text-paper/45">suite {run.suite_version} · {formatTime(run.completed_at ?? run.started_at)} · languages {Object.entries(run.language_counts).map(([language, count]) => `${language} ${count}`).join(", ") || "—"}</p></div><div className="text-right"><p className="font-mono text-2xl text-acid">{run.passed_count}/{run.case_count}</p><p className="text-xs text-paper/45">cases passed</p></div></CardContent></Card>)}{!evaluations.data.length && <Card className="border-paper/10 bg-paper/[0.04] text-paper"><CardContent><EmptyState label="No evaluation runs recorded yet. Run make evaluate to create evidence." /></CardContent></Card>}</div>
     </div>
@@ -318,11 +449,26 @@ function FeatureFlagCard({ flag, canManage, pending, onUpdate, onRollback }: { f
   return <Card className="border-paper/10 bg-paper/[0.04] text-paper"><CardContent className="space-y-4 p-5"><div className="flex flex-wrap items-start justify-between gap-4"><div><div className="flex items-center gap-2"><Badge variant={flag.enabled ? "success" : "warning"}>{flag.enabled ? `${flag.rollout_percentage}% live` : "off"}</Badge><h3 className="font-semibold">{flag.key}</h3><span className="font-mono text-xs text-paper/40">revision {flag.revision}</span></div><p className="mt-2 max-w-2xl text-sm leading-6 text-paper/55">{flag.description}</p></div>{canManage && <Button type="button" size="sm" variant="outline" disabled={pending || flag.revision < 1} onClick={() => onRollback(reason.trim() || "Rollback reviewed feature flag") }><RotateCcw className="size-3.5" aria-hidden="true" />Rollback</Button>}</div>{canManage ? <form className="grid gap-3 border-t border-paper/10 pt-4 md:grid-cols-2" onSubmit={submit}><label className="flex items-center gap-2 text-sm font-semibold"><input type="checkbox" checked={enabled} onChange={(event) => setEnabled(event.target.checked)} /> Enabled</label><label className="grid gap-1 text-xs font-semibold text-paper/60">Rollout percentage<input type="number" min="0" max="100" value={percentage} onChange={(event) => setPercentage(event.target.value)} className="h-10 rounded-lg border border-paper/15 bg-ink px-3 text-sm text-paper" /></label><label className="grid gap-1 text-xs font-semibold text-paper/60">Languages (comma separated)<input value={languages} onChange={(event) => setLanguages(event.target.value)} className="h-10 rounded-lg border border-paper/15 bg-ink px-3 text-sm text-paper" placeholder="kn, hi" /></label><label className="grid gap-1 text-xs font-semibold text-paper/60">States (comma separated)<input value={states} onChange={(event) => setStates(event.target.value)} className="h-10 rounded-lg border border-paper/15 bg-ink px-3 text-sm text-paper" placeholder="KA, DL" /></label><label className="grid gap-1 text-xs font-semibold text-paper/60 md:col-span-2">Reason<input value={reason} onChange={(event) => setReason(event.target.value)} className="h-10 rounded-lg border border-paper/15 bg-ink px-3 text-sm text-paper" minLength={3} /></label><div className="flex items-center justify-between gap-3 md:col-span-2"><p className="text-xs text-paper/40">Target lists are optional. Empty lists mean all supported locales/states.</p><Button type="submit" size="sm" disabled={pending || reason.trim().length < 3}>{pending ? "Saving…" : "Save flag"}</Button></div></form> : <p className="border-t border-paper/10 pt-4 text-xs text-paper/45">Targets: {flag.target_languages.join(", ") || "all languages"} · {flag.target_states.join(", ") || "all states"}</p>}</CardContent></Card>;
 }
 
-function LanguagesPage({ token }: { token: string }) {
+function LanguagesPage({ token, role }: { token: string; role: string }) {
   const query = useAdminLanguagesQuery(token);
+  const update = useUpdateAdminLanguageReviewMutation(token);
   if (query.isPending) return <Loading label="Loading language readiness…" />;
   if (query.isError || !query.data) return <ErrorPanel error={query.error} />;
-  return <div className="space-y-6"><PageIntro title="Language readiness" description="A locale is launch-ready only when interface, prompts, data, understanding, voice, and accessibility have evidence—not merely a catalog row." /><Card className="border-paper/10 bg-paper/[0.04] text-paper"><CardContent className="overflow-x-auto p-0"><table className="w-full min-w-[900px] text-left text-sm"><caption className="sr-only">Language readiness matrix</caption><thead className="border-b border-paper/10 text-xs uppercase tracking-[0.12em] text-paper/40"><tr><th className="px-5 py-4">Language</th><th className="px-5 py-4">Rollout</th><th className="px-5 py-4">Prompts</th><th className="px-5 py-4">Data</th><th className="px-5 py-4">Voice</th><th className="px-5 py-4">Providers</th></tr></thead><tbody>{query.data.map((language) => <tr key={language.code} className="border-b border-paper/5 last:border-0"><td className="px-5 py-4"><span className="font-semibold">{language.native_name}</span><span className="ml-2 text-xs text-paper/40">{language.code}</span></td><td className="px-5 py-4">{language.rollout_status}</td><td className="px-5 py-4">{language.prompt_ready ? "ready" : "missing"}</td><td className="px-5 py-4">{language.data_status} · {language.active_benefits}</td><td className="px-5 py-4">{language.voice_status}</td><td className="px-5 py-4 text-xs text-paper/50">{language.stt_provider} → {language.tts_provider}</td></tr>)}</tbody></table></CardContent></Card></div>;
+  const canReview = role === "reviewer" || role === "admin";
+  return <div className="space-y-6"><PageIntro title="Language readiness" description="A locale is launch-ready only when interface, prompts, data, understanding, voice, and accessibility have evidence—not merely a catalog row." />
+    {update.isError && <ErrorPanel error={update.error} />}
+    <Card className="border-paper/10 bg-paper/[0.04] text-paper"><CardContent className="overflow-x-auto p-0"><table className="w-full min-w-[1120px] text-left text-sm"><caption className="sr-only">Language readiness matrix</caption><thead className="border-b border-paper/10 text-xs uppercase tracking-[0.12em] text-paper/40"><tr><th className="px-5 py-4">Language</th><th className="px-5 py-4">Rollout</th><th className="px-5 py-4">Prompt bundle</th><th className="px-5 py-4">Native review</th><th className="px-5 py-4">Content / accessibility</th><th className="px-5 py-4">Voice</th><th className="px-5 py-4">Data</th></tr></thead><tbody>{query.data.map((language) => <tr key={language.code} className="border-b border-paper/5 last:border-0"><td className="px-5 py-4"><span className="font-semibold">{language.native_name}</span><span className="ml-2 text-xs text-paper/40">{language.code}</span></td><td className="px-5 py-4">{language.rollout_status}</td><td className="px-5 py-4">{language.prompt_ready ? language.prompt_status : "missing"}</td><td className="px-5 py-4">{language.native_speaker_status}</td><td className="px-5 py-4">{language.content_status} · {language.accessibility_status}</td><td className="px-5 py-4">{language.voice_status} · {language.voice_review_status}</td><td className="px-5 py-4">{language.data_status} · {language.active_benefits}</td></tr>)}</tbody></table></CardContent></Card>
+    <div className="grid gap-4">{query.data.filter((language) => !language.active || language.rollout_status !== "active").map((language) => <LanguageReviewCard key={language.code} language={language} canReview={canReview} canActivate={role === "admin"} pending={update.isPending} onSave={(payload) => update.mutate({code: language.code, payload})} />)}</div>
+  </div>;
+}
+
+function LanguageReviewCard({ language, canReview, canActivate, pending, onSave }: { language: import("@/features/admin/api").LanguageReadiness; canReview: boolean; canActivate: boolean; pending: boolean; onSave: (payload: import("@/features/admin/api").LanguageReviewUpdate) => void }) {
+  const [statuses, setStatuses] = useState<LanguageReviewStatuses>({native_speaker_status: normalizeLanguageReviewStatus(language.native_speaker_status), interface_status: normalizeLanguageReviewStatus(language.interface_review_status), prompt_status: normalizeLanguageReviewStatus(language.prompt_status), content_status: normalizeLanguageReviewStatus(language.content_status), understanding_status: normalizeLanguageReviewStatus(language.understanding_status), voice_status: normalizeLanguageReviewStatus(language.voice_review_status), accessibility_status: normalizeLanguageReviewStatus(language.accessibility_status)});
+  const [evidenceUrl, setEvidenceUrl] = useState(language.evidence_url);
+  const [notes, setNotes] = useState(language.review_notes);
+  const [attestation, setAttestation] = useState(false);
+  const allApproved = Object.values(statuses).every((status) => status === "approved");
+  return <Card className="border-paper/10 bg-paper/[0.04] text-paper"><CardHeader><div className="flex flex-wrap items-center justify-between gap-3"><div><CardTitle className="text-paper">{language.native_name} · {language.name}</CardTitle><p className="mt-2 text-sm leading-6 text-paper/50">Review evidence before enabling this locale. A prompt bundle must be installed before prompt readiness can be approved.</p></div><Badge variant={language.rollout_status === "active" ? "success" : "warning"}>{language.rollout_status}</Badge></div></CardHeader><CardContent>{canReview ? <form className="grid gap-4 md:grid-cols-2" onSubmit={(event) => { event.preventDefault(); onSave({...statuses, evidence_url: evidenceUrl.trim(), review_notes: notes.trim(), attestation, activate: canActivate && allApproved}); }}><div className="grid gap-3 sm:grid-cols-2">{Object.entries(statuses).map(([key, value]) => <label key={key} className="grid gap-1 text-xs font-semibold capitalize text-paper/60">{key.replaceAll("_", " ")}<select value={value} onChange={(event) => setStatuses((current) => ({...current, [key]: normalizeLanguageReviewStatus(event.target.value)}))} className="h-10 rounded-lg border border-paper/15 bg-ink px-3 text-sm font-normal text-paper"><option value="pending">Pending</option><option value="approved">Approved</option><option value="rejected">Rejected</option></select></label>)}</div><div className="space-y-3"><label className="grid gap-1 text-xs font-semibold text-paper/60">Evidence URL<input value={evidenceUrl} onChange={(event) => setEvidenceUrl(event.target.value)} className="h-10 rounded-lg border border-paper/15 bg-ink px-3 text-sm text-paper" placeholder="QA report, recording, or review artifact" /></label><label className="grid gap-1 text-xs font-semibold text-paper/60">Review notes<Textarea value={notes} onChange={(event) => setNotes(event.target.value)} minLength={3} maxLength={2000} placeholder="Who reviewed wording, pronunciation, data, and accessibility?" /></label><label className="flex items-start gap-2 text-xs leading-5 text-paper/55"><input type="checkbox" checked={attestation} onChange={(event) => setAttestation(event.target.checked)} className="mt-1" /> I attest that the linked evidence was checked by the appropriate native-language reviewer(s).</label><Button type="submit" size="sm" disabled={pending || !attestation || notes.trim().length < 3}>{pending ? "Saving…" : canActivate && allApproved ? "Save and activate" : "Save review gate"}</Button></div></form> : <p className="text-sm text-paper/50">Observer access can inspect this gate; a reviewer or admin must provide the native-speaker evidence.</p>}</CardContent></Card>;
 }
 
 function AuditPage({ token }: { token: string }) {
@@ -344,21 +490,247 @@ function AuditPage({ token }: { token: string }) {
 
 function SystemPage({ token }: { token: string }) {
   const query = useAdminSystemQuery(token);
+  const comparison = useAdminDeploymentComparisonQuery(token);
   if (query.isPending) return <Loading label="Loading system state…" />;
   if (query.isError || !query.data) return <ErrorPanel error={query.error} />;
-  return <div className="space-y-6"><PageIntro title="System and deployment state" description="Safe configuration flags and revision identifiers help an operator explain what is running without exposing secrets." /><div className="grid gap-4 lg:grid-cols-2"><Card className="border-paper/10 bg-paper/[0.04] text-paper"><CardHeader><CardTitle className="text-paper">Revision</CardTitle></CardHeader><CardContent className="space-y-3"><Stat label="Environment" value={query.data.environment} /><Stat label="Database" value={query.data.database_mode} /><Stat label="Migration" value={query.data.migration_revision ?? "unknown"} /><Stat label="Commit" value={query.data.git_commit_sha} /><Stat label="Process started" value={formatTime(query.data.process_started_at)} /></CardContent></Card><Card className="border-paper/10 bg-paper/[0.04] text-paper"><CardHeader><CardTitle className="text-paper">Configuration posture</CardTitle></CardHeader><CardContent className="grid gap-3 sm:grid-cols-2">{Object.entries(query.data.configuration).map(([key, value]) => <Stat key={key} label={key.replaceAll("_", " ")} value={value ? "enabled" : "disabled"} tone={value ? "good" : "muted"} />)}</CardContent></Card></div><Card className="border-paper/10 bg-paper/[0.04] text-paper"><CardHeader><CardTitle className="text-paper">Operator notes</CardTitle></CardHeader><CardContent><ul className="list-disc space-y-2 pl-5 text-sm leading-6 text-paper/60">{query.data.deployment_notes.map((note) => <li key={note}>{note}</li>)}</ul></CardContent></Card></div>;
+  if (comparison.isPending) return <Loading label="Loading deployment comparison…" />;
+  if (comparison.isError || !comparison.data) return <ErrorPanel error={comparison.error} />;
+  return (
+    <div className="space-y-6">
+      <PageIntro title="System and deployment state" description="Safe configuration flags and revision identifiers help an operator explain what is running without exposing secrets." />
+      <div className="grid gap-4 lg:grid-cols-2">
+        <Card className="border-paper/10 bg-paper/[0.04] text-paper">
+          <CardHeader><CardTitle className="text-paper">Revision</CardTitle></CardHeader>
+          <CardContent className="space-y-3">
+            <Stat label="Environment" value={query.data.environment} />
+            <Stat label="Database" value={query.data.database_mode} />
+            <Stat label="Migration" value={query.data.migration_revision ?? "unknown"} />
+            <Stat label="Commit" value={query.data.git_commit_sha} />
+            <Stat label="Deployment" value={query.data.deployment_id ?? "not recorded"} />
+            <Stat label="Process started" value={formatTime(query.data.process_started_at)} />
+          </CardContent>
+        </Card>
+        <Card className="border-paper/10 bg-paper/[0.04] text-paper">
+          <CardHeader><CardTitle className="text-paper">Configuration posture</CardTitle></CardHeader>
+          <CardContent className="grid gap-3 sm:grid-cols-2">
+            {Object.entries(query.data.configuration).map(([key, value]) => <Stat key={key} label={key.replaceAll("_", " ")} value={value ? "enabled" : "disabled"} tone={value ? "good" : "muted"} />)}
+          </CardContent>
+        </Card>
+      </div>
+      <DeploymentComparisonCard data={comparison.data} />
+      <Card className="border-paper/10 bg-paper/[0.04] text-paper">
+        <CardHeader><CardTitle className="text-paper">Operator notes</CardTitle></CardHeader>
+        <CardContent><ul className="list-disc space-y-2 pl-5 text-sm leading-6 text-paper/60">{query.data.deployment_notes.map((note) => <li key={note}>{note}</li>)}</ul></CardContent>
+      </Card>
+    </div>
+  );
 }
 
-function ReviewCard({ item, canReview, onSubmit, pending }: { item: import("@/features/admin/api").ReviewItem; canReview: boolean; onSubmit: (input: { status: string; reason: string; activate: boolean }) => void; pending: boolean }) {
+function DeploymentComparisonCard({ data }: { data: import("@/features/admin/api").DeploymentComparison }) {
+  return (
+    <Card className="border-paper/10 bg-paper/[0.04] text-paper">
+      <CardHeader>
+        <CardTitle className="text-paper">Deployment/version comparison</CardTitle>
+        <p className="text-sm leading-6 text-paper/50">{data.note}</p>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        <div className="grid gap-3 sm:grid-cols-2">
+          <Stat label="Current release" value={data.current ? `${data.current.app_version} · ${data.current.id}` : "not recorded"} tone="good" />
+          <Stat label="Previous release" value={data.previous ? `${data.previous.app_version} · ${data.previous.id}` : "no baseline yet"} tone="muted" />
+        </div>
+        {data.changes.length ? (
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-[760px] text-left text-sm">
+              <caption className="sr-only">Changes between the current and previous deployment</caption>
+              <thead className="border-b border-paper/10 text-xs uppercase tracking-[0.12em] text-paper/40"><tr><th className="px-3 py-3">Field</th><th className="px-3 py-3">Previous</th><th className="px-3 py-3">Current</th></tr></thead>
+              <tbody>{data.changes.map((change) => <tr key={change.field} className="border-b border-paper/5 align-top last:border-0"><td className="px-3 py-3 font-semibold">{change.field.replaceAll("_", " ")}</td><td className="max-w-sm px-3 py-3 font-mono text-xs text-paper/50">{displayDeploymentValue(change.previous)}</td><td className="max-w-sm px-3 py-3 font-mono text-xs text-acid">{displayDeploymentValue(change.current)}</td></tr>)}</tbody>
+            </table>
+          </div>
+        ) : <EmptyState label="No field-level changes from the previous release." />}
+        <details className="rounded-xl border border-paper/10 bg-ink/20 p-4">
+          <summary className="cursor-pointer text-sm font-semibold text-acid">Show recorded release history</summary>
+          <div className="mt-3 space-y-2">{data.history.map((release) => <div key={release.id} className="flex flex-wrap items-center justify-between gap-3 border-b border-paper/10 py-2 text-sm last:border-0"><div><p className="font-semibold">{release.app_version} · {release.environment}</p><p className="font-mono text-xs text-paper/40">{release.id} · migration {release.migration_revision ?? "unknown"} · data {release.data_revision}</p></div><time className="text-xs text-paper/45">{formatTime(release.deployed_at)}</time></div>)}</div>
+        </details>
+      </CardContent>
+    </Card>
+  );
+}
+
+function displayDeploymentValue(value: unknown) {
+  if (value == null) return "—";
+  if (typeof value === "object") return JSON.stringify(value);
+  return String(value);
+}
+
+function ReviewCard({
+  token,
+  item,
+  canReview,
+  canRollback,
+  onSubmit,
+  onEdit,
+  onRollback,
+  pending,
+}: {
+  token: string;
+  item: import("@/features/admin/api").ReviewItem;
+  canReview: boolean;
+  canRollback: boolean;
+  onSubmit: (input: { status: string; reason: string; activate: boolean }) => void;
+  onEdit: (payload: import("@/features/admin/api").BenefitEditPayload) => void;
+  onRollback: (version: number, reason: string) => void;
+  pending: boolean;
+}) {
   const [status, setStatus] = useState(item.verification_status);
   const [reason, setReason] = useState("Reviewed against the source document");
   const [activate, setActivate] = useState(item.is_active);
+  const [editing, setEditing] = useState(false);
+  const [showHistory, setShowHistory] = useState(false);
+  const [editError, setEditError] = useState("");
+  const [draft, setDraft] = useState(() => benefitEditDraft(item));
+  const versions = useAdminBenefitVersionsQuery(token, item.id, showHistory);
   const job = item.domain === "job" ? item.job_metadata : {};
   const jobValue = (key: string) => {
     const value = job[key];
     return typeof value === "string" || typeof value === "number" ? String(value) : "";
   };
-  return <Card className="border-paper/10 bg-paper/[0.04] text-paper"><CardContent className="space-y-4 p-5"><div className="flex flex-wrap items-start justify-between gap-3"><div><div className="flex flex-wrap items-center gap-2"><Badge variant="outline" className="border-orange/30 text-orange">{item.verification_status}</Badge><span className="font-mono text-xs text-paper/40">{item.id}</span></div><h3 className="mt-2 text-lg font-bold">{item.name}</h3><p className="mt-1 text-sm text-paper/50">{item.domain} · {item.state_code ?? "central"} · {item.source_title || "Source title missing"}</p></div>{item.source_document_url && <a className="inline-flex items-center gap-1 text-xs font-semibold text-acid underline-offset-4 hover:underline" href={item.source_document_url} target="_blank" rel="noreferrer">Source <ExternalLink className="size-3" aria-hidden="true" /></a>}</div>{item.domain === "job" && <div className="grid gap-2 rounded-xl border border-blue/20 bg-blue/[0.06] p-4 text-xs text-paper/70 sm:grid-cols-2"><p><span className="text-paper/40">Employer:</span> {jobValue("employer") || "Not stated"}</p><p><span className="text-paper/40">Deadline:</span> {jobValue("application_deadline") || "Not stated"}</p><p><span className="text-paper/40">Vacancies:</span> {jobValue("vacancy_count") || "Not stated"}</p><p><span className="text-paper/40">Employment:</span> {jobValue("employment_type") || "Not stated"}</p></div>}<details className="rounded-xl border border-paper/10 bg-ink/20"><summary className="cursor-pointer px-4 py-3 text-sm font-semibold">Show machine review and source excerpt</summary><div className="space-y-3 border-t border-paper/10 px-4 py-3 text-xs leading-5 text-paper/60"><p>{item.source_excerpt || "No source excerpt stored."}</p><pre className="overflow-x-auto whitespace-pre-wrap rounded-lg bg-ink p-3 font-mono text-[0.68rem]">{JSON.stringify(item.automated_review, null, 2)}</pre></div></details>{canReview ? <form className="grid gap-3 border-t border-paper/10 pt-4 md:grid-cols-[180px_1fr_auto] md:items-end" onSubmit={(event) => { event.preventDefault(); onSubmit({status, reason, activate}); }}><label className="grid gap-1 text-xs font-semibold text-paper/60">Decision<select value={status} onChange={(event) => setStatus(event.target.value)} className="h-10 rounded-lg border border-paper/15 bg-ink px-2 text-sm text-paper"><option value="human_verified">Human verified</option><option value="needs_review">Needs review</option><option value="stale">Stale</option><option value="machine_reviewed">Machine reviewed</option></select></label><label className="grid gap-1 text-xs font-semibold text-paper/60">Reason<input value={reason} onChange={(event) => setReason(event.target.value)} className="h-10 rounded-lg border border-paper/15 bg-ink px-3 text-sm text-paper" /></label><div className="flex items-center gap-3"><label className="flex items-center gap-2 text-xs text-paper/60"><input type="checkbox" checked={activate} onChange={(event) => setActivate(event.target.checked)} /> Publish</label><Button type="submit" size="sm" disabled={pending || reason.trim().length < 3}>{pending ? "Saving…" : "Save decision"}</Button></div></form> : <p className="text-xs text-paper/45">Your role can inspect this row but cannot change publication status.</p>}</CardContent></Card>;
+  const setField = <K extends keyof BenefitEditDraft>(
+    key: K,
+    value: BenefitEditDraft[K],
+  ) => setDraft((current) => ({...current, [key]: value}));
+  const submitEdit = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    try {
+      const eligibility = JSON.parse(draft.eligibility_initial_json) as Record<string, unknown>;
+      const renewal = draft.eligibility_renewal_json.trim()
+        ? JSON.parse(draft.eligibility_renewal_json) as Record<string, unknown>
+        : null;
+      const localized = draft.localized_summary_json.trim()
+        ? JSON.parse(draft.localized_summary_json) as Record<string, string>
+        : {};
+      const jobMetadata = draft.job_metadata_json.trim()
+        ? JSON.parse(draft.job_metadata_json) as Record<string, unknown>
+        : null;
+      setEditError("");
+      onEdit({
+        expected_revision: item.content_revision,
+        domain: draft.domain,
+        name: draft.name.trim(),
+        state_code: draft.state_code.trim() || null,
+        category: draft.category.trim(),
+        description: draft.description.trim(),
+        eligibility_initial: eligibility,
+        eligibility_renewal: renewal,
+        benefits_text: draft.benefits_text.trim(),
+        documents_required: draft.documents_text.split("\n").map((value) => value.trim()).filter(Boolean),
+        application_process: draft.application_process.trim(),
+        source_url: draft.source_url.trim(),
+        source_title: draft.source_title.trim(),
+        source_document_url: draft.source_document_url.trim(),
+        source_excerpt: draft.source_excerpt.trim() || null,
+        valid_from: draft.valid_from || null,
+        valid_until: draft.valid_until || null,
+        localized_summary: localized,
+        job_metadata: jobMetadata,
+        reason: draft.reason.trim(),
+      });
+      setEditing(false);
+    } catch {
+      setEditError("Eligibility, localization, and job metadata fields must contain valid JSON.");
+    }
+  };
+  return (
+    <Card className="border-paper/10 bg-paper/[0.04] text-paper">
+      <CardContent className="space-y-4 p-5">
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <div className="flex flex-wrap items-center gap-2">
+              <Badge variant="outline" className="border-orange/30 text-orange">{item.verification_status}</Badge>
+              <span className="font-mono text-xs text-paper/40">{item.id}</span>
+              <span className="font-mono text-xs text-paper/40">revision {item.content_revision}</span>
+            </div>
+            <h3 className="mt-2 text-lg font-bold">{item.name}</h3>
+            <p className="mt-1 text-sm text-paper/50">{item.domain} · {item.state_code ?? "central"} · {item.source_title || "Source title missing"}</p>
+            <p className="mt-1 text-xs text-paper/40">Last source check: {item.last_verified_date ?? "not recorded"}</p>
+          </div>
+          {item.source_document_url && <a className="inline-flex items-center gap-1 text-xs font-semibold text-acid underline-offset-4 hover:underline" href={item.source_document_url} target="_blank" rel="noreferrer">Source <ExternalLink className="size-3" aria-hidden="true" /></a>}
+        </div>
+        {item.domain === "job" && <div className="grid gap-2 rounded-xl border border-blue/20 bg-blue/[0.06] p-4 text-xs text-paper/70 sm:grid-cols-2"><p><span className="text-paper/40">Employer:</span> {jobValue("employer") || "Not stated"}</p><p><span className="text-paper/40">Deadline:</span> {jobValue("application_deadline") || "Not stated"}</p><p><span className="text-paper/40">Vacancies:</span> {jobValue("vacancy_count") || "Not stated"}</p><p><span className="text-paper/40">Employment:</span> {jobValue("employment_type") || "Not stated"}</p></div>}
+        <details className="rounded-xl border border-paper/10 bg-ink/20"><summary className="cursor-pointer px-4 py-3 text-sm font-semibold">Show machine review and source excerpt</summary><div className="space-y-3 border-t border-paper/10 px-4 py-3 text-xs leading-5 text-paper/60"><p>{item.source_excerpt || "No source excerpt stored."}</p><pre className="overflow-x-auto whitespace-pre-wrap rounded-lg bg-ink p-3 font-mono text-[0.68rem]">{JSON.stringify(item.automated_review, null, 2)}</pre></div></details>
+        <div className="flex flex-wrap gap-2 border-t border-paper/10 pt-4">
+          {canReview && <Button type="button" size="sm" variant="outline" onClick={() => { setEditing((value) => !value); setEditError(""); }}>{editing ? "Close editor" : "Edit benefit"}</Button>}
+          <Button type="button" size="sm" variant="ghost" onClick={() => setShowHistory((value) => !value)}>{showHistory ? "Hide history" : "View version history"}</Button>
+        </div>
+        {editing && canReview && <form className="grid gap-3 rounded-xl border border-acid/20 bg-acid/[0.04] p-4 md:grid-cols-2" onSubmit={submitEdit}>
+          <label className="grid gap-1 text-xs font-semibold text-paper/60">Name<input required value={draft.name} onChange={(event) => setField("name", event.target.value)} className="h-10 rounded-lg border border-paper/15 bg-ink px-3 text-sm text-paper" /></label>
+          <label className="grid gap-1 text-xs font-semibold text-paper/60">Domain<select value={draft.domain} onChange={(event) => setField("domain", event.target.value)} className="h-10 rounded-lg border border-paper/15 bg-ink px-2 text-sm text-paper"><option value="scheme">Scheme</option><option value="scholarship">Scholarship</option><option value="job">Job</option></select></label>
+          <label className="grid gap-1 text-xs font-semibold text-paper/60">State code<input value={draft.state_code} onChange={(event) => setField("state_code", event.target.value)} className="h-10 rounded-lg border border-paper/15 bg-ink px-3 text-sm text-paper" placeholder="KA or blank for central" /></label>
+          <label className="grid gap-1 text-xs font-semibold text-paper/60">Category<input value={draft.category} onChange={(event) => setField("category", event.target.value)} className="h-10 rounded-lg border border-paper/15 bg-ink px-3 text-sm text-paper" /></label>
+          <label className="grid gap-1 text-xs font-semibold text-paper/60 md:col-span-2">Description<textarea value={draft.description} onChange={(event) => setField("description", event.target.value)} className="min-h-24 rounded-lg border border-paper/15 bg-ink px-3 py-2 text-sm text-paper" /></label>
+          <label className="grid gap-1 text-xs font-semibold text-paper/60">Eligibility JSON<textarea required value={draft.eligibility_initial_json} onChange={(event) => setField("eligibility_initial_json", event.target.value)} className="min-h-32 rounded-lg border border-paper/15 bg-ink px-3 py-2 font-mono text-xs text-paper" /></label>
+          <label className="grid gap-1 text-xs font-semibold text-paper/60">Renewal eligibility JSON<textarea value={draft.eligibility_renewal_json} onChange={(event) => setField("eligibility_renewal_json", event.target.value)} className="min-h-32 rounded-lg border border-paper/15 bg-ink px-3 py-2 font-mono text-xs text-paper" placeholder="Optional JSON object" /></label>
+          <label className="grid gap-1 text-xs font-semibold text-paper/60">Benefits text<textarea value={draft.benefits_text} onChange={(event) => setField("benefits_text", event.target.value)} className="min-h-24 rounded-lg border border-paper/15 bg-ink px-3 py-2 text-sm text-paper" /></label>
+          <label className="grid gap-1 text-xs font-semibold text-paper/60">Documents, one per line<textarea value={draft.documents_text} onChange={(event) => setField("documents_text", event.target.value)} className="min-h-24 rounded-lg border border-paper/15 bg-ink px-3 py-2 text-sm text-paper" /></label>
+          <label className="grid gap-1 text-xs font-semibold text-paper/60 md:col-span-2">Application process<textarea value={draft.application_process} onChange={(event) => setField("application_process", event.target.value)} className="min-h-24 rounded-lg border border-paper/15 bg-ink px-3 py-2 text-sm text-paper" /></label>
+          <label className="grid gap-1 text-xs font-semibold text-paper/60">Source URL<input value={draft.source_url} onChange={(event) => setField("source_url", event.target.value)} className="h-10 rounded-lg border border-paper/15 bg-ink px-3 text-sm text-paper" /></label>
+          <label className="grid gap-1 text-xs font-semibold text-paper/60">Source title<input value={draft.source_title} onChange={(event) => setField("source_title", event.target.value)} className="h-10 rounded-lg border border-paper/15 bg-ink px-3 text-sm text-paper" /></label>
+          <label className="grid gap-1 text-xs font-semibold text-paper/60">Source document URL<input value={draft.source_document_url} onChange={(event) => setField("source_document_url", event.target.value)} className="h-10 rounded-lg border border-paper/15 bg-ink px-3 text-sm text-paper" /></label>
+          <label className="grid gap-1 text-xs font-semibold text-paper/60">Valid from<input type="date" value={draft.valid_from} onChange={(event) => setField("valid_from", event.target.value)} className="h-10 rounded-lg border border-paper/15 bg-ink px-3 text-sm text-paper" /></label>
+          <label className="grid gap-1 text-xs font-semibold text-paper/60">Valid until<input type="date" value={draft.valid_until} onChange={(event) => setField("valid_until", event.target.value)} className="h-10 rounded-lg border border-paper/15 bg-ink px-3 text-sm text-paper" /></label>
+          <label className="grid gap-1 text-xs font-semibold text-paper/60 md:col-span-2">Source excerpt<textarea value={draft.source_excerpt} onChange={(event) => setField("source_excerpt", event.target.value)} className="min-h-24 rounded-lg border border-paper/15 bg-ink px-3 py-2 text-sm text-paper" /></label>
+          <label className="grid gap-1 text-xs font-semibold text-paper/60">Localized summaries JSON<textarea value={draft.localized_summary_json} onChange={(event) => setField("localized_summary_json", event.target.value)} className="min-h-24 rounded-lg border border-paper/15 bg-ink px-3 py-2 font-mono text-xs text-paper" /></label>
+          <label className="grid gap-1 text-xs font-semibold text-paper/60">Job metadata JSON<textarea value={draft.job_metadata_json} onChange={(event) => setField("job_metadata_json", event.target.value)} className="min-h-24 rounded-lg border border-paper/15 bg-ink px-3 py-2 font-mono text-xs text-paper" /></label>
+          <label className="grid gap-1 text-xs font-semibold text-paper/60 md:col-span-2">Edit reason<input required minLength={3} value={draft.reason} onChange={(event) => setField("reason", event.target.value)} className="h-10 rounded-lg border border-paper/15 bg-ink px-3 text-sm text-paper" /></label>
+          {editError && <p role="alert" className="md:col-span-2 text-sm text-orange">{editError}</p>}
+          <div className="flex flex-wrap items-center justify-between gap-3 md:col-span-2"><p className="text-xs leading-5 text-orange/80">Saving an edit deactivates the row and sends it back to review.</p><Button type="submit" size="sm" disabled={pending}>{pending ? "Saving…" : "Save edit"}</Button></div>
+        </form>}
+        {canReview ? <form className="grid gap-3 border-t border-paper/10 pt-4 md:grid-cols-[180px_1fr_auto] md:items-end" onSubmit={(event) => { event.preventDefault(); onSubmit({status, reason, activate}); }}><label className="grid gap-1 text-xs font-semibold text-paper/60">Decision<select value={status} onChange={(event) => setStatus(event.target.value)} className="h-10 rounded-lg border border-paper/15 bg-ink px-2 text-sm text-paper"><option value="human_verified">Human verified</option><option value="needs_review">Needs review</option><option value="stale">Stale</option><option value="machine_reviewed">Machine reviewed</option></select></label><label className="grid gap-1 text-xs font-semibold text-paper/60">Reason<input value={reason} onChange={(event) => setReason(event.target.value)} className="h-10 rounded-lg border border-paper/15 bg-ink px-3 text-sm text-paper" /></label><div className="flex items-center gap-3"><label className="flex items-center gap-2 text-xs text-paper/60"><input type="checkbox" checked={activate} onChange={(event) => setActivate(event.target.checked)} /> Publish</label><Button type="submit" size="sm" disabled={pending || reason.trim().length < 3}>{pending ? "Saving…" : "Save decision"}</Button></div></form> : <p className="text-xs text-paper/45">Your role can inspect this row but cannot change publication status.</p>}
+        {showHistory && <div className="space-y-2 rounded-xl border border-paper/10 bg-ink/20 p-4"><p className="text-xs font-semibold uppercase tracking-[0.12em] text-paper/40">Immutable version history</p>{versions.isPending && <p className="text-sm text-paper/45">Loading history…</p>}{versions.isError && <p role="alert" className="text-sm text-orange">Could not load version history.</p>}{versions.data?.versions.map((version) => <div key={version.id} className="flex flex-wrap items-center justify-between gap-3 border-b border-paper/10 py-2 text-sm last:border-0"><div><p><span className="font-mono text-acid">v{version.version}</span> · <span className="font-semibold">{version.action}</span> · {version.actor_id}</p><p className="text-xs text-paper/45">{version.reason} · {formatTime(version.created_at)}</p></div>{canRollback && version.version !== item.content_revision && <Button type="button" size="sm" variant="outline" disabled={pending} onClick={() => onRollback(version.version, `Restore benefit version ${version.version}`)}><RotateCcw className="size-3.5" aria-hidden="true" />Restore v{version.version}</Button>}</div>)}{versions.data && !versions.data.versions.length && <p className="text-sm text-paper/45">No history recorded yet.</p>}</div>}
+      </CardContent>
+    </Card>
+  );
+}
+
+type BenefitEditDraft = Omit<import("@/features/admin/api").BenefitEditPayload, "state_code" | "source_excerpt" | "valid_from" | "valid_until"> & {
+  state_code: string;
+  source_excerpt: string;
+  valid_from: string;
+  valid_until: string;
+  documents_text: string;
+  eligibility_initial_json: string;
+  eligibility_renewal_json: string;
+  localized_summary_json: string;
+  job_metadata_json: string;
+};
+
+function benefitEditDraft(item: import("@/features/admin/api").ReviewItem): BenefitEditDraft {
+  return {
+    expected_revision: item.content_revision,
+    domain: item.domain,
+    name: item.name,
+    state_code: item.state_code ?? "",
+    category: item.category,
+    description: item.description,
+    eligibility_initial: item.eligibility_initial,
+    eligibility_renewal: item.eligibility_renewal,
+    benefits_text: item.benefits_text,
+    documents_required: item.documents_required,
+    application_process: item.application_process,
+    source_url: item.source_url,
+    source_title: item.source_title,
+    source_document_url: item.source_document_url,
+    source_excerpt: item.source_excerpt ?? "",
+    valid_from: item.valid_from ?? "",
+    valid_until: item.valid_until ?? "",
+    localized_summary: item.localized_summary,
+    job_metadata: Object.keys(item.job_metadata).length ? item.job_metadata : null,
+    reason: "Corrected against the official source",
+    documents_text: item.documents_required.join("\n"),
+    eligibility_initial_json: JSON.stringify(item.eligibility_initial, null, 2),
+    eligibility_renewal_json: item.eligibility_renewal ? JSON.stringify(item.eligibility_renewal, null, 2) : "",
+    localized_summary_json: JSON.stringify(item.localized_summary, null, 2),
+    job_metadata_json: item.job_metadata && Object.keys(item.job_metadata).length ? JSON.stringify(item.job_metadata, null, 2) : "",
+  };
 }
 
 function PageIntro({ title, description }: { title: string; description: string }) {

@@ -45,6 +45,7 @@ from sahaayak_common import (
     ContactPoint,
     NotificationDelivery,
     Reminder,
+    UserSession,
     get_logger,
     session_scope,
     settings,
@@ -210,6 +211,7 @@ class NotificationWorker:
             else None
         )
         template_key = reminder.template_key or "benefit_reminder"
+        session_row = db.get(UserSession, reminder.session_id)
 
         # Re-checked now, not trusted from when the reminder was created.
         availability = check_channel(
@@ -219,6 +221,8 @@ class NotificationWorker:
             session_id=reminder.session_id,
             template_key=template_key,
             locale=_locale_of(contact),
+            state_code=session_row.state_code if session_row else None,
+            respect_rollout=True,
         )
         if not availability.available:
             self._suppress(db, reminder, channel=channel, gate=availability.gate, stats=stats)

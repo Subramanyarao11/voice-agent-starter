@@ -6,6 +6,9 @@ translated language degrades to bilingual output instead of a failed call —
 during a build week, half-translated beats broken.
 """
 
+from importlib import import_module
+
+from sahaayak_agent.languages import ALL_PROFILES
 from sahaayak_agent.prompts import en, hi, kn
 from sahaayak_common import get_logger
 
@@ -16,6 +19,24 @@ CATALOGS: dict[str, dict[str, str]] = {
     "hi": hi.PHRASES,
     "kn": kn.PHRASES,
 }
+
+# Expansion bundles are deliberately discovered by locale code. A reviewed
+# bundle can therefore be added as `prompts/<code>.py` without changing the
+# dialogue graph or risking a code-path fork. Missing modules remain absent
+# from `supported_languages()` and the admin release gate cannot approve them.
+for _profile in ALL_PROFILES:
+    if _profile.code in CATALOGS:
+        continue
+    try:
+        _module = import_module(f"{__name__}.{_profile.code}")
+    except ModuleNotFoundError:
+        continue
+    _phrases = getattr(_module, "PHRASES", None)
+    if isinstance(_phrases, dict) and all(
+        isinstance(key, str) and isinstance(value, str)
+        for key, value in _phrases.items()
+    ):
+        CATALOGS[_profile.code] = _phrases
 
 FALLBACK_LANGUAGE = "en"
 

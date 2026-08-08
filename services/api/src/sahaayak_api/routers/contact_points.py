@@ -398,6 +398,8 @@ def list_notification_channels(
             session_id=principal.session_id,
             template_key=template_key,
             locale=principal.language_code,
+            state_code=principal.state_code,
+            respect_rollout=True,
         )
         results.append(
             ChannelStatusOut(

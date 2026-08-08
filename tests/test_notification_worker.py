@@ -12,7 +12,7 @@ from datetime import UTC, datetime, timedelta
 
 import pytest
 from cryptography.fernet import Fernet
-from sqlmodel import Session
+from sqlmodel import Session, select
 
 from sahaayak_api.notifications import register_provider, reset_providers
 from sahaayak_api.notifications.base import OutboundNotification
@@ -24,6 +24,7 @@ from sahaayak_api.workers.notification_worker import (
 )
 from sahaayak_common import (
     ContactPoint,
+    FeatureFlag,
     NotificationDelivery,
     ProviderPolicy,
     Reminder,
@@ -137,7 +138,23 @@ def sms_ready(monkeypatch, database):
     monkeypatch.setattr(settings, "infobip_sms_enabled", True, raising=False)
     monkeypatch.setattr(settings, "infobip_sms_sender", "SAHAYK", raising=False)
 
+    previous_flag: tuple[bool, int, list[str], list[str]] | None = None
     with Session(engine) as db:
+        flag = db.exec(
+            select(FeatureFlag).where(FeatureFlag.key == "infobip_reminders")
+        ).first()
+        if flag is not None:
+            previous_flag = (
+                flag.enabled,
+                flag.rollout_percentage,
+                list(flag.target_languages),
+                list(flag.target_states),
+            )
+            flag.enabled = True
+            flag.rollout_percentage = 100
+            flag.target_languages = []
+            flag.target_states = []
+            db.add(flag)
         db.merge(
             ProviderPolicy(
                 id=new_id("pp"),
@@ -153,6 +170,14 @@ def sms_ready(monkeypatch, database):
     reset_encryption_cache()
     reset_providers()
     with Session(engine) as db:
+        flag = db.exec(
+            select(FeatureFlag).where(FeatureFlag.key == "infobip_reminders")
+        ).first()
+        if flag is not None and previous_flag is not None:
+            flag.enabled, flag.rollout_percentage, flag.target_languages, flag.target_states = (
+                previous_flag
+            )
+            db.add(flag)
         for row in db.query(ProviderPolicy).all():
             db.delete(row)
         db.commit()

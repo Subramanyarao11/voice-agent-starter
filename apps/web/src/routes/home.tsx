@@ -305,7 +305,11 @@ export function HomePage() {
             voiceInputAvailable={voiceInputAvailable}
             textToSpeechAvailable={healthQuery.data?.text_to_speech ?? false}
             recorderError={streamingVoice.supported ? streamingVoice.error : recorder.error}
+            transcriptDraft={streamingVoice.transcriptDraft}
             onDraftChange={setDraft}
+            onTranscriptChange={streamingVoice.updateTranscript}
+            onSubmitTranscript={streamingVoice.submitTranscript}
+            onCancelTranscript={streamingVoice.cancelTranscript}
             onSubmit={(event) => void handleTextSubmit(event)}
             onSuggestion={setDraft}
             onStartRecording={startRecording}

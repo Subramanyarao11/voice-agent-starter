@@ -1,6 +1,6 @@
 import { useEffect, useState, type FormEvent, type ReactNode } from "react";
 
-import { Activity, ArrowLeft, BarChart3, Database, FileCheck2, Flag, Gauge, Languages, ListChecks, LogOut, MessageSquare, Server, ShieldCheck, Users } from "lucide-react";
+import { Activity, ArrowLeft, BarChart3, Database, FileCheck2, Flag, Gauge, Languages, ListChecks, LogOut, MapPinned, MessageSquare, Server, ShieldCheck, Users } from "lucide-react";
 import { Link } from "@tanstack/react-router";
 
 import { Button } from "@/components/ui/button";
@@ -15,13 +15,14 @@ import {
   isAdminOidcConfigured,
 } from "@/features/admin/oidc";
 
-export type AdminView = "overview" | "conversations" | "telemetry" | "escalations" | "benefits" | "providers" | "messaging" | "quality" | "flags" | "languages" | "audit" | "system";
+export type AdminView = "overview" | "conversations" | "telemetry" | "escalations" | "directory" | "benefits" | "providers" | "messaging" | "quality" | "flags" | "languages" | "audit" | "system";
 
 const NAV_ITEMS: Array<{ view: AdminView; label: string; href: string; icon: typeof Gauge }> = [
   {view: "overview", label: "Overview", href: "/admin/overview", icon: Gauge},
   {view: "conversations", label: "Conversations", href: "/admin/conversations", icon: Users},
   {view: "telemetry", label: "Telemetry", href: "/admin/telemetry", icon: Activity},
   {view: "escalations", label: "Escalations", href: "/admin/escalations", icon: ListChecks},
+  {view: "directory", label: "Directory", href: "/admin/directory", icon: MapPinned},
   {view: "benefits", label: "Benefits & review", href: "/admin/benefits", icon: FileCheck2},
   {view: "providers", label: "Providers", href: "/admin/providers", icon: Server},
   {view: "messaging", label: "Messaging", href: "/admin/messaging", icon: MessageSquare},

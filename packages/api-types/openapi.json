@@ -495,6 +495,131 @@
         }
       }
     },
+    "/api/sessions/{session_id}/tasks": {
+      "get": {
+        "tags": [
+          "saved benefits"
+        ],
+        "summary": "List Application Tasks",
+        "operationId": "list_application_tasks_api_sessions__session_id__tasks_get",
+        "parameters": [
+          {
+            "name": "session_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Session Id"
+            }
+          },
+          {
+            "name": "benefit_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 160
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Benefit Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ApplicationTaskOut"
+                  },
+                  "title": "Response List Application Tasks Api Sessions  Session Id  Tasks Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/sessions/{session_id}/tasks/{task_id}": {
+      "post": {
+        "tags": [
+          "saved benefits"
+        ],
+        "summary": "Update Application Task",
+        "operationId": "update_application_task_api_sessions__session_id__tasks__task_id__post",
+        "parameters": [
+          {
+            "name": "session_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Session Id"
+            }
+          },
+          {
+            "name": "task_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Task Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApplicationTaskUpdate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApplicationTaskOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/sessions/{session_id}/reminders": {
       "get": {
         "tags": [
@@ -1968,6 +2093,153 @@
         }
       }
     },
+    "/api/admin/benefits/{benefit_id}": {
+      "put": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "Edit Benefit",
+        "description": "Replace public benefit content while forcing a fresh review.\n\nEditing never silently republishes a row. Even a reviewer correcting a\nspelling mistake gets a new version, clears machine evidence, and moves\nthe benefit back to the inactive review queue.",
+        "operationId": "edit_benefit_api_admin_benefits__benefit_id__put",
+        "parameters": [
+          {
+            "name": "benefit_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Benefit Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BenefitEditRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BenefitReviewOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/admin/benefits/{benefit_id}/versions": {
+      "get": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "Benefit Versions",
+        "operationId": "benefit_versions_api_admin_benefits__benefit_id__versions_get",
+        "parameters": [
+          {
+            "name": "benefit_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Benefit Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BenefitVersionListOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/admin/benefits/{benefit_id}/rollback": {
+      "post": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "Rollback Benefit",
+        "operationId": "rollback_benefit_api_admin_benefits__benefit_id__rollback_post",
+        "parameters": [
+          {
+            "name": "benefit_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Benefit Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BenefitRollbackRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BenefitReviewOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/admin/benefit-reports": {
       "get": {
         "tags": [
@@ -2205,6 +2477,174 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/FreshnessOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/admin/freshness/scan": {
+      "post": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "Scan Admin Freshness",
+        "description": "Run an explicit source scan from the admin console or a scheduler.",
+        "operationId": "scan_admin_freshness_api_admin_freshness_scan_post",
+        "parameters": [
+          {
+            "name": "stale_days",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 730,
+              "minimum": 1,
+              "default": 90,
+              "title": "Stale Days"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FreshnessOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/admin/freshness/alerts": {
+      "get": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "Admin Freshness Alerts",
+        "operationId": "admin_freshness_alerts_api_admin_freshness_alerts_get",
+        "parameters": [
+          {
+            "name": "status",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "open",
+                    "acknowledged",
+                    "resolved"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Status"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 1000,
+              "minimum": 1,
+              "default": 200,
+              "title": "Limit"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/FreshnessAlertOut"
+                  },
+                  "title": "Response Admin Freshness Alerts Api Admin Freshness Alerts Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/admin/freshness/alerts/{alert_id}": {
+      "post": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "Update Freshness Alert",
+        "operationId": "update_freshness_alert_api_admin_freshness_alerts__alert_id__post",
+        "parameters": [
+          {
+            "name": "alert_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Alert Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FreshnessAlertUpdate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FreshnessAlertOut"
                 }
               }
             }
@@ -2536,6 +2976,58 @@
         }
       }
     },
+    "/api/admin/languages/{code}/review": {
+      "put": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "Update Language Review",
+        "operationId": "update_language_review_api_admin_languages__code__review_put",
+        "parameters": [
+          {
+            "name": "code",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Code"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LanguageReviewUpdateRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LanguageReadinessOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/admin/audit-events": {
       "get": {
         "tags": [
@@ -2688,6 +3180,304 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/SystemOut"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/admin/system/deployments/compare": {
+      "get": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "Admin Deployment Compare",
+        "operationId": "admin_deployment_compare_api_admin_system_deployments_compare_get",
+        "parameters": [
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 100,
+              "minimum": 2,
+              "default": 20,
+              "title": "Limit"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DeploymentComparisonOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/admin/providers/simulations": {
+      "get": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "Admin Provider Failure Simulations",
+        "description": "Show failure paths without making a provider request or changing state.",
+        "operationId": "admin_provider_failure_simulations_api_admin_providers_simulations_get",
+        "parameters": [
+          {
+            "name": "language_code",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "minLength": 2,
+              "maxLength": 12,
+              "default": "en",
+              "title": "Language Code"
+            }
+          },
+          {
+            "name": "state_code",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "minLength": 2,
+              "maxLength": 3,
+              "default": "KA",
+              "title": "State Code"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProviderFailureSimulationListOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/admin/departments": {
+      "get": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "List Directory Entries",
+        "operationId": "list_directory_entries_api_admin_departments_get",
+        "parameters": [
+          {
+            "name": "status",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "enum": [
+                "pending",
+                "approved",
+                "rejected",
+                "all"
+              ],
+              "type": "string",
+              "default": "all",
+              "title": "Status"
+            }
+          },
+          {
+            "name": "state_code",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "State Code"
+            }
+          },
+          {
+            "name": "district_name",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "District Name"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 200,
+              "title": "Limit"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DirectoryListOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/admin/departments/{entry_id}/approve": {
+      "post": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "Approve Directory Entry",
+        "operationId": "approve_directory_entry_api_admin_departments__entry_id__approve_post",
+        "parameters": [
+          {
+            "name": "entry_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Entry Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DirectoryDecisionRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DirectoryEntryOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/admin/departments/{entry_id}/deactivate": {
+      "post": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "Deactivate Directory Entry",
+        "operationId": "deactivate_directory_entry_api_admin_departments__entry_id__deactivate_post",
+        "parameters": [
+          {
+            "name": "entry_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Entry Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DirectoryDecisionRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DirectoryEntryOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
                 }
               }
             }
@@ -2856,6 +3646,115 @@
           "recent_errors"
         ],
         "title": "AdminOverviewOut"
+      },
+      "ApplicationTaskOut": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "benefit_id": {
+            "type": "string",
+            "title": "Benefit Id"
+          },
+          "benefit_name": {
+            "type": "string",
+            "title": "Benefit Name"
+          },
+          "kind": {
+            "type": "string",
+            "title": "Kind"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "description": {
+            "type": "string",
+            "title": "Description"
+          },
+          "position": {
+            "type": "integer",
+            "title": "Position"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "due_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Due At"
+          },
+          "completed_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Completed At"
+          },
+          "source_revision": {
+            "type": "integer",
+            "title": "Source Revision"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Updated At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "benefit_id",
+          "benefit_name",
+          "kind",
+          "title",
+          "description",
+          "position",
+          "status",
+          "due_at",
+          "completed_at",
+          "source_revision",
+          "created_at",
+          "updated_at"
+        ],
+        "title": "ApplicationTaskOut"
+      },
+      "ApplicationTaskUpdate": {
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "pending",
+              "completed",
+              "skipped"
+            ],
+            "title": "Status"
+          }
+        },
+        "type": "object",
+        "required": [
+          "status"
+        ],
+        "title": "ApplicationTaskUpdate"
       },
       "AuditEventOut": {
         "properties": {
@@ -3083,6 +3982,179 @@
         "title": "BenefitDetailOut",
         "description": "Public benefit details with enough provenance to make trust inspectable."
       },
+      "BenefitEditRequest": {
+        "properties": {
+          "expected_revision": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Expected Revision"
+          },
+          "domain": {
+            "$ref": "#/components/schemas/Domain"
+          },
+          "name": {
+            "type": "string",
+            "maxLength": 240,
+            "minLength": 2,
+            "title": "Name"
+          },
+          "state_code": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 16
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "State Code"
+          },
+          "category": {
+            "type": "string",
+            "maxLength": 240,
+            "title": "Category",
+            "default": ""
+          },
+          "description": {
+            "type": "string",
+            "maxLength": 20000,
+            "title": "Description",
+            "default": ""
+          },
+          "eligibility_initial": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Eligibility Initial"
+          },
+          "eligibility_renewal": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Eligibility Renewal"
+          },
+          "benefits_text": {
+            "type": "string",
+            "maxLength": 20000,
+            "title": "Benefits Text",
+            "default": ""
+          },
+          "documents_required": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "maxItems": 100,
+            "title": "Documents Required"
+          },
+          "application_process": {
+            "type": "string",
+            "maxLength": 20000,
+            "title": "Application Process",
+            "default": ""
+          },
+          "source_url": {
+            "type": "string",
+            "maxLength": 2000,
+            "title": "Source Url",
+            "default": ""
+          },
+          "source_title": {
+            "type": "string",
+            "maxLength": 500,
+            "title": "Source Title",
+            "default": ""
+          },
+          "source_document_url": {
+            "type": "string",
+            "maxLength": 2000,
+            "title": "Source Document Url",
+            "default": ""
+          },
+          "source_excerpt": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 30000
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Excerpt"
+          },
+          "valid_from": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Valid From"
+          },
+          "valid_until": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Valid Until"
+          },
+          "localized_summary": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "type": "object",
+            "title": "Localized Summary"
+          },
+          "job_metadata": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Job Metadata"
+          },
+          "reason": {
+            "type": "string",
+            "maxLength": 500,
+            "minLength": 3,
+            "title": "Reason"
+          }
+        },
+        "type": "object",
+        "required": [
+          "domain",
+          "name",
+          "reason"
+        ],
+        "title": "BenefitEditRequest",
+        "description": "Full public-content replacement; publication remains a separate action."
+      },
       "BenefitIssueReportRequest": {
         "properties": {
           "category": {
@@ -3159,6 +4231,50 @@
               }
             ],
             "title": "State Code"
+          },
+          "category": {
+            "type": "string",
+            "title": "Category"
+          },
+          "description": {
+            "type": "string",
+            "title": "Description"
+          },
+          "eligibility_initial": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Eligibility Initial"
+          },
+          "eligibility_renewal": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Eligibility Renewal"
+          },
+          "benefits_text": {
+            "type": "string",
+            "title": "Benefits Text"
+          },
+          "documents_required": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Documents Required"
+          },
+          "application_process": {
+            "type": "string",
+            "title": "Application Process"
+          },
+          "source_url": {
+            "type": "string",
+            "title": "Source Url"
           },
           "verification_status": {
             "type": "string",
@@ -3251,10 +4367,19 @@
             ],
             "title": "Valid Until"
           },
+          "localized_summary": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Localized Summary"
+          },
           "job_metadata": {
             "additionalProperties": true,
             "type": "object",
             "title": "Job Metadata"
+          },
+          "content_revision": {
+            "type": "integer",
+            "title": "Content Revision"
           }
         },
         "type": "object",
@@ -3263,6 +4388,14 @@
           "domain",
           "name",
           "state_code",
+          "category",
+          "description",
+          "eligibility_initial",
+          "eligibility_renewal",
+          "benefits_text",
+          "documents_required",
+          "application_process",
+          "source_url",
           "verification_status",
           "is_active",
           "source_title",
@@ -3274,7 +4407,9 @@
           "last_verified_date",
           "valid_from",
           "valid_until",
-          "job_metadata"
+          "localized_summary",
+          "job_metadata",
+          "content_revision"
         ],
         "title": "BenefitReviewOut"
       },
@@ -3307,6 +4442,108 @@
           "reason"
         ],
         "title": "BenefitReviewRequest"
+      },
+      "BenefitRollbackRequest": {
+        "properties": {
+          "version": {
+            "type": "integer",
+            "minimum": 1.0,
+            "title": "Version"
+          },
+          "reason": {
+            "type": "string",
+            "maxLength": 500,
+            "minLength": 3,
+            "title": "Reason"
+          }
+        },
+        "type": "object",
+        "required": [
+          "version",
+          "reason"
+        ],
+        "title": "BenefitRollbackRequest"
+      },
+      "BenefitVersionListOut": {
+        "properties": {
+          "benefit_id": {
+            "type": "string",
+            "title": "Benefit Id"
+          },
+          "current_revision": {
+            "type": "integer",
+            "title": "Current Revision"
+          },
+          "versions": {
+            "items": {
+              "$ref": "#/components/schemas/BenefitVersionOut"
+            },
+            "type": "array",
+            "title": "Versions"
+          }
+        },
+        "type": "object",
+        "required": [
+          "benefit_id",
+          "current_revision",
+          "versions"
+        ],
+        "title": "BenefitVersionListOut"
+      },
+      "BenefitVersionOut": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "benefit_id": {
+            "type": "string",
+            "title": "Benefit Id"
+          },
+          "version": {
+            "type": "integer",
+            "title": "Version"
+          },
+          "action": {
+            "type": "string",
+            "title": "Action"
+          },
+          "actor_id": {
+            "type": "string",
+            "title": "Actor Id"
+          },
+          "actor_role": {
+            "type": "string",
+            "title": "Actor Role"
+          },
+          "reason": {
+            "type": "string",
+            "title": "Reason"
+          },
+          "snapshot": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Snapshot"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "benefit_id",
+          "version",
+          "action",
+          "actor_id",
+          "actor_role",
+          "reason",
+          "snapshot",
+          "created_at"
+        ],
+        "title": "BenefitVersionOut"
       },
       "Body_take_telephony_turn_api_telephony_turns_post": {
         "properties": {
@@ -3911,6 +5148,406 @@
         "title": "CoverageOut",
         "description": "Benefit counts per state and domain.\n\nUseful in the demo for showing honestly how much data is loaded, rather\nthan implying nationwide coverage the pipeline has not produced yet."
       },
+      "CriterionOutcome": {
+        "properties": {
+          "slot": {
+            "$ref": "#/components/schemas/SlotName"
+          },
+          "status": {
+            "$ref": "#/components/schemas/CriterionStatus"
+          },
+          "requirement": {
+            "type": "string",
+            "title": "Requirement"
+          },
+          "caller_value": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Caller Value"
+          }
+        },
+        "type": "object",
+        "required": [
+          "slot",
+          "status",
+          "requirement"
+        ],
+        "title": "CriterionOutcome",
+        "description": "One criterion checked against one caller, kept in human-readable form.\n\nThe agent reads these back to explain *why* a verdict was reached, which is\nthe difference between a trustworthy answer and an oracle."
+      },
+      "CriterionStatus": {
+        "type": "string",
+        "enum": [
+          "pass",
+          "fail",
+          "unknown"
+        ],
+        "title": "CriterionStatus"
+      },
+      "DeploymentChangeOut": {
+        "properties": {
+          "field": {
+            "type": "string",
+            "title": "Field"
+          },
+          "previous": {
+            "title": "Previous"
+          },
+          "current": {
+            "title": "Current"
+          }
+        },
+        "type": "object",
+        "required": [
+          "field"
+        ],
+        "title": "DeploymentChangeOut"
+      },
+      "DeploymentComparisonOut": {
+        "properties": {
+          "generated_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Generated At"
+          },
+          "current": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/DeploymentOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "previous": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/DeploymentOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "history": {
+            "items": {
+              "$ref": "#/components/schemas/DeploymentOut"
+            },
+            "type": "array",
+            "title": "History"
+          },
+          "changes": {
+            "items": {
+              "$ref": "#/components/schemas/DeploymentChangeOut"
+            },
+            "type": "array",
+            "title": "Changes"
+          },
+          "note": {
+            "type": "string",
+            "title": "Note"
+          }
+        },
+        "type": "object",
+        "required": [
+          "generated_at",
+          "current",
+          "previous",
+          "history",
+          "changes",
+          "note"
+        ],
+        "title": "DeploymentComparisonOut"
+      },
+      "DeploymentOut": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "release_key": {
+            "type": "string",
+            "title": "Release Key"
+          },
+          "environment": {
+            "type": "string",
+            "title": "Environment"
+          },
+          "app_version": {
+            "type": "string",
+            "title": "App Version"
+          },
+          "git_commit_sha": {
+            "type": "string",
+            "title": "Git Commit Sha"
+          },
+          "image_digest": {
+            "type": "string",
+            "title": "Image Digest"
+          },
+          "migration_revision": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Migration Revision"
+          },
+          "data_revision": {
+            "type": "string",
+            "title": "Data Revision"
+          },
+          "prompt_version": {
+            "type": "string",
+            "title": "Prompt Version"
+          },
+          "model_versions": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Model Versions"
+          },
+          "active_flags": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Active Flags"
+          },
+          "configuration": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Configuration"
+          },
+          "deployed_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Deployed At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "release_key",
+          "environment",
+          "app_version",
+          "git_commit_sha",
+          "image_digest",
+          "migration_revision",
+          "data_revision",
+          "prompt_version",
+          "model_versions",
+          "active_flags",
+          "configuration",
+          "deployed_at"
+        ],
+        "title": "DeploymentOut"
+      },
+      "DirectoryDecisionRequest": {
+        "properties": {
+          "reason": {
+            "type": "string",
+            "maxLength": 500,
+            "minLength": 3,
+            "title": "Reason"
+          }
+        },
+        "type": "object",
+        "required": [
+          "reason"
+        ],
+        "title": "DirectoryDecisionRequest"
+      },
+      "DirectoryEntryOut": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "entry_key": {
+            "type": "string",
+            "title": "Entry Key"
+          },
+          "state_code": {
+            "type": "string",
+            "title": "State Code"
+          },
+          "district_code": {
+            "type": "string",
+            "title": "District Code"
+          },
+          "district_name": {
+            "type": "string",
+            "title": "District Name"
+          },
+          "service_domain": {
+            "type": "string",
+            "title": "Service Domain"
+          },
+          "pincode": {
+            "type": "string",
+            "title": "Pincode"
+          },
+          "pincode_prefix": {
+            "type": "string",
+            "title": "Pincode Prefix"
+          },
+          "department_code": {
+            "type": "string",
+            "title": "Department Code"
+          },
+          "department_name": {
+            "type": "string",
+            "title": "Department Name"
+          },
+          "help_centre_name": {
+            "type": "string",
+            "title": "Help Centre Name"
+          },
+          "address": {
+            "type": "string",
+            "title": "Address"
+          },
+          "phone": {
+            "type": "string",
+            "title": "Phone"
+          },
+          "email": {
+            "type": "string",
+            "title": "Email"
+          },
+          "website_url": {
+            "type": "string",
+            "title": "Website Url"
+          },
+          "source_name": {
+            "type": "string",
+            "title": "Source Name"
+          },
+          "source_url": {
+            "type": "string",
+            "title": "Source Url"
+          },
+          "source_record_id": {
+            "type": "string",
+            "title": "Source Record Id"
+          },
+          "source_last_verified": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Last Verified"
+          },
+          "approval_status": {
+            "type": "string",
+            "title": "Approval Status"
+          },
+          "is_active": {
+            "type": "boolean",
+            "title": "Is Active"
+          },
+          "stale": {
+            "type": "boolean",
+            "title": "Stale"
+          },
+          "priority": {
+            "type": "integer",
+            "title": "Priority"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Updated At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "entry_key",
+          "state_code",
+          "district_code",
+          "district_name",
+          "service_domain",
+          "pincode",
+          "pincode_prefix",
+          "department_code",
+          "department_name",
+          "help_centre_name",
+          "address",
+          "phone",
+          "email",
+          "website_url",
+          "source_name",
+          "source_url",
+          "source_record_id",
+          "source_last_verified",
+          "approval_status",
+          "is_active",
+          "stale",
+          "priority",
+          "created_at",
+          "updated_at"
+        ],
+        "title": "DirectoryEntryOut"
+      },
+      "DirectoryListOut": {
+        "properties": {
+          "generated_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Generated At"
+          },
+          "stale_after_days": {
+            "type": "integer",
+            "title": "Stale After Days"
+          },
+          "entries": {
+            "items": {
+              "$ref": "#/components/schemas/DirectoryEntryOut"
+            },
+            "type": "array",
+            "title": "Entries"
+          },
+          "total": {
+            "type": "integer",
+            "title": "Total"
+          },
+          "status_counts": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "type": "object",
+            "title": "Status Counts"
+          }
+        },
+        "type": "object",
+        "required": [
+          "generated_at",
+          "stale_after_days",
+          "entries",
+          "total",
+          "status_counts"
+        ],
+        "title": "DirectoryListOut"
+      },
       "Domain": {
         "type": "string",
         "enum": [
@@ -4236,6 +5873,128 @@
         ],
         "title": "FeatureFlagUpdateRequest"
       },
+      "FreshnessAlertOut": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "alert_key": {
+            "type": "string",
+            "title": "Alert Key"
+          },
+          "benefit_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Benefit Id"
+          },
+          "dataset": {
+            "type": "string",
+            "title": "Dataset"
+          },
+          "alert_type": {
+            "type": "string",
+            "title": "Alert Type"
+          },
+          "severity": {
+            "type": "string",
+            "title": "Severity"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "message": {
+            "type": "string",
+            "title": "Message"
+          },
+          "first_seen_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "First Seen At"
+          },
+          "last_seen_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Last Seen At"
+          },
+          "resolved_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Resolved At"
+          },
+          "resolved_by": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Resolved By"
+          },
+          "safe_metadata": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Safe Metadata"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "alert_key",
+          "benefit_id",
+          "dataset",
+          "alert_type",
+          "severity",
+          "status",
+          "message",
+          "first_seen_at",
+          "last_seen_at",
+          "resolved_at",
+          "resolved_by",
+          "safe_metadata"
+        ],
+        "title": "FreshnessAlertOut"
+      },
+      "FreshnessAlertUpdate": {
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "acknowledged",
+              "resolved"
+            ],
+            "title": "Status"
+          },
+          "reason": {
+            "type": "string",
+            "maxLength": 500,
+            "minLength": 3,
+            "title": "Reason"
+          }
+        },
+        "type": "object",
+        "required": [
+          "status",
+          "reason"
+        ],
+        "title": "FreshnessAlertUpdate"
+      },
       "FreshnessOut": {
         "properties": {
           "generated_at": {
@@ -4265,6 +6024,20 @@
             },
             "type": "array",
             "title": "Sources"
+          },
+          "alerts": {
+            "items": {
+              "$ref": "#/components/schemas/FreshnessAlertOut"
+            },
+            "type": "array",
+            "title": "Alerts"
+          },
+          "alert_counts": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "type": "object",
+            "title": "Alert Counts"
           }
         },
         "type": "object",
@@ -4272,7 +6045,9 @@
           "generated_at",
           "stale_after_days",
           "data_fresh_at",
-          "sources"
+          "sources",
+          "alerts",
+          "alert_counts"
         ],
         "title": "FreshnessOut"
       },
@@ -4648,6 +6423,10 @@
             "type": "string",
             "title": "Interface Status"
           },
+          "interface_review_status": {
+            "type": "string",
+            "title": "Interface Review Status"
+          },
           "data_status": {
             "type": "string",
             "title": "Data Status"
@@ -4672,6 +6451,73 @@
             "type": "string",
             "title": "Voice Status"
           },
+          "voice_review_status": {
+            "type": "string",
+            "title": "Voice Review Status"
+          },
+          "native_speaker_status": {
+            "type": "string",
+            "title": "Native Speaker Status"
+          },
+          "prompt_status": {
+            "type": "string",
+            "title": "Prompt Status"
+          },
+          "content_status": {
+            "type": "string",
+            "title": "Content Status"
+          },
+          "understanding_status": {
+            "type": "string",
+            "title": "Understanding Status"
+          },
+          "accessibility_status": {
+            "type": "string",
+            "title": "Accessibility Status"
+          },
+          "evidence_url": {
+            "type": "string",
+            "title": "Evidence Url"
+          },
+          "review_notes": {
+            "type": "string",
+            "title": "Review Notes"
+          },
+          "reviewed_by": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reviewed By"
+          },
+          "reviewed_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reviewed At"
+          },
+          "activated_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Activated At"
+          },
           "rollout_status": {
             "type": "string",
             "title": "Rollout Status"
@@ -4685,15 +6531,128 @@
           "active",
           "prompt_ready",
           "interface_status",
+          "interface_review_status",
           "data_status",
           "localized_benefits",
           "active_benefits",
           "stt_provider",
           "tts_provider",
           "voice_status",
+          "voice_review_status",
+          "native_speaker_status",
+          "prompt_status",
+          "content_status",
+          "understanding_status",
+          "accessibility_status",
+          "evidence_url",
+          "review_notes",
+          "reviewed_by",
+          "reviewed_at",
+          "activated_at",
           "rollout_status"
         ],
         "title": "LanguageReadinessOut"
+      },
+      "LanguageReviewUpdateRequest": {
+        "properties": {
+          "native_speaker_status": {
+            "type": "string",
+            "enum": [
+              "pending",
+              "approved",
+              "rejected"
+            ],
+            "title": "Native Speaker Status",
+            "default": "pending"
+          },
+          "interface_status": {
+            "type": "string",
+            "enum": [
+              "pending",
+              "approved",
+              "rejected"
+            ],
+            "title": "Interface Status",
+            "default": "pending"
+          },
+          "prompt_status": {
+            "type": "string",
+            "enum": [
+              "pending",
+              "approved",
+              "rejected"
+            ],
+            "title": "Prompt Status",
+            "default": "pending"
+          },
+          "content_status": {
+            "type": "string",
+            "enum": [
+              "pending",
+              "approved",
+              "rejected"
+            ],
+            "title": "Content Status",
+            "default": "pending"
+          },
+          "understanding_status": {
+            "type": "string",
+            "enum": [
+              "pending",
+              "approved",
+              "rejected"
+            ],
+            "title": "Understanding Status",
+            "default": "pending"
+          },
+          "voice_status": {
+            "type": "string",
+            "enum": [
+              "pending",
+              "approved",
+              "rejected"
+            ],
+            "title": "Voice Status",
+            "default": "pending"
+          },
+          "accessibility_status": {
+            "type": "string",
+            "enum": [
+              "pending",
+              "approved",
+              "rejected"
+            ],
+            "title": "Accessibility Status",
+            "default": "pending"
+          },
+          "evidence_url": {
+            "type": "string",
+            "maxLength": 500,
+            "title": "Evidence Url",
+            "default": ""
+          },
+          "review_notes": {
+            "type": "string",
+            "maxLength": 2000,
+            "minLength": 3,
+            "title": "Review Notes"
+          },
+          "attestation": {
+            "type": "boolean",
+            "title": "Attestation",
+            "default": false
+          },
+          "activate": {
+            "type": "boolean",
+            "title": "Activate",
+            "default": false
+          }
+        },
+        "type": "object",
+        "required": [
+          "review_notes"
+        ],
+        "title": "LanguageReviewUpdateRequest"
       },
       "MatchSummary": {
         "properties": {
@@ -4722,6 +6681,20 @@
             },
             "type": "array",
             "title": "Reasons"
+          },
+          "criteria": {
+            "items": {
+              "$ref": "#/components/schemas/CriterionOutcome"
+            },
+            "type": "array",
+            "title": "Criteria"
+          },
+          "caveats": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Caveats"
           },
           "verification_status": {
             "$ref": "#/components/schemas/VerificationStatus",
@@ -4794,7 +6767,7 @@
           "confidence"
         ],
         "title": "MatchSummary",
-        "description": "A match flattened for the API, without the full criterion trace."
+        "description": "A match flattened for the API, including the explainability trace.\n\n`reasons` remains as a short, voice-friendly compatibility field. The\nstructured criteria are what web and operator surfaces should use when\nthey need to show exactly which requirement passed, failed, or is still\nunknown."
       },
       "NotificationOverviewOut": {
         "properties": {
@@ -4886,6 +6859,121 @@
           "controls_note"
         ],
         "title": "NotificationOverviewOut"
+      },
+      "ProviderFailureSimulationListOut": {
+        "properties": {
+          "generated_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Generated At"
+          },
+          "language_code": {
+            "type": "string",
+            "title": "Language Code"
+          },
+          "state_code": {
+            "type": "string",
+            "title": "State Code"
+          },
+          "simulations": {
+            "items": {
+              "$ref": "#/components/schemas/ProviderFailureSimulationOut"
+            },
+            "type": "array",
+            "title": "Simulations"
+          },
+          "note": {
+            "type": "string",
+            "title": "Note"
+          }
+        },
+        "type": "object",
+        "required": [
+          "generated_at",
+          "language_code",
+          "state_code",
+          "simulations",
+          "note"
+        ],
+        "title": "ProviderFailureSimulationListOut"
+      },
+      "ProviderFailureSimulationOut": {
+        "properties": {
+          "scenario": {
+            "type": "string",
+            "title": "Scenario"
+          },
+          "provider": {
+            "type": "string",
+            "title": "Provider"
+          },
+          "policy_provider": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Policy Provider"
+          },
+          "flag_key": {
+            "type": "string",
+            "title": "Flag Key"
+          },
+          "flag_enabled": {
+            "type": "boolean",
+            "title": "Flag Enabled"
+          },
+          "policy_enabled": {
+            "type": "boolean",
+            "title": "Policy Enabled"
+          },
+          "circuit_state": {
+            "type": "string",
+            "title": "Circuit State"
+          },
+          "configured": {
+            "type": "boolean",
+            "title": "Configured"
+          },
+          "current_posture": {
+            "type": "string",
+            "title": "Current Posture"
+          },
+          "expected_path": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Expected Path"
+          },
+          "user_facing_fallback": {
+            "type": "string",
+            "title": "User Facing Fallback"
+          },
+          "operator_action": {
+            "type": "string",
+            "title": "Operator Action"
+          }
+        },
+        "type": "object",
+        "required": [
+          "scenario",
+          "provider",
+          "policy_provider",
+          "flag_key",
+          "flag_enabled",
+          "policy_enabled",
+          "circuit_state",
+          "configured",
+          "current_posture",
+          "expected_path",
+          "user_facing_fallback",
+          "operator_action"
+        ],
+        "title": "ProviderFailureSimulationOut"
       },
       "ProviderListOut": {
         "properties": {
@@ -6039,6 +8127,17 @@
             ],
             "title": "Migration Revision"
           },
+          "deployment_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Deployment Id"
+          },
           "database_mode": {
             "type": "string",
             "title": "Database Mode"
@@ -6341,6 +8440,34 @@
           "routing_source": {
             "type": "string",
             "title": "Routing Source"
+          },
+          "routing_directory_entry_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Routing Directory Entry Id"
+          },
+          "routing_source_url": {
+            "type": "string",
+            "title": "Routing Source Url",
+            "default": ""
+          },
+          "routing_verified_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Routing Verified At"
           },
           "operator_notes": {
             "items": {

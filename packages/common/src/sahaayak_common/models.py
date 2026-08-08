@@ -69,6 +69,27 @@ class Language(SQLModel, table=True):
     is_active: bool = True
 
 
+class LanguageReadinessReview(SQLModel, table=True):
+    """Release evidence required before an expansion language is enabled."""
+
+    __tablename__ = "language_readiness_review"
+
+    language_code: str = Field(primary_key=True, foreign_key="language.code")
+    native_speaker_status: str = "pending"  # pending | approved | rejected
+    interface_status: str = "pending"
+    prompt_status: str = "pending"
+    content_status: str = "pending"
+    understanding_status: str = "pending"
+    voice_status: str = "pending"
+    accessibility_status: str = "pending"
+    evidence_url: str = ""
+    review_notes: str = ""
+    reviewed_by: str | None = None
+    reviewed_at: datetime | None = None
+    activated_at: datetime | None = None
+    updated_at: datetime = Field(default_factory=_utcnow)
+
+
 class State(SQLModel, table=True):
     __tablename__ = "state"
 
@@ -144,7 +165,67 @@ class Benefit(SQLModel, table=True):
         sa_column=Column(MutableDict.as_mutable(JSON), nullable=True),
     )
 
+    # Monotonic public-content revision. A revision is written to
+    # `benefit_version` before/after every workforce edit, review decision, or
+    # rollback. Keeping the counter on the current row avoids relying on
+    # timestamps for concurrency-sensitive rollback UX.
+    content_revision: int = 0
     is_active: bool = True
+
+
+class BenefitVersion(SQLModel, table=True):
+    """Immutable public snapshot of one benefit governance state.
+
+    The snapshot intentionally contains only benefit/provenance fields. It
+    never includes a caller profile, transcript, contact destination, or other
+    private session data. A rollback creates a new version rather than
+    deleting history.
+    """
+
+    __tablename__ = "benefit_version"
+    __table_args__ = (
+        Index(
+            "ix_benefit_version_benefit_version",
+            "benefit_id",
+            "version",
+            unique=True,
+        ),
+        Index("ix_benefit_version_benefit_created", "benefit_id", "created_at"),
+    )
+
+    id: str = Field(primary_key=True)
+    benefit_id: str = Field(foreign_key="benefit.id", index=True)
+    version: int = Field(index=True)
+    action: str = Field(index=True)  # baseline | edit | review | rollback | import
+    actor_id: str = Field(index=True)
+    actor_role: str = ""
+    reason: str = ""
+    snapshot: dict = Field(default_factory=dict, sa_column=json_dict())
+    created_at: datetime = Field(default_factory=_utcnow, index=True)
+
+
+class SourceFreshnessAlert(SQLModel, table=True):
+    """Deduplicated, actionable alert for a stale or incomplete source row."""
+
+    __tablename__ = "source_freshness_alert"
+    __table_args__ = (
+        Index("ix_source_freshness_alert_status_seen", "status", "last_seen_at"),
+        Index("ix_source_freshness_alert_dataset_status", "dataset", "status"),
+    )
+
+    id: str = Field(primary_key=True)
+    alert_key: str = Field(index=True, unique=True)
+    benefit_id: str | None = Field(default=None, foreign_key="benefit.id", index=True)
+    dataset: str = Field(index=True)
+    alert_type: str = Field(index=True)  # stale_source | missing_source | expired
+    severity: str = "warning"  # warning | critical
+    status: str = Field(default="open", index=True)  # open | acknowledged | resolved
+    message: str = ""
+    first_seen_at: datetime = Field(default_factory=_utcnow, index=True)
+    last_seen_at: datetime = Field(default_factory=_utcnow, index=True)
+    resolved_at: datetime | None = None
+    resolved_by: str | None = None
+    safe_metadata: dict = Field(default_factory=dict, sa_column=json_dict())
 
 
 class UserSession(SQLModel, table=True):
@@ -203,6 +284,42 @@ class SavedBenefit(SQLModel, table=True):
     session_id: str = Field(foreign_key="user_session.id", index=True)
     benefit_id: str = Field(foreign_key="benefit.id", index=True)
     created_at: datetime = Field(default_factory=_utcnow, index=True)
+
+
+class ApplicationTask(SQLModel, table=True):
+    """A private, durable checklist item for one saved benefit."""
+
+    __tablename__ = "application_task"
+    __table_args__ = (
+        Index(
+            "ix_application_task_session_benefit_status",
+            "session_id",
+            "benefit_id",
+            "status",
+        ),
+        Index(
+            "ix_application_task_session_benefit_title",
+            "session_id",
+            "benefit_id",
+            "kind",
+            "title",
+            unique=True,
+        ),
+    )
+
+    id: str = Field(primary_key=True)
+    session_id: str = Field(foreign_key="user_session.id", index=True)
+    benefit_id: str = Field(foreign_key="benefit.id", index=True)
+    kind: str = Field(index=True)  # document | application_step
+    title: str
+    description: str = ""
+    position: int = 0
+    status: str = Field(default="pending", index=True)  # pending | completed | skipped
+    due_at: datetime | None = Field(default=None, index=True)
+    completed_at: datetime | None = None
+    source_revision: int = 0
+    created_at: datetime = Field(default_factory=_utcnow, index=True)
+    updated_at: datetime = Field(default_factory=_utcnow)
 
 
 class BenefitIssueReport(SQLModel, table=True):
@@ -513,6 +630,79 @@ class ConversationTurnLog(SQLModel, table=True):
     created_at: datetime = Field(default_factory=_utcnow)
 
 
+class DepartmentDirectoryEntry(SQLModel, table=True):
+    """A source-attested department/help-centre routing record.
+
+    Rows are imported as pending and become usable only after a workforce
+    reviewer approves the source. Pincode and district are intentionally
+    separate match keys: a pincode is a useful postal hint, not a promise that
+    one office serves every address in that postal area.
+    """
+
+    __tablename__ = "department_directory_entry"
+    __table_args__ = (
+        Index(
+            "ix_department_directory_state_service_status",
+            "state_code",
+            "service_domain",
+            "approval_status",
+            "is_active",
+        ),
+        Index(
+            "ix_department_directory_district_service_status",
+            "state_code",
+            "district_name",
+            "service_domain",
+            "approval_status",
+            "is_active",
+        ),
+        Index(
+            "ix_department_directory_pincode_service_status",
+            "pincode",
+            "service_domain",
+            "approval_status",
+            "is_active",
+        ),
+        Index(
+            "ix_department_directory_prefix_service_status",
+            "pincode_prefix",
+            "service_domain",
+            "approval_status",
+            "is_active",
+        ),
+    )
+
+    id: str = Field(primary_key=True)
+    # Stable import key makes rerunning an official directory export
+    # idempotent without treating an edited source record as a new office.
+    entry_key: str = Field(index=True, unique=True)
+    state_code: str = Field(foreign_key="state.code", index=True)
+    district_code: str = ""
+    district_name: str = Field(index=True)
+    service_domain: str = Field(default="citizen_support", index=True)
+    pincode: str = Field(default="", index=True)
+    pincode_prefix: str = Field(default="", index=True)
+
+    department_code: str = ""
+    department_name: str
+    help_centre_name: str = ""
+    address: str = ""
+    phone: str = ""
+    email: str = ""
+    website_url: str = ""
+
+    source_name: str
+    source_url: str
+    source_record_id: str = ""
+    source_last_verified: datetime | None = None
+    approval_status: str = Field(default="pending", index=True)  # pending | approved | rejected
+    is_active: bool = Field(default=False, index=True)
+    priority: int = 100
+    safe_metadata: dict = Field(default_factory=dict, sa_column=json_dict())
+    created_at: datetime = Field(default_factory=_utcnow, index=True)
+    updated_at: datetime = Field(default_factory=_utcnow)
+
+
 class EscalationTicket(SQLModel, table=True):
     """A handoff to a human volunteer.
 
@@ -538,6 +728,9 @@ class EscalationTicket(SQLModel, table=True):
     department: str = "National welfare and citizen-support desk"
     routing_location: str = ""
     routing_source: str = "state_domain_fallback"
+    routing_directory_entry_id: str | None = Field(default=None, index=True)
+    routing_source_url: str = ""
+    routing_verified_at: datetime | None = None
     operator_notes: list[dict] = Field(default_factory=list, sa_column=json_list())
     created_at: datetime = Field(default_factory=_utcnow)
     updated_at: datetime = Field(default_factory=_utcnow)
@@ -587,6 +780,27 @@ class EvaluationRun(SQLModel, table=True):
     report_json: dict = Field(default_factory=dict, sa_column=json_dict())
     started_at: datetime = Field(default_factory=_utcnow, index=True)
     completed_at: datetime | None = None
+
+
+class DeploymentRevision(SQLModel, table=True):
+    """Safe release metadata captured once per distinct deployment build."""
+
+    __tablename__ = "deployment_revision"
+
+    id: str = Field(primary_key=True)
+    release_key: str = Field(index=True, unique=True)
+    environment: str = Field(index=True)
+    app_version: str = ""
+    git_commit_sha: str = "unknown"
+    image_digest: str = "unknown"
+    migration_revision: str | None = None
+    data_revision: str = ""
+    prompt_version: str = ""
+    model_versions: dict = Field(default_factory=dict, sa_column=json_dict())
+    active_flags: dict = Field(default_factory=dict, sa_column=json_dict())
+    configuration: dict = Field(default_factory=dict, sa_column=json_dict())
+    deployed_at: datetime = Field(default_factory=_utcnow, index=True)
+    created_at: datetime = Field(default_factory=_utcnow)
 
 
 class TelemetryEvent(SQLModel, table=True):

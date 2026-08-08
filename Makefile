@@ -1,7 +1,7 @@
 .DEFAULT_GOAL := help
 .PHONY: help setup up down infra api web lint fmt test check types seed validate-data migrate \
 pipeline extract prefilter structure spotcheck jobs jobs-state jobs-ncs evaluate retention rate-limit-smoke \
-notifications notifications-dry-run logs-api ps clean
+notifications notifications-dry-run freshness-scan language-release-check logs-api ps clean
 
 help: ## Show every available target
 	@grep -hE '^[a-zA-Z_-]+:.*?## ' $(MAKEFILE_LIST) \
@@ -66,6 +66,12 @@ notifications: ## Dispatch one batch of due external-channel reminders
 
 notifications-dry-run: ## Show which reminders are due without sending anything
 	uv run python scripts/14_run_notification_worker.py --dry-run
+
+freshness-scan: ## Scan active sources and persist deduplicated freshness alerts
+	uv run python scripts/15_scan_source_freshness.py
+
+language-release-check: ## Validate a locale's prompt bundle and review evidence
+	uv run python scripts/17_validate_language_release.py --all
 
 migrate: ## Apply all Alembic migrations to the configured database
 	uv run python -m alembic upgrade head

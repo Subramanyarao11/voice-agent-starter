@@ -280,6 +280,8 @@ def to_response(session: UserSession, state: AgentState) -> TurnResponse:
                 verdict=m.verdict.value,
                 confidence=m.confidence,
                 reasons=_match_reasons(m),
+                criteria=m.outcomes,
+                caveats=m.caveats,
                 verification_status=m.verification_status,
                 source_title=m.source_title,
                 source_document_url=m.source_document_url,

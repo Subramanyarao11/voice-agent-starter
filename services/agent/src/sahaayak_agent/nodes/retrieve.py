@@ -24,6 +24,8 @@ async def answer_from_knowledge(state: AgentState, deps: GraphDeps) -> dict:
         result = await deps.retrieval.answer(
             state.transcript,
             language_code=state.language_code,
+            subject=state.session_id,
+            state_code=state.state_code,
         )
     except (BudgetError, RagUnavailable) as exc:
         log.warning(

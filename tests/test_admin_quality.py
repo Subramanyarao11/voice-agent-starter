@@ -75,3 +75,33 @@ def test_admin_evaluation_history_is_visible_and_guest_is_rejected(client):
         headers={"Authorization": f"Bearer {guest.json()['access_token']}"},
     )
     assert rejected.status_code in {401, 403}
+
+
+def test_admin_deployment_comparison_and_failure_simulation_are_dry_run_only(client):
+    comparison = client.get(
+        "/api/admin/system/deployments/compare?limit=10",
+        headers=ADMIN,
+    )
+    assert comparison.status_code == 200
+    comparison_body = comparison.json()
+    assert comparison_body["current"] is not None
+    assert comparison_body["current"]["migration_revision"] is None
+    assert comparison_body["history"]
+
+    simulations = client.get(
+        "/api/admin/providers/simulations?language_code=kn&state_code=KA",
+        headers=ADMIN,
+    )
+    assert simulations.status_code == 200
+    simulation_body = simulations.json()
+    assert simulation_body["language_code"] == "kn"
+    assert simulation_body["state_code"] == "KA"
+    assert {item["scenario"] for item in simulation_body["simulations"]} >= {
+        "stt_failure",
+        "tts_failure",
+        "rag_failure",
+        "sms_failure",
+        "whatsapp_failure",
+        "email_failure",
+    }
+    assert "never calls a provider" in simulation_body["note"]

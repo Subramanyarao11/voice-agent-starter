@@ -12,7 +12,7 @@ from typing import Literal
 from pydantic import BaseModel, Field
 
 from sahaayak_contracts.domain import Domain, Intent, VerificationStatus
-from sahaayak_contracts.eligibility import EligibilityMatchResult
+from sahaayak_contracts.eligibility import CriterionOutcome, EligibilityMatchResult
 from sahaayak_contracts.retrieval import RetrievedSource
 from sahaayak_contracts.slots import SlotName
 
@@ -83,7 +83,13 @@ class TurnRequest(BaseModel):
 
 
 class MatchSummary(BaseModel):
-    """A match flattened for the API, without the full criterion trace."""
+    """A match flattened for the API, including the explainability trace.
+
+    `reasons` remains as a short, voice-friendly compatibility field. The
+    structured criteria are what web and operator surfaces should use when
+    they need to show exactly which requirement passed, failed, or is still
+    unknown.
+    """
 
     benefit_id: str
     benefit_name: str
@@ -91,6 +97,8 @@ class MatchSummary(BaseModel):
     verdict: str
     confidence: float
     reasons: list[str] = Field(default_factory=list)
+    criteria: list[CriterionOutcome] = Field(default_factory=list)
+    caveats: list[str] = Field(default_factory=list)
     verification_status: VerificationStatus = VerificationStatus.ILLUSTRATIVE
     source_title: str = ""
     source_document_url: str = ""

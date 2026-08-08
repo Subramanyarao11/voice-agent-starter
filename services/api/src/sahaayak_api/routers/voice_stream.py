@@ -1,20 +1,22 @@
-"""Chunked browser voice transport with sentence-level response audio.
+"""Browser voice transport with editable transcripts and streamed audio.
 
-The browser sends short MediaRecorder chunks over a WebSocket and uses local
-voice-activity detection to decide when an utterance ends. OpenAI Whisper still
-needs a complete utterance today, so the server buffers only the current turn,
-transcribes it once, and starts Sarvam synthesis one sentence at a time. This
-reduces time-to-first-audio without pretending that the current STT provider is
-incremental.
+Modern browsers send small 24 kHz PCM frames. When the opt-in OpenAI Realtime
+transcription bridge is enabled, those frames are forwarded incrementally and
+partial transcript deltas are surfaced to the browser. The default path still
+accepts MediaRecorder containers and batch-transcribes the completed utterance,
+so an unconfigured realtime provider never breaks voice fallback. In both paths
+the caller reviews or edits the transcript before the reasoning graph runs.
 """
 
 from __future__ import annotations
 
 import asyncio
 import base64
+import io
 import json
 import re
-from typing import Any
+import wave
+from typing import Any, Literal
 
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 from pydantic import BaseModel, Field, ValidationError
@@ -25,7 +27,7 @@ from sahaayak_api.browser_auth import principal_for_access_token
 from sahaayak_api.deps import get_runtime, get_voice
 from sahaayak_api.rate_limit import enforce_rate_limit
 from sahaayak_api.telemetry import record_telemetry
-from sahaayak_common import get_logger, get_session
+from sahaayak_common import feature_flag_enabled, get_logger, get_session
 
 log = get_logger(__name__)
 
@@ -34,6 +36,7 @@ router = APIRouter(tags=["conversation"])
 MAX_STREAM_AUDIO_BYTES = 10 * 1024 * 1024
 MAX_STREAM_CHUNKS = 480
 MAX_STREAM_SECONDS = 90
+TRANSCRIPT_REVIEW_SECONDS = 120
 
 
 class StreamStart(BaseModel):
@@ -42,7 +45,14 @@ class StreamStart(BaseModel):
     language_code: str | None = Field(default=None, max_length=16)
     state_code: str | None = Field(default=None, max_length=16)
     mime_type: str | None = Field(default=None, max_length=80)
+    audio_format: Literal["container", "pcm16"] = "container"
+    sample_rate: int = Field(default=24_000, ge=8_000, le=48_000)
     speak: bool = True
+
+
+class TranscriptSubmission(BaseModel):
+    type: Literal["submit_transcript"]
+    text: str = Field(min_length=1, max_length=2_000)
 
 
 @router.websocket("/api/voice/stream")
@@ -52,6 +62,8 @@ async def voice_stream(websocket: WebSocket) -> None:
     db_dependency = get_session()
     db_session = next(db_dependency)
     processing: asyncio.Task[None] | None = None
+    transcript_future: asyncio.Future[str | None] | None = None
+    realtime_session: Any = None
     try:
         start = await _receive_start(websocket)
         if start is None:
@@ -67,11 +79,62 @@ async def voice_stream(websocket: WebSocket) -> None:
         voice = get_voice()
         language_code = (start.language_code or principal.language_code).strip()[:16]
         state_code = (start.state_code or principal.state_code).strip()[:16]
+        if not feature_flag_enabled(
+            "voice_streaming",
+            subject=principal.session_id,
+            language_code=language_code,
+            state_code=state_code,
+        ):
+            await _send_error(
+                websocket,
+                "voice_streaming_disabled",
+                "Streaming voice is not available for this rollout cohort yet.",
+            )
+            await websocket.close(code=1013)
+            return
+        if start.audio_format == "pcm16" and start.sample_rate != 24_000:
+            await _send_error(
+                websocket,
+                "unsupported_audio_format",
+                "PCM streaming must use a 24 kHz sample rate.",
+            )
+            await websocket.close(code=1003)
+            return
         speak = start.speak
         chunks: list[bytes] = []
         total_bytes = 0
 
-        await websocket.send_json({"type": "ready", "session_id": principal.session_id})
+        if start.audio_format == "pcm16" and isinstance(voice, VoiceService):
+            try:
+                realtime_session = await voice.start_realtime_transcription(
+                    language_code=language_code,
+                    subject=principal.session_id,
+                    state_code=state_code,
+                    on_delta=lambda delta: _send_transcript_delta(websocket, delta),
+                )
+            except VoiceUnavailable:
+                # PCM can still be wrapped as a WAV for the batch provider. The
+                # browser does not need to know which provider path is active.
+                realtime_session = None
+                await websocket.send_json(
+                    {
+                        "type": "stream_notice",
+                        "code": "realtime_stt_fallback",
+                        "message": (
+                            "Realtime transcription is unavailable; using the "
+                            "buffered voice fallback."
+                        ),
+                    }
+                )
+
+        await websocket.send_json(
+            {
+                "type": "ready",
+                "session_id": principal.session_id,
+                "audio_format": start.audio_format,
+                "realtime_stt": realtime_session is not None,
+            }
+        )
         while True:
             message = await websocket.receive()
             if message.get("type") == "websocket.disconnect":
@@ -88,7 +151,7 @@ async def voice_stream(websocket: WebSocket) -> None:
                     )
                     continue
                 if (
-                    len(chunks) >= MAX_STREAM_CHUNKS
+                    (start.audio_format == "container" and len(chunks) >= MAX_STREAM_CHUNKS)
                     or total_bytes + len(binary) > MAX_STREAM_AUDIO_BYTES
                 ):
                     await _send_error(
@@ -99,7 +162,10 @@ async def voice_stream(websocket: WebSocket) -> None:
                     chunks.clear()
                     total_bytes = 0
                     continue
-                chunks.append(binary)
+                if realtime_session is not None:
+                    await realtime_session.append(binary)
+                else:
+                    chunks.append(binary)
                 total_bytes += len(binary)
                 continue
 
@@ -123,7 +189,7 @@ async def voice_stream(websocket: WebSocket) -> None:
 
             event_type = event.get("type")
             if event_type == "end_turn":
-                if not chunks:
+                if total_bytes <= 0:
                     await _send_error(
                         websocket,
                         "empty_audio",
@@ -148,9 +214,16 @@ async def voice_stream(websocket: WebSocket) -> None:
                     chunks.clear()
                     total_bytes = 0
                     continue
-                audio = b"".join(chunks)
+                audio = (
+                    b""
+                    if realtime_session is not None
+                    else _pcm16_to_wav(b"".join(chunks), start.sample_rate)
+                    if start.audio_format == "pcm16"
+                    else b"".join(chunks)
+                )
                 chunks.clear()
                 total_bytes = 0
+                transcript_future = asyncio.get_running_loop().create_future()
                 processing = asyncio.create_task(
                     _process_turn(
                         websocket,
@@ -160,6 +233,8 @@ async def voice_stream(websocket: WebSocket) -> None:
                         language_code=language_code,
                         state_code=state_code,
                         audio=audio,
+                        realtime_session=realtime_session,
+                        transcript_future=transcript_future,
                         speak=speak,
                         filename=(
                             "sahaayak-stream.ogg"
@@ -171,6 +246,8 @@ async def voice_stream(websocket: WebSocket) -> None:
                 continue
 
             if event_type in {"interrupt", "cancel"}:
+                if transcript_future is not None and not transcript_future.done():
+                    transcript_future.set_result(None)
                 if processing is not None and not processing.done():
                     processing.cancel()
                     try:
@@ -180,7 +257,43 @@ async def voice_stream(websocket: WebSocket) -> None:
                 processing = None
                 chunks.clear()
                 total_bytes = 0
+                if realtime_session is not None:
+                    await realtime_session.cancel()
+                    realtime_session = None
                 await websocket.send_json({"type": "interrupted"})
+                continue
+
+            if event_type == "submit_transcript":
+                if transcript_future is None or transcript_future.done():
+                    await _send_error(
+                        websocket,
+                        "transcript_not_editable",
+                        "There is no voice transcript waiting for review.",
+                    )
+                    continue
+                try:
+                    submission = TranscriptSubmission.model_validate(event)
+                except ValidationError:
+                    await _send_error(
+                        websocket,
+                        "invalid_transcript",
+                        "Please provide a transcript between 1 and 2,000 characters.",
+                    )
+                    continue
+                cleaned_text = submission.text.strip()
+                if not cleaned_text:
+                    await _send_error(
+                        websocket,
+                        "invalid_transcript",
+                        "Please provide a transcript between 1 and 2,000 characters.",
+                    )
+                    continue
+                transcript_future.set_result(cleaned_text)
+                continue
+
+            if event_type == "cancel_transcript":
+                if transcript_future is not None and not transcript_future.done():
+                    transcript_future.set_result(None)
                 continue
 
             if event_type == "ping":
@@ -201,13 +314,20 @@ async def voice_stream(websocket: WebSocket) -> None:
     finally:
         if processing is not None and not processing.done():
             processing.cancel()
+        if transcript_future is not None and not transcript_future.done():
+            transcript_future.set_result(None)
+        if realtime_session is not None:
+            await realtime_session.close()
         db_dependency.close()
         db_session.close()
 
 
 async def _receive_start(websocket: WebSocket) -> StreamStart | None:
     try:
-        message = await asyncio.wait_for(websocket.receive_json(), timeout=10)
+        # Microphone permission prompts can legitimately take longer than ten
+        # seconds, especially on mobile browsers. Keep the socket bounded
+        # while still giving the caller time to approve the device prompt.
+        message = await asyncio.wait_for(websocket.receive_json(), timeout=30)
         return StreamStart.model_validate(message)
     except (TimeoutError, ValidationError, WebSocketDisconnect):
         await _send_error(
@@ -228,15 +348,23 @@ async def _process_turn(
     language_code: str,
     state_code: str,
     audio: bytes,
+    realtime_session: Any,
+    transcript_future: asyncio.Future[str | None],
     speak: bool,
     filename: str,
 ) -> None:
     try:
-        transcription = await voice.transcribe(
-            audio,
-            language_code=language_code,
-            filename=filename,
-        )
+        if realtime_session is not None:
+            transcription = await realtime_session.finish()
+        else:
+            transcription = await _transcribe_for_session(
+                voice,
+                audio,
+                language_code=language_code,
+                state_code=state_code,
+                session_id=caller_id,
+                filename=filename,
+            )
     except VoiceUnavailable:
         await _send_error(
             websocket,
@@ -253,14 +381,52 @@ async def _process_turn(
         )
         return
 
-    await websocket.send_json({
-        "type": "transcript",
-        "text": transcription.text,
-        "provider": transcription.provider,
-    })
+    original_transcript = transcription.text.strip()
+    if not original_transcript:
+        await _send_error(
+            websocket,
+            "empty_transcript",
+            "I could not make out any words. Please try speaking again.",
+        )
+        return
+
+    await websocket.send_json(
+        {
+            "type": "transcript",
+            "text": original_transcript,
+            "provider": transcription.provider,
+            "editable": True,
+        }
+    )
+    try:
+        final_transcript = await asyncio.wait_for(
+            asyncio.shield(transcript_future),
+            timeout=TRANSCRIPT_REVIEW_SECONDS,
+        )
+    except TimeoutError:
+        await _send_error(
+            websocket,
+            "transcript_review_timeout",
+            "The transcript review timed out. Please record that question again.",
+        )
+        return
+    if final_transcript is None:
+        await websocket.send_json({"type": "transcript_cancelled"})
+        await websocket.send_json({"type": "turn_end", "tts_chunks": 0, "cancelled": True})
+        return
+
+    final_transcript = final_transcript.strip()
+    transcript_edited = final_transcript != original_transcript
+    await websocket.send_json(
+        {
+            "type": "transcript_accepted",
+            "text": final_transcript,
+            "edited": transcript_edited,
+        }
+    )
     session, state = await runtime.run_turn(
         caller_id=caller_id,
-        transcript=transcription.text,
+        transcript=final_transcript,
         language_code=language_code,
         state_code=state_code,
     )
@@ -274,7 +440,13 @@ async def _process_turn(
     if speak and response.response_text and voice.tts_available:
         for index, sentence in enumerate(_sentence_chunks(response.response_text)):
             try:
-                spoken = await voice.speak(sentence, language_code=language_code)
+                spoken = await _speak_for_session(
+                    voice,
+                    sentence,
+                    language_code=language_code,
+                    state_code=state_code,
+                    session_id=caller_id,
+                )
             except asyncio.CancelledError:
                 raise
             except Exception as exc:  # text response remains available
@@ -309,9 +481,73 @@ async def _process_turn(
             "tts_provider": tts_provider,
             "tts_chunks": tts_chunks,
             "tts_cache_hits": tts_cache_hits,
+            "transcript_edited": transcript_edited,
+            "transcript_characters": len(final_transcript),
         },
     )
-    await websocket.send_json({"type": "turn_end", "tts_chunks": tts_chunks})
+    await websocket.send_json(
+        {
+            "type": "turn_end",
+            "tts_chunks": tts_chunks,
+            "transcript_edited": transcript_edited,
+        }
+    )
+
+
+async def _transcribe_for_session(
+    voice: VoiceService,
+    audio: bytes,
+    *,
+    language_code: str,
+    state_code: str,
+    session_id: str,
+    filename: str,
+):
+    if isinstance(voice, VoiceService):
+        return await voice.transcribe(
+            audio,
+            language_code=language_code,
+            filename=filename,
+            subject=session_id,
+            state_code=state_code,
+        )
+    return await voice.transcribe(audio, language_code=language_code, filename=filename)
+
+
+async def _speak_for_session(
+    voice: VoiceService,
+    text: str,
+    *,
+    language_code: str,
+    state_code: str,
+    session_id: str,
+):
+    if isinstance(voice, VoiceService):
+        return await voice.speak(
+            text,
+            language_code=language_code,
+            subject=session_id,
+            state_code=state_code,
+        )
+    return await voice.speak(text, language_code=language_code)
+
+
+async def _send_transcript_delta(websocket: WebSocket, delta: str) -> None:
+    try:
+        await websocket.send_json({"type": "transcript_delta", "text": delta})
+    except Exception:
+        pass
+
+
+def _pcm16_to_wav(audio: bytes, sample_rate: int) -> bytes:
+    """Wrap streamed mono PCM in a valid container for batch STT fallback."""
+    output = io.BytesIO()
+    with wave.open(output, "wb") as writer:
+        writer.setnchannels(1)
+        writer.setsampwidth(2)
+        writer.setframerate(sample_rate)
+        writer.writeframes(audio)
+    return output.getvalue()
 
 
 def _sentence_chunks(text: str, *, max_characters: int = 240) -> list[str]:

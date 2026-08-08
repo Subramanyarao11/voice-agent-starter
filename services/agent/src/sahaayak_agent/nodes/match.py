@@ -4,8 +4,8 @@ from __future__ import annotations
 
 from sahaayak_agent import matcher, repository
 from sahaayak_agent.nodes.deps import GraphDeps
-from sahaayak_common import get_logger, settings
-from sahaayak_contracts import AgentState, MatchVerdict, VerificationStatus
+from sahaayak_common import feature_flag_enabled, get_logger, settings
+from sahaayak_contracts import AgentState, Domain, MatchVerdict, VerificationStatus
 
 log = get_logger(__name__)
 
@@ -20,6 +20,19 @@ MAX_QUESTIONS = 8
 
 async def match(state: AgentState, deps: GraphDeps) -> dict:
     if state.domain is None:
+        return {"matches": []}
+
+    if state.domain is Domain.JOB and not feature_flag_enabled(
+        "government_jobs",
+        subject=state.session_id,
+        language_code=state.language_code,
+        state_code=state.state_code,
+    ):
+        log.info(
+            "government_jobs_rollout_excluded",
+            session_id=state.session_id,
+            state_code=state.state_code,
+        )
         return {"matches": []}
 
     with deps.session_factory() as session:

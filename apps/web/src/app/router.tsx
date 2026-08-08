@@ -72,6 +72,12 @@ const adminEscalationsRoute = createRoute({
   component: () => <AdminRoutePage view="escalations" />,
 });
 
+const adminDirectoryRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/admin/directory",
+  component: () => <AdminRoutePage view="directory" />,
+});
+
 const adminBenefitsRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/admin/benefits",
@@ -129,6 +135,7 @@ const routeTree = rootRoute.addChildren([
   adminConversationsRoute,
   adminTelemetryRoute,
   adminEscalationsRoute,
+  adminDirectoryRoute,
   adminBenefitsRoute,
   adminProvidersRoute,
   adminMessagingRoute,

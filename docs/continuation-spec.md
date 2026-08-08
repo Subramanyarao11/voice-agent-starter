@@ -13,6 +13,13 @@
 > required-vs-nice-to-have plan; this continuation spec remains useful as the
 > historical scaffold checklist.
 
+> **2026-08-09 status note:** The working tree now includes benefit governance,
+> application tasks, criterion evidence, runtime rollout enforcement,
+> deployment/provider operations, streaming transcript review, source-attested
+> department routing, and an audited eight-locale release gate. The expansion
+> languages remain intentionally inactive until native-speaker evidence and
+> complete prompt bundles are supplied.
+
 ---
 
 ## 0. How to use this document
@@ -122,6 +129,10 @@ understand → gather → (match → choose_followup)? → assess_escalation →
 **Voice layer (implemented, not fully exercised live):**
 
 - `OpenAIWhisperSTT`
+- Opt-in OpenAI Realtime PCM transcription with streamed transcript deltas
+- Browser WebSocket PCM capture with local VAD, interruption, and a bounded
+  MediaRecorder/WAV fallback
+- Caller transcript review/edit before the reasoning graph runs
 - `SarvamBulbulTTS` (chunk + merge WAV)
 - Cache-first `VoiceService` (SHA-256 keys, Redis or in-memory)
 
@@ -400,7 +411,8 @@ final eligibility authority. See [`docs/rag-operations.md`](rag-operations.md).
    - eligibility result playback
 5. Confirm TTS cache hits on second run of same canned questions (logs: `tts_cache_hit`)
 6. Confirm long answers are not truncated (sentence chunking already in Sarvam client)
-7. Optionally switch `OPENAI_TRANSCRIPTION_MODEL` / streaming later — **not blocking**
+7. Optionally enable `OPENAI_REALTIME_STT_ENABLED=true` for a tightly bounded
+   real-key staging test; the default remains batch Whisper for cost control.
 
 **Acceptance:**
 
@@ -408,6 +420,8 @@ final eligibility authority. See [`docs/rag-operations.md`](rag-operations.md).
 - [ ] Canned questions show cache hits after prewarm
 - [ ] Sarvam credit burn logged / estimated; no regen loops in dev
 - [ ] Failure modes: STT empty → “didn’t understand” + re-ask pending slot
+- [ ] Realtime transcript deltas, caller edits, and sentence-level audio are
+      captured as repeatable browser evidence
 
 **Suggested commits:** only code fixes found during live testing (e.g. Sarvam field quirks)
 

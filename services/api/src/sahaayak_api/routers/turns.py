@@ -84,9 +84,12 @@ async def take_voice_turn(
     language = language_code or principal.language_code
 
     try:
-        transcription = await voice.transcribe(
+        transcription = await _transcribe_for_session(
+            voice,
             audio_bytes,
             language_code=language,
+            state_code=state_code or principal.state_code,
+            session_id=principal.session_id,
             filename=audio.filename or "audio.wav",
         )
     except VoiceUnavailable as exc:
@@ -107,7 +110,13 @@ async def take_voice_turn(
     tts_billed_characters = 0
     if speak and state.response_text and voice.tts_available:
         try:
-            spoken = await voice.speak(state.response_text, language_code=language)
+            spoken = await _speak_for_session(
+                voice,
+                state.response_text,
+                language_code=language,
+                state_code=session.state_code,
+                session_id=session.id,
+            )
             if spoken.audio:
                 response.audio_base64 = base64.b64encode(spoken.audio).decode("ascii")
                 response.audio_mime_type = spoken.mime_type
@@ -134,6 +143,45 @@ async def take_voice_turn(
         },
     )
     return response
+
+
+async def _transcribe_for_session(
+    voice: VoiceService,
+    audio: bytes,
+    *,
+    language_code: str,
+    state_code: str,
+    session_id: str,
+    filename: str,
+):
+    """Pass rollout identity to the built-in service while keeping test seams small."""
+    if isinstance(voice, VoiceService):
+        return await voice.transcribe(
+            audio,
+            language_code=language_code,
+            filename=filename,
+            subject=session_id,
+            state_code=state_code,
+        )
+    return await voice.transcribe(audio, language_code=language_code, filename=filename)
+
+
+async def _speak_for_session(
+    voice: VoiceService,
+    text: str,
+    *,
+    language_code: str,
+    state_code: str,
+    session_id: str,
+):
+    if isinstance(voice, VoiceService):
+        return await voice.speak(
+            text,
+            language_code=language_code,
+            subject=session_id,
+            state_code=state_code,
+        )
+    return await voice.speak(text, language_code=language_code)
 
 
 def _turn_outcome(state) -> str:

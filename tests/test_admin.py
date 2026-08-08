@@ -158,6 +158,46 @@ def test_admin_provider_policy_update_and_rollback_is_audited(client):
             db.delete(row)
 
 
+def test_admin_language_release_gate_requires_bundle_and_attestation(client):
+    languages = {row["code"]: row for row in client.get("/api/admin/languages").json()}
+    assert languages["ta"]["native_speaker_status"] == "pending"
+    assert languages["ta"]["active"] is False
+
+    base_payload = {
+        "native_speaker_status": "pending",
+        "interface_status": "pending",
+        "prompt_status": "pending",
+        "content_status": "pending",
+        "understanding_status": "pending",
+        "voice_status": "pending",
+        "accessibility_status": "pending",
+        "evidence_url": "https://example.test/ta-review",
+        "review_notes": "Native review packet is not complete yet",
+    }
+    missing_attestation = client.put(
+        "/api/admin/languages/ta/review",
+        json=base_payload,
+    )
+    assert missing_attestation.status_code == 400
+
+    saved = client.put(
+        "/api/admin/languages/ta/review",
+        json={**base_payload, "attestation": True},
+    )
+    assert saved.status_code == 200
+    assert saved.json()["rollout_status"] == "not ready"
+
+    prompt_without_bundle = client.put(
+        "/api/admin/languages/ta/review",
+        json={
+            **base_payload,
+            "prompt_status": "approved",
+            "attestation": True,
+        },
+    )
+    assert prompt_without_bundle.status_code == 409
+
+
 async def test_managed_oidc_token_requires_mfa_and_maps_role(monkeypatch):
     import json
     from datetime import UTC, datetime, timedelta

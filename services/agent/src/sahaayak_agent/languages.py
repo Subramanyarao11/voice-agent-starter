@@ -48,6 +48,8 @@ PLANNED_PROFILES = [
     LanguageProfile(code="or", name="Odia", native_name="ଓଡ଼ିଆ", tts_voice_id="anushka"),
 ]
 
+ALL_PROFILES = [*DEFAULT_CATALOG.profiles, *PLANNED_PROFILES]
+
 
 DEFAULT_STATES: list[tuple[str, str, str]] = [
     # (state code, name, primary language)
@@ -61,4 +63,8 @@ DEFAULT_STATES: list[tuple[str, str, str]] = [
 
 def get_profile(code: str) -> LanguageProfile:
     """Resolve a language, falling back to English rather than failing a call."""
-    return DEFAULT_CATALOG.get(code) or DEFAULT_CATALOG.get("en")  # type: ignore[return-value]
+    normalized = code.strip().lower()
+    return next(
+        (profile for profile in ALL_PROFILES if profile.code == normalized),
+        DEFAULT_CATALOG.get("en"),
+    )  # type: ignore[return-value]

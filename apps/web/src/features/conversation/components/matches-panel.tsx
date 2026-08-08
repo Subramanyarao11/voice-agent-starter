@@ -6,6 +6,7 @@ import { formatConfidence } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { CriterionEvidence } from "@/features/conversation/components/criterion-evidence";
 
 type MatchesPanelProps = {
   turn: TurnResponse | null;
@@ -112,6 +113,7 @@ function MatchCard({
         </div>
         <h3 id={`match-${match.benefit_id}`} className="mt-5 text-lg font-bold leading-snug text-paper">{match.benefit_name}</h3>
         <p className="mt-3 min-h-12 text-sm leading-6 text-paper/60">{match.reasons?.[0] ?? "No additional reason was returned."}</p>
+        <CriterionEvidence match={match} compact />
         <div className="mt-4 flex flex-wrap items-center gap-2 text-xs text-paper/45">
           <Badge variant={match.verification_status === "human_verified" ? "success" : "warning"}>
             {verificationLabel}

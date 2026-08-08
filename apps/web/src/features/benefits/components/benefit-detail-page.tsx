@@ -20,6 +20,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { useBenefitDetailQuery } from "@/features/benefits/queries";
 import { ReportIssuePanel } from "@/features/benefits/components/report-issue-panel";
+import { CriterionEvidence } from "@/features/conversation/components/criterion-evidence";
 import { useConversationStore } from "@/features/conversation/store";
 import { useGuestSessionStore } from "@/features/session/store";
 import type { BenefitDetail } from "@/lib/api";
@@ -204,6 +205,7 @@ export function BenefitDetailPage() {
                       {currentMatch.reasons.map((reason) => <li key={reason}>{reason}</li>)}
                     </ul>
                   )}
+                  <CriterionEvidence match={currentMatch} />
                   <p className="text-xs text-paper/45">
                     Confidence: {Math.round(currentMatch.confidence * 100)}%. Missing or
                     source-ambiguous conditions should be confirmed with a person.

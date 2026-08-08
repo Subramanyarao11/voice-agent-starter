@@ -24,20 +24,30 @@ are labelled as such rather than being silently treated as on time.
 
 ## Routing behavior
 
-New tickets receive a deterministic fallback route from:
+New tickets first try an approved, recently verified directory route from:
+
+1. an exact pincode match;
+2. a pincode-prefix match; or
+3. an exact district match for the session state and conversation domain.
+
+When no current directory row matches, tickets receive the deterministic
+fallback route from:
 
 1. the session state code;
 2. the conversation domain (scheme, scholarship, or job); and
 3. a caller-stated city/district value when one exists.
 
-This is a routing hint, not an authoritative government directory. The admin
-console displays `state_domain_fallback` and asks the operator to confirm the
-real department or help centre. Operators/admins can replace the department and
-location hint; that change is marked `operator_override` and audited.
+Approved directory matches are marked `authoritative_directory` and retain the
+directory row ID, source URL, and verification timestamp on the ticket. The
+admin console displays that provenance. Stale or unapproved rows are never used
+for runtime routing; a `state_domain_fallback` is still only a routing hint and
+must be confirmed before referral. Operators/admins can replace the department
+and location hint; that change is marked `operator_override` and audited.
 
 Do not infer a department, district, or pincode from an unverified transcript.
-If an authoritative state/district directory is added later, it should become a
-versioned adapter that writes a distinct routing source and confidence value.
+Directory data is imported with `scripts/16_import_department_directory.py` and
+must carry a source name, URL, and verification timestamp. See
+`data/directory/README.md` for the official-source format and the review gate.
 
 ## API
 
@@ -66,6 +76,7 @@ curl http://localhost:8000/health
 ```
 
 Before production, configure the actual department directory or a staffed
-operator process, define SLA escalation alerts, test two concurrent claims
-against Postgres, and confirm retention/deletion rules for transcript excerpts
-and caller context.
+operator process, import and human-approve the applicable district/pincode
+records, define SLA escalation alerts, test two concurrent claims against
+Postgres, and confirm retention/deletion rules for transcript excerpts and
+caller context.

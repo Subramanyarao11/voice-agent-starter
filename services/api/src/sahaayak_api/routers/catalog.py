@@ -13,7 +13,15 @@ from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 from sqlmodel import Session, func, select
 
-from sahaayak_common import Benefit, DataImportRun, Language, State, get_session
+from sahaayak_common import (
+    Benefit,
+    DataImportRun,
+    Language,
+    State,
+    get_session,
+    language_rollout_enabled,
+    state_rollout_enabled,
+)
 from sahaayak_contracts import Domain, VerificationStatus
 
 router = APIRouter(prefix="/api", tags=["catalog"])
@@ -75,13 +83,32 @@ class BenefitDetailOut(BaseModel):
 @router.get("/languages", response_model=list[LanguageOut])
 def list_languages(db: Session = Depends(get_session)) -> list[LanguageOut]:
     rows = db.exec(select(Language).order_by(Language.code)).all()
-    return [LanguageOut.model_validate(row.model_dump()) for row in rows]
+    return [
+        LanguageOut(
+            code=row.code,
+            name=row.name,
+            native_name=row.native_name,
+            is_active=(
+                language_rollout_enabled(row.code)
+                and row.is_active
+            ),
+        )
+        for row in rows
+    ]
 
 
 @router.get("/states", response_model=list[StateOut])
 def list_states(db: Session = Depends(get_session)) -> list[StateOut]:
     rows = db.exec(select(State).order_by(State.code)).all()
-    return [StateOut.model_validate(row.model_dump()) for row in rows]
+    return [
+        StateOut(
+            code=row.code,
+            name=row.name,
+            primary_language_code=row.primary_language_code,
+            is_active=state_rollout_enabled(row.code),
+        )
+        for row in rows
+    ]
 
 
 @router.get("/coverage", response_model=CoverageOut)

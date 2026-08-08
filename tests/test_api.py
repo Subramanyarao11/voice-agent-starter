@@ -175,6 +175,12 @@ def test_match_response_carries_verification_status_and_source(client, guest_ses
     assert matches
     assert {match["verification_status"] for match in matches} == {"illustrative"}
     assert all(match["source_document_url"] for match in matches)
+    assert all("criteria" in match and "caveats" in match for match in matches)
+    assert any(
+        criterion["status"] in {"pass", "unknown"}
+        for match in matches
+        for criterion in match["criteria"]
+    )
 
 
 def test_an_inbound_request_id_is_echoed_back(client):

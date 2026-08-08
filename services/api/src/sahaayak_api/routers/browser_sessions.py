@@ -10,7 +10,16 @@ from sqlmodel import Session, select
 
 from sahaayak_api.browser_auth import new_access_token, token_digest
 from sahaayak_api.rate_limit import apply_rate_limit_headers, enforce_rate_limit
-from sahaayak_common import Language, State, UserSession, get_session, new_id, settings
+from sahaayak_common import (
+    Language,
+    State,
+    UserSession,
+    get_session,
+    language_rollout_enabled,
+    new_id,
+    settings,
+    state_rollout_enabled,
+)
 
 router = APIRouter(prefix="/api/browser-sessions", tags=["browser sessions"])
 
@@ -38,8 +47,20 @@ async def create_browser_session(
     decision = await enforce_rate_limit(request, session_id=None, bucket="session_create")
     apply_rate_limit_headers(response, decision)
 
-    language_code = _active_language(db, payload.language_code or settings.default_language)
-    state_code = _active_state(db, payload.state_code or settings.default_state)
+    # A fresh opaque cohort key makes percentage rollout deterministic for the
+    # lifetime of this guest session without using an IP address as identity.
+    rollout_subject = new_id("cohort")
+    state_code = _active_state(
+        db,
+        payload.state_code or settings.default_state,
+        subject=rollout_subject,
+    )
+    language_code = _active_language(
+        db,
+        payload.language_code or settings.default_language,
+        subject=rollout_subject,
+        state_code=state_code,
+    )
     public_session_id = new_id("ses")
     access_token = new_access_token()
     expires_at = datetime.now(UTC) + timedelta(hours=max(1, settings.guest_session_ttl_hours))
@@ -63,26 +84,48 @@ async def create_browser_session(
     )
 
 
-def _active_language(db: Session, requested: str) -> str:
-    row = db.exec(
-        select(Language).where(Language.code == requested, Language.is_active.is_(True))
-    ).first()
-    if row is not None:
+def _active_language(
+    db: Session,
+    requested: str,
+    *,
+    subject: str,
+    state_code: str,
+) -> str:
+    normalized = requested.strip().lower()
+    row = db.get(Language, normalized)
+    if row is not None and _language_available(row, subject=subject, state_code=state_code):
         return row.code
-    fallback = db.exec(
-        select(Language).where(
-            Language.code == settings.default_language,
-            Language.is_active.is_(True),
-        )
-    ).first()
-    return fallback.code if fallback is not None else requested
+    fallback = db.get(Language, settings.default_language)
+    if fallback is not None and _language_available(
+        fallback, subject=subject, state_code=state_code
+    ):
+        return fallback.code
+    for candidate in db.exec(select(Language).order_by(Language.code)).all():
+        if _language_available(candidate, subject=subject, state_code=state_code):
+            return candidate.code
+    return settings.default_language
 
 
-def _active_state(db: Session, requested: str) -> str:
-    row = db.exec(select(State).where(State.code == requested, State.is_active.is_(True))).first()
-    if row is not None:
+def _active_state(db: Session, requested: str, *, subject: str) -> str:
+    normalized = requested.strip().upper()
+    row = db.get(State, normalized)
+    if row is not None and state_rollout_enabled(row.code, subject=subject):
         return row.code
-    fallback = db.exec(
-        select(State).where(State.code == settings.default_state, State.is_active.is_(True))
-    ).first()
-    return fallback.code if fallback is not None else requested
+    fallback = db.get(State, settings.default_state)
+    if fallback is not None and state_rollout_enabled(fallback.code, subject=subject):
+        return fallback.code
+    for candidate in db.exec(select(State).order_by(State.code)).all():
+        if state_rollout_enabled(candidate.code, subject=subject):
+            return candidate.code
+    return settings.default_state
+
+
+def _language_available(row: Language, *, subject: str, state_code: str) -> bool:
+    # Every locale must be explicitly activated in the admin release gate. The
+    # feature flag then provides the reversible cohort-level rollout control.
+    enabled = language_rollout_enabled(
+        row.code,
+        subject=subject,
+        state_code=state_code,
+    )
+    return enabled and row.is_active

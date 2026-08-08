@@ -65,13 +65,14 @@ async def assess_escalation(state: AgentState, deps: GraphDeps) -> dict:
     # A durable row rather than a webhook call: if the volunteer queue is down,
     # the request is still recorded and can be picked up later.
     try:
-        route = resolve_escalation_route(
-            state_code=state.state_code,
-            domain=state.domain,
-            slots=state.slots,
-        )
         now = datetime.now(UTC)
         with deps.session_factory() as session:
+            route = resolve_escalation_route(
+                state_code=state.state_code,
+                domain=state.domain,
+                slots=state.slots,
+                db=session,
+            )
             session.add(
                 EscalationTicket(
                     id=ticket_id(),
@@ -88,6 +89,9 @@ async def assess_escalation(state: AgentState, deps: GraphDeps) -> dict:
                     department=route.department,
                     routing_location=route.routing_location,
                     routing_source=route.routing_source,
+                    routing_directory_entry_id=route.directory_entry_id,
+                    routing_source_url=route.source_url,
+                    routing_verified_at=route.verified_at,
                     created_at=now,
                     updated_at=now,
                 )

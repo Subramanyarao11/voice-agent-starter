@@ -9,6 +9,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from sahaayak_agent.bootstrap import ensure_reference_data
 from sahaayak_agent.tracing import configure_observability, shutdown_observability
+from sahaayak_api.deployment import record_current_deployment
 from sahaayak_api.middleware import RequestContextMiddleware
 from sahaayak_api.observability import (
     configure_library_instrumentation,
@@ -16,6 +17,7 @@ from sahaayak_api.observability import (
 )
 from sahaayak_api.routers import (
     admin,
+    admin_directory,
     admin_notifications,
     benefit_feedback,
     browser_sessions,
@@ -43,6 +45,7 @@ async def lifespan(app: FastAPI):
     configure_library_instrumentation()
     init_db()
     ensure_reference_data()
+    record_current_deployment()
     log.info(
         "api_started",
         environment=settings.env,
@@ -93,4 +96,5 @@ app.include_router(telephony.router)
 app.include_router(webhooks_infobip.router)
 app.include_router(escalations.router)
 app.include_router(admin.router)
+app.include_router(admin_directory.router)
 app.include_router(admin_notifications.router)

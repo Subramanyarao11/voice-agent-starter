@@ -3,6 +3,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   getAdminAuditEvents,
   getAdminConversations,
+  getAdminDirectory,
   getAdminBenefitReports,
   getAdminEscalations,
   getAdminImports,
@@ -11,8 +12,11 @@ import {
   getAdminOverview,
   getAdminNotifications,
   getAdminFreshness,
+  getAdminBenefitVersions,
   getAdminEvaluations,
   getAdminFeatureFlags,
+  getAdminDeploymentComparison,
+  getAdminProviderFailureSimulations,
   getAdminProviders,
   getAdminReviews,
   getAdminSystem,
@@ -25,9 +29,15 @@ import {
   routeAdminEscalation,
   resolveAdminEscalation,
   reviewAdminBenefit,
+  rollbackAdminBenefit,
+  updateAdminBenefit,
+  updateFreshnessAlert,
   updateAdminProviderPolicy,
   updateAdminFeatureFlag,
   updateAdminBenefitReport,
+  updateAdminLanguageReview,
+  approveAdminDirectoryEntry,
+  deactivateAdminDirectoryEntry,
 } from "@/features/admin/api";
 
 export function useAdminMeQuery(token: string) {
@@ -106,12 +116,55 @@ export function useAdminEscalationsQuery(token: string) {
   });
 }
 
+export function useAdminDirectoryQuery(token: string) {
+  return useQuery({
+    queryKey: ["admin", "directory"],
+    queryFn: () => getAdminDirectory(token),
+    enabled: Boolean(token),
+  });
+}
+
+export function useApproveAdminDirectoryMutation(token: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (input: {entryId: string; reason: string}) =>
+      approveAdminDirectoryEntry(token, input.entryId, input.reason),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({queryKey: ["admin", "directory"]});
+      void queryClient.invalidateQueries({queryKey: ["admin", "escalations"]});
+      void queryClient.invalidateQueries({queryKey: ["admin", "audit"]});
+    },
+  });
+}
+
+export function useDeactivateAdminDirectoryMutation(token: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (input: {entryId: string; reason: string}) =>
+      deactivateAdminDirectoryEntry(token, input.entryId, input.reason),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({queryKey: ["admin", "directory"]});
+      void queryClient.invalidateQueries({queryKey: ["admin", "escalations"]});
+      void queryClient.invalidateQueries({queryKey: ["admin", "audit"]});
+    },
+  });
+}
+
 export function useAdminProvidersQuery(token: string) {
   return useQuery({
     queryKey: ["admin", "providers"],
     queryFn: () => getAdminProviders(token),
     enabled: Boolean(token),
     refetchInterval: 30_000,
+  });
+}
+
+export function useAdminProviderFailureSimulationsQuery(token: string) {
+  return useQuery({
+    queryKey: ["admin", "provider-failure-simulations", "en", "KA"],
+    queryFn: () => getAdminProviderFailureSimulations(token),
+    enabled: Boolean(token),
+    refetchInterval: 60_000,
   });
 }
 
@@ -130,6 +183,60 @@ export function useAdminFreshnessQuery(token: string) {
     queryFn: () => getAdminFreshness(token),
     enabled: Boolean(token),
     refetchInterval: 60_000,
+  });
+}
+
+export function useAdminBenefitVersionsQuery(token: string, benefitId: string, enabled = true) {
+  return useQuery({
+    queryKey: ["admin", "benefit-versions", benefitId],
+    queryFn: () => getAdminBenefitVersions(token, benefitId),
+    enabled: Boolean(token) && enabled,
+  });
+}
+
+export function useUpdateAdminBenefitMutation(token: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (input: { benefitId: string; payload: Parameters<typeof updateAdminBenefit>[2] }) =>
+      updateAdminBenefit(token, input.benefitId, input.payload),
+    onSuccess: (_data, variables) => {
+      void queryClient.invalidateQueries({queryKey: ["admin", "reviews"]});
+      void queryClient.invalidateQueries({queryKey: ["admin", "benefit-versions", variables.benefitId]});
+      void queryClient.invalidateQueries({queryKey: ["admin", "freshness"]});
+      void queryClient.invalidateQueries({queryKey: ["admin", "audit"]});
+    },
+  });
+}
+
+export function useRollbackAdminBenefitMutation(token: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (input: { benefitId: string; version: number; reason: string }) =>
+      rollbackAdminBenefit(token, input.benefitId, {
+        version: input.version,
+        reason: input.reason,
+      }),
+    onSuccess: (_data, variables) => {
+      void queryClient.invalidateQueries({queryKey: ["admin", "reviews"]});
+      void queryClient.invalidateQueries({queryKey: ["admin", "benefit-versions", variables.benefitId]});
+      void queryClient.invalidateQueries({queryKey: ["admin", "freshness"]});
+      void queryClient.invalidateQueries({queryKey: ["admin", "audit"]});
+    },
+  });
+}
+
+export function useUpdateFreshnessAlertMutation(token: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (input: { alertId: string; status: "acknowledged" | "resolved"; reason: string }) =>
+      updateFreshnessAlert(token, input.alertId, {
+        status: input.status,
+        reason: input.reason,
+      }),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({queryKey: ["admin", "freshness"]});
+      void queryClient.invalidateQueries({queryKey: ["admin", "audit"]});
+    },
   });
 }
 
@@ -211,6 +318,20 @@ export function useAdminLanguagesQuery(token: string) {
   });
 }
 
+export function useUpdateAdminLanguageReviewMutation(token: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (input: {code: string; payload: Parameters<typeof updateAdminLanguageReview>[2]}) =>
+      updateAdminLanguageReview(token, input.code, input.payload),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({queryKey: ["admin", "languages"]});
+      void queryClient.invalidateQueries({queryKey: ["admin", "flags"]});
+      void queryClient.invalidateQueries({queryKey: ["admin", "audit"]});
+      void queryClient.invalidateQueries({queryKey: ["catalog"]});
+    },
+  });
+}
+
 export function useAdminAuditQuery(token: string) {
   return useQuery({
     queryKey: ["admin", "audit"],
@@ -238,6 +359,15 @@ export function useAdminSystemQuery(token: string) {
     queryKey: ["admin", "system"],
     queryFn: () => getAdminSystem(token),
     enabled: Boolean(token),
+  });
+}
+
+export function useAdminDeploymentComparisonQuery(token: string) {
+  return useQuery({
+    queryKey: ["admin", "deployment-comparison"],
+    queryFn: () => getAdminDeploymentComparison(token),
+    enabled: Boolean(token),
+    refetchInterval: 60_000,
   });
 }
 

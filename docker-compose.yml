@@ -41,7 +41,10 @@ services:
       REDIS_URL: redis://redis:6379/0
       ADMIN_API_TOKEN: ${ADMIN_API_TOKEN:-}
       ADMIN_TOKENS_JSON: ${ADMIN_TOKENS_JSON:-}
-      ADMIN_OIDC_ENABLED: ${ADMIN_OIDC_ENABLED:-}
+      # Do not let an omitted optional boolean become an empty string and
+      # fail Pydantic settings validation. Production can override this with
+      # ADMIN_OIDC_ENABLED=true in the deployment environment.
+      ADMIN_OIDC_ENABLED: ${ADMIN_OIDC_ENABLED:-false}
     ports:
       - "8000:8000"
     depends_on:

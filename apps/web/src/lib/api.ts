@@ -68,6 +68,13 @@ const retrievedSourceSchema = z.object({
     .default({}),
 });
 
+const criterionEvidenceSchema = z.object({
+  slot: z.string(),
+  status: z.enum(["pass", "fail", "unknown"]),
+  requirement: z.string(),
+  caller_value: z.string().nullable().optional(),
+});
+
 const matchSchema = z.object({
   benefit_id: z.string(),
   benefit_name: z.string(),
@@ -75,6 +82,8 @@ const matchSchema = z.object({
   verdict: z.string(),
   confidence: z.number(),
   reasons: z.array(z.string()).default([]),
+  criteria: z.array(criterionEvidenceSchema).default([]),
+  caveats: z.array(z.string()).default([]),
   verification_status: z.enum([
     "illustrative",
     "machine_structured",
@@ -157,6 +166,22 @@ export const reminderSchema = z.object({
   delivery_status: z.string().default(""),
 });
 
+export const applicationTaskSchema = z.object({
+  id: z.string(),
+  benefit_id: z.string(),
+  benefit_name: z.string(),
+  kind: z.string(),
+  title: z.string(),
+  description: z.string(),
+  position: z.number(),
+  status: z.string(),
+  due_at: z.string().nullable(),
+  completed_at: z.string().nullable(),
+  source_revision: z.number(),
+  created_at: z.string(),
+  updated_at: z.string(),
+});
+
 export const contactPointSchema = z.object({
   id: z.string(),
   channel: z.string(),
@@ -217,6 +242,7 @@ export type BenefitIssueReport = z.infer<typeof benefitIssueReportSchema>;
 export type RetrievedSource = z.infer<typeof retrievedSourceSchema>;
 export type SavedBenefit = z.infer<typeof savedBenefitSchema>;
 export type Reminder = z.infer<typeof reminderSchema>;
+export type ApplicationTask = z.infer<typeof applicationTaskSchema>;
 export type ContactPoint = z.infer<typeof contactPointSchema>;
 export type ChannelStatus = z.infer<typeof channelStatusSchema>;
 
@@ -412,6 +438,34 @@ export function cancelReminder(
     `/api/sessions/${encodeURIComponent(sessionId)}/reminders/${encodeURIComponent(reminderId)}`,
     z.undefined(),
     { method: "DELETE", headers: { Authorization: `Bearer ${accessToken}` } },
+  );
+}
+
+export function getApplicationTasks(
+  sessionId: string,
+  accessToken: string,
+): Promise<ApplicationTask[]> {
+  return request(
+    `/api/sessions/${encodeURIComponent(sessionId)}/tasks`,
+    z.array(applicationTaskSchema),
+    {headers: {Authorization: `Bearer ${accessToken}`}},
+  );
+}
+
+export function updateApplicationTask(
+  sessionId: string,
+  taskId: string,
+  status: "pending" | "completed" | "skipped",
+  accessToken: string,
+): Promise<ApplicationTask> {
+  return request(
+    `/api/sessions/${encodeURIComponent(sessionId)}/tasks/${encodeURIComponent(taskId)}`,
+    applicationTaskSchema,
+    {
+      method: "POST",
+      body: JSON.stringify({status}),
+      headers: {Authorization: `Bearer ${accessToken}`},
+    },
   );
 }
 

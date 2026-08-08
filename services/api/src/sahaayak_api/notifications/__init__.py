@@ -8,6 +8,7 @@ back a template through the admin console rather than through a deployment.
 
 from sahaayak_api.notifications.base import NotificationProvider, OutboundNotification
 from sahaayak_api.notifications.dispatcher import (
+    GATE_FEATURE_ROLLOUT_DISABLED,
     GATE_MESSAGES,
     GATE_OK,
     ChannelAvailability,
@@ -38,6 +39,7 @@ from sahaayak_api.notifications.templates import (
 
 __all__ = [
     "GATE_MESSAGES",
+    "GATE_FEATURE_ROLLOUT_DISABLED",
     "GATE_OK",
     "TEMPLATE_KEYS",
     "ChannelAvailability",

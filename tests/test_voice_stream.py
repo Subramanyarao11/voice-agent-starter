@@ -1,4 +1,4 @@
-"""Offline protocol tests for the chunked browser voice transport."""
+"""Offline protocol tests for the browser voice transport."""
 
 from __future__ import annotations
 
@@ -9,7 +9,11 @@ from sahaayak_contracts import AgentState, Intent, SynthesisResult, Transcriptio
 
 
 class FakeRuntime:
+    def __init__(self) -> None:
+        self.transcripts: list[str] = []
+
     async def run_turn(self, *, caller_id, transcript, language_code, state_code):
+        self.transcripts.append(transcript)
         session = UserSession(
             id="ses_stream_runtime",
             phone_or_session_id=caller_id,
@@ -72,7 +76,8 @@ def test_streaming_voice_sends_sentence_audio_and_turn_end(client, guest_session
     from sahaayak_api.routers import voice_stream
 
     fake_voice = FakeVoice()
-    monkeypatch.setattr(voice_stream, "get_runtime", lambda: FakeRuntime())
+    fake_runtime = FakeRuntime()
+    monkeypatch.setattr(voice_stream, "get_runtime", lambda: fake_runtime)
     monkeypatch.setattr(voice_stream, "get_voice", lambda: fake_voice)
     session = guest_session(language_code="kn")
 
@@ -82,6 +87,8 @@ def test_streaming_voice_sends_sentence_audio_and_turn_end(client, guest_session
         socket.send_bytes(b"chunk-one")
         socket.send_bytes(b"chunk-two")
         socket.send_json({"type": "end_turn"})
+        assert socket.receive_json()["type"] == "transcript"
+        socket.send_json({"type": "submit_transcript", "text": "hello from the caller"})
 
         events = []
         while True:
@@ -92,13 +99,15 @@ def test_streaming_voice_sends_sentence_audio_and_turn_end(client, guest_session
 
     assert fake_voice.transcribed == [b"chunk-onechunk-two"]
     assert fake_voice.spoken == ["First sentence.", "Second sentence."]
+    assert fake_runtime.transcripts == ["hello from the caller"]
     assert [event["type"] for event in events] == [
-        "transcript",
+        "transcript_accepted",
         "turn",
         "audio_chunk",
         "audio_chunk",
         "turn_end",
     ]
+    assert events[0]["edited"] is True
     assert events[-1]["tts_chunks"] == 2
 
 
@@ -116,9 +125,25 @@ def test_streaming_voice_interrupt_cancels_in_flight_tts(client, guest_session, 
         socket.send_bytes(b"chunk")
         socket.send_json({"type": "end_turn"})
         assert socket.receive_json()["type"] == "transcript"
+        socket.send_json({"type": "submit_transcript", "text": "hello"})
+        assert socket.receive_json()["type"] == "transcript_accepted"
         assert socket.receive_json()["type"] == "turn"
         socket.send_json({"type": "interrupt"})
         assert socket.receive_json() == {"type": "interrupted"}
 
         socket.send_json({"type": "ping"})
         assert socket.receive_json() == {"type": "pong"}
+
+
+def test_pcm_stream_fallback_is_wrapped_as_mono_wav():
+    import io
+    import wave
+
+    from sahaayak_api.routers.voice_stream import _pcm16_to_wav
+
+    payload = _pcm16_to_wav(b"\x00\x01" * 240, 24_000)
+    with wave.open(io.BytesIO(payload), "rb") as reader:
+        assert reader.getnchannels() == 1
+        assert reader.getsampwidth() == 2
+        assert reader.getframerate() == 24_000
+        assert reader.readframes(240) == b"\x00\x01" * 240

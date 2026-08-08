@@ -27,11 +27,34 @@ at product, frontend, backend/AI, data, infrastructure, security, and QA levels.
 > browser streaming voice with VAD/interruption and clip fallback; consent-
 > gated Infobip reminder delivery; and an expanded admin control center with
 > messaging cost, data freshness, persisted evaluations, feature-flag rollout,
-> audit export, and provider/flag rollback. Docker migration head is
-> `20260808_0013`. The remaining gates are external: human publication review,
+> audit export, provider/flag rollback, deployment/version comparison, and
+> dry-run provider-failure simulations. Docker migration head is
+> `20260808_0016`. The remaining gates are external: human publication review,
 > authorized NCS credentials, real Infobip sender approvals/keys, live voice
 > evidence, managed IdP production registration, telemetry collector/Langfuse
 > verification, and full browser/accessibility QA.
+
+> **Implementation update (2026-08-09):** The browser voice path now supports
+> 24 kHz PCM worklet capture, bounded WebSocket frames, an opt-in OpenAI
+> Realtime transcription bridge, streamed transcript deltas, and an explicit
+> transcript review/edit step before the reasoning graph runs. Batch
+> MediaRecorder/WAV fallback remains the default until a budgeted real-key voice
+> test approves the realtime path.
+
+> The same slice adds a source-attested department-directory import/review
+> workflow. Runtime routing prefers approved fresh exact-pincode, prefix, or
+> district entries and retains their source provenance on escalation tickets;
+> no directory rows are bundled or activated without review.
+
+> **Implementation update (2026-08-09, continued):** Benefit editing/version
+> history/rollback, task and document tracking, criterion-level evidence,
+> runtime language/state/provider/reminder flags, deployment comparison and
+> provider-failure drills, transcript review/editing, streaming PCM capture,
+> and the department-directory release gate are covered by code and tests.
+> The eight expansion locales now have an audited native-review release gate
+> and a read-only validation command; they remain inactive until complete
+> prompt bundles, native-speaker evidence, voice/accessibility evidence, and an
+> explicit admin activation are present.
 
 ---
 
@@ -104,13 +127,13 @@ product target is now broader and more explicit:
 | Frontend architecture | Tailwind v4, shadcn-style primitives, TanStack Router/Query, Zustand, Zod, Motion, and `react-media-recorder` are integrated | `apps/web/package.json` |
 | API | Catalog, coverage, text turn, voice turn, sessions, transcripts, reset, and escalation endpoints exist | `services/api/.../routers` |
 | Agent | Language-agnostic LangGraph flow, rule-first understanding, optional LLM understanding, deterministic matching, adaptive follow-up questions, and escalation | `services/agent` |
-| Language | English, Hindi, and Kannada prompt catalogs are active; Marathi, Tamil, and Telugu reference rows are inactive | prompt modules + local DB |
+| Language | English, Hindi, and Kannada prompt catalogs are active; Tamil, Telugu, Marathi, Bengali, Gujarati, Malayalam, Punjabi, and Odia are registered but release-gated and inactive | prompt modules + language readiness review |
 | State | Karnataka and Delhi are active; Maharashtra, Tamil Nadu, and Telangana are inactive | local DB |
 | Data | The source-backed myScheme pipeline remains the eligibility corpus; official UPSC and KPSC adapters produce inactive review-gated job rows, and an authorized NCS API adapter is ready | local DB + `scripts/ingest_*_jobs.py` |
-| Voice code | OpenAI Whisper transcription, Sarvam Bulbul synthesis, sentence-level streaming audio, browser VAD/interruption, WAV clip fallback, and Redis/in-memory TTS caching exist | `services/agent/.../voice`, `apps/web/src/hooks/use-streaming-voice.ts` |
+| Voice code | OpenAI Whisper batch fallback, opt-in OpenAI Realtime PCM transcription, Sarvam Bulbul synthesis, sentence-level audio chunks, browser VAD/interruption, transcript review/editing, WAV clip fallback, and Redis/in-memory TTS caching exist | `services/agent/.../voice`, `services/api/.../routers/voice_stream.py`, `apps/web/src/hooks/use-streaming-voice.ts` |
 | Persistence | SQLite fallback and Postgres-compatible SQLModel tables for benefits, sessions, transcripts, and escalation tickets | `packages/common` |
 | Types | OpenAPI and generated TypeScript declarations are committed and consumed by the web app | `packages/api-types` |
-| Verification | Ruff passes, 454 Python tests pass, the web production build passes, Docker migration head is `20260808_0013`, and the source adapters/admin controls have offline tests | `make check` + Docker smoke |
+| Verification | Ruff passes, 465 Python tests pass, the web production build passes, Docker migration head is `20260809_0018`, and the governance/voice/directory/language controls have offline tests | `make check` + Docker smoke |
 
 ### 2.2 What is still demonstration-only or unverified
 
@@ -148,11 +171,26 @@ product target is now broader and more explicit:
 - Citizen account linking remains out of scope for the guest-first beta. The
   admin shell, RBAC boundary, OIDC/MFA claim validation, immutable audit log,
   messaging cost view, freshness/evaluation view, feature-flag rollout and
-  rollback, audit export, and provider rollback are implemented; managed IdP
+  rollback, audit export, provider rollback, runtime flag enforcement,
+  deployment/version comparison, and dry-run provider-failure simulations are
+  implemented; managed IdP
   provisioning and browser redirect UX remain deployment-specific.
+- Runtime rollout gates now cover core/expansion languages, state availability,
+  government-job matching, streaming voice, STT/TTS/RAG provider kill
+  switches, and Infobip reminder creation/dispatch. Public catalogs expose
+  rollout posture while guest sessions receive a stable cohort assignment.
 - Provider routing policies now have admin-only, audited, expiring overrides
   and rollback. Native-speaker quality gates and a separately tested OpenAI
   audio fallback remain required before advertising voice fallback coverage.
+- Department routing now has an import format, stale-source gate, admin review
+  page, and provenance fields on escalation tickets. Until official rows are
+  imported and approved, the state/domain route remains intentionally visible
+  as a fallback.
+- Expansion-language readiness now has seven review dimensions, evidence URL,
+  attestation, reviewer/timestamp, audited activation, and a bundle/review
+  validator at `scripts/17_validate_language_release.py`. The prompt loader
+  discovers future locale modules by code, but missing modules cannot be
+  approved or activated.
 
 ### 2.3 Product definition of done
 
@@ -218,6 +256,8 @@ native speakers, platform provisioning, or contest approval.
 | P0-9 agent evaluation | Trust thresholds | Failure messaging | Intent/slot evals and fallback | Versioned eval set | Eval report in CI |
 | P0-10 citizen design/i18n | Familiarity and easy navigation | Design tokens, routes, locale bundles | Locale contracts and prompt keys | Reviewed translations | Font assets, locale CI, visual/a11y tests |
 | P1-7 admin control center | Operational transparency | Separate admin shell and dashboards | Aggregates, RBAC, audit APIs | Quality/provider history | SLOs, alerts, cost controls |
+| P1-8 department directory | Correct human handoff | Directory review/provenance UI | Pincode/district match with safe fallback | Official source exports and freshness | Import/review runbook and routing audits |
+| P1-9 language release gate | Safe ten-language expansion | Review matrix, evidence, activation controls | Prompt-bundle discovery and rollout enforcement | Native/content/voice/accessibility evidence | Locale validation and staged rollback |
 
 ---
 
@@ -300,6 +340,10 @@ not silently replace a human-verified row with a new machine-only extraction.
   no source, invalid criteria, an expired date, or an unsupported state/domain.
 
 ### Frontend work
+
+The transport and review foundation is now implemented. The remaining P0 work
+is measured provider QA and polish, not another client-controlled transcript
+submission path.
 
 - Display a clear `Verified`, `Needs review`, or `Illustrative demo` badge.
 - Show “Data last updated …” near coverage.
@@ -401,22 +445,28 @@ degrades to text without losing the answer.
 
 ### Frontend work
 
-- Add explicit states for permission request, ready, recording, stopping,
-  uploading, transcribing, answering, playback, and failure.
+- Implemented: connecting, listening, reviewing, processing, speaking, and
+  failure states with keyboard-accessible transcript review.
+- Keep provider-ready and permission-request copy distinct in browser QA.
 - Show recording duration and enforce the server limit before upload.
-- Add cancel and retry controls.
+- Implemented: cancel/interrupt controls and a retry path through a fresh voice
+  turn; verify the copy and timing on real devices.
 - Explain how microphone audio is used before requesting permission.
 - Preserve text mode when microphone permission is denied or STT is unavailable.
 - Show a manual play control even when autoplay succeeds.
-- Add a low-bandwidth error with an option to retry as text.
+- Implemented: clip fallback for browsers without AudioWorklet/realtime support
+  and text remains available; verify low-bandwidth messaging in browser QA.
 - Do not store audio blobs in Zustand/localStorage.
 
 ### Backend/provider work
 
-- Validate supported MIME types and reject mislabeled uploads.
+- Implemented: explicit `container`/`pcm16` framing, 24 kHz validation, byte and
+  container-chunk caps, and WAV wrapping for PCM batch fallback.
 - Return a dedicated error code for empty transcription, provider timeout,
   unsupported language, and exhausted quota.
-- Add bounded retries with jitter only for safe transient provider failures.
+- Add bounded retries with jitter only for safe transient provider failures;
+  realtime sessions currently fail closed to the existing buffered path before
+  the turn is committed.
 - Set separate connect/read/write timeouts and log provider latency.
 - Pass request ID, provider, model, language, input bytes/characters, cache hit,
   and billed characters to metrics/traces without attaching raw audio.
@@ -1190,11 +1240,16 @@ JSONL by hand.
 
 - Build a reviewer-only queue comparing source excerpt and structured criteria.
 - Support approve, reject, edit, request re-extraction, and deactivate actions.
+- Keep an immutable public-content snapshot for every edit/review/rollback;
+  require an expected revision on browser edits and restrict rollback to admin.
 - Highlight every numeric/category field and its source evidence.
-- Schedule source freshness checks based on hash/date.
+- Schedule source freshness checks based on hash/date and persist deduplicated,
+  acknowledgeable alerts for active or human-verified rows.
 - Automatically mark expired job postings and expired schemes inactive.
 - Add review sampling metrics and inter-reviewer disagreement tracking.
 - Keep model/prompt lineage for every proposed revision.
+- Materialize private document/application tasks from a saved benefit and keep
+  progress separate from official application status.
 
 ### Acceptance
 
@@ -1425,28 +1480,32 @@ admin product.
 
 ---
 
-## P2-2 — Streaming voice and voice activity detection
+## P2-2 — Streaming voice hardening and voice activity detection
 
 **Value:** lower perceived latency and hands-free turn endings.
-**Build after:** recorded-clip metrics show latency is the main usability problem.
+**Status:** transport foundation implemented; real-key QA and production
+hardening remain.
 
-**Size:** XL
+**Size:** M for the remaining hardening after the current voice slice
 
 ### Implementation outline
 
 - Evaluate browser VAD only after measuring false-stop behavior on noisy/mobile
   environments; retain a manual stop control.
-- Move audio exchange to WebSocket/WebRTC with a short-lived authenticated token.
-- Stream partial transcription but commit a turn only on final transcript.
-- Start TTS at safe sentence boundaries after the deterministic result is final.
-- Add interruption/barge-in handling and cancellation propagation.
-- Maintain a clip-upload fallback for unsupported networks/browsers.
+- Implemented: WebSocket PCM frames with a server-owned guest token, local VAD,
+  partial transcript deltas through the opt-in Realtime provider, final
+  transcript acceptance, sentence-level TTS chunks, interruption propagation,
+  and MediaRecorder/WAV fallback.
+- Remaining: real Kannada/Hindi latency and accuracy evidence, disconnect/retry
+  drills, browser compatibility QA, and provider billing reconciliation.
 
 ### Acceptance
 
 - [ ] Median perceived response time improves materially over clip mode.
 - [ ] False turn endings remain within an agreed threshold across test devices.
 - [ ] Disconnects do not create duplicate turns or provider charges.
+- [x] A transcript cannot reach the matcher/RAG graph until the caller accepts
+      or edits it.
 
 ---
 

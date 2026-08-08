@@ -249,6 +249,40 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/sessions/{session_id}/tasks": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Application Tasks */
+        get: operations["list_application_tasks_api_sessions__session_id__tasks_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/sessions/{session_id}/tasks/{task_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Update Application Task */
+        post: operations["update_application_task_api_sessions__session_id__tasks__task_id__post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/sessions/{session_id}/reminders": {
         parameters: {
             query?: never;
@@ -774,6 +808,64 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/admin/benefits/{benefit_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Edit Benefit
+         * @description Replace public benefit content while forcing a fresh review.
+         *
+         *     Editing never silently republishes a row. Even a reviewer correcting a
+         *     spelling mistake gets a new version, clears machine evidence, and moves
+         *     the benefit back to the inactive review queue.
+         */
+        put: operations["edit_benefit_api_admin_benefits__benefit_id__put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/admin/benefits/{benefit_id}/versions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Benefit Versions */
+        get: operations["benefit_versions_api_admin_benefits__benefit_id__versions_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/admin/benefits/{benefit_id}/rollback": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Rollback Benefit */
+        post: operations["rollback_benefit_api_admin_benefits__benefit_id__rollback_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/admin/benefit-reports": {
         parameters: {
             query?: never;
@@ -853,6 +945,60 @@ export interface paths {
         get: operations["admin_freshness_api_admin_freshness_get"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/admin/freshness/scan": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Scan Admin Freshness
+         * @description Run an explicit source scan from the admin console or a scheduler.
+         */
+        post: operations["scan_admin_freshness_api_admin_freshness_scan_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/admin/freshness/alerts": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Admin Freshness Alerts */
+        get: operations["admin_freshness_alerts_api_admin_freshness_alerts_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/admin/freshness/alerts/{alert_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Update Freshness Alert */
+        post: operations["update_freshness_alert_api_admin_freshness_alerts__alert_id__post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -995,6 +1141,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/admin/languages/{code}/review": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Update Language Review */
+        put: operations["update_language_review_api_admin_languages__code__review_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/admin/audit-events": {
         parameters: {
             query?: never;
@@ -1040,6 +1203,94 @@ export interface paths {
         get: operations["admin_system_api_admin_system_get"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/admin/system/deployments/compare": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Admin Deployment Compare */
+        get: operations["admin_deployment_compare_api_admin_system_deployments_compare_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/admin/providers/simulations": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Admin Provider Failure Simulations
+         * @description Show failure paths without making a provider request or changing state.
+         */
+        get: operations["admin_provider_failure_simulations_api_admin_providers_simulations_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/admin/departments": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Directory Entries */
+        get: operations["list_directory_entries_api_admin_departments_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/admin/departments/{entry_id}/approve": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Approve Directory Entry */
+        post: operations["approve_directory_entry_api_admin_departments__entry_id__approve_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/admin/departments/{entry_id}/deactivate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Deactivate Directory Entry */
+        post: operations["deactivate_directory_entry_api_admin_departments__entry_id__deactivate_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1105,6 +1356,49 @@ export interface components {
             providers: components["schemas"]["ProviderStatusOut"][];
             /** Recent Errors */
             recent_errors: components["schemas"]["RecentErrorOut"][];
+        };
+        /** ApplicationTaskOut */
+        ApplicationTaskOut: {
+            /** Id */
+            id: string;
+            /** Benefit Id */
+            benefit_id: string;
+            /** Benefit Name */
+            benefit_name: string;
+            /** Kind */
+            kind: string;
+            /** Title */
+            title: string;
+            /** Description */
+            description: string;
+            /** Position */
+            position: number;
+            /** Status */
+            status: string;
+            /** Due At */
+            due_at: string | null;
+            /** Completed At */
+            completed_at: string | null;
+            /** Source Revision */
+            source_revision: number;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /**
+             * Updated At
+             * Format: date-time
+             */
+            updated_at: string;
+        };
+        /** ApplicationTaskUpdate */
+        ApplicationTaskUpdate: {
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "pending" | "completed" | "skipped";
         };
         /** AuditEventOut */
         AuditEventOut: {
@@ -1187,6 +1481,80 @@ export interface components {
                 [key: string]: unknown;
             };
         };
+        /**
+         * BenefitEditRequest
+         * @description Full public-content replacement; publication remains a separate action.
+         */
+        BenefitEditRequest: {
+            /** Expected Revision */
+            expected_revision?: number | null;
+            domain: components["schemas"]["Domain"];
+            /** Name */
+            name: string;
+            /** State Code */
+            state_code?: string | null;
+            /**
+             * Category
+             * @default
+             */
+            category: string;
+            /**
+             * Description
+             * @default
+             */
+            description: string;
+            /** Eligibility Initial */
+            eligibility_initial?: {
+                [key: string]: unknown;
+            };
+            /** Eligibility Renewal */
+            eligibility_renewal?: {
+                [key: string]: unknown;
+            } | null;
+            /**
+             * Benefits Text
+             * @default
+             */
+            benefits_text: string;
+            /** Documents Required */
+            documents_required?: string[];
+            /**
+             * Application Process
+             * @default
+             */
+            application_process: string;
+            /**
+             * Source Url
+             * @default
+             */
+            source_url: string;
+            /**
+             * Source Title
+             * @default
+             */
+            source_title: string;
+            /**
+             * Source Document Url
+             * @default
+             */
+            source_document_url: string;
+            /** Source Excerpt */
+            source_excerpt?: string | null;
+            /** Valid From */
+            valid_from?: string | null;
+            /** Valid Until */
+            valid_until?: string | null;
+            /** Localized Summary */
+            localized_summary?: {
+                [key: string]: string;
+            };
+            /** Job Metadata */
+            job_metadata?: {
+                [key: string]: unknown;
+            } | null;
+            /** Reason */
+            reason: string;
+        };
         /** BenefitIssueReportRequest */
         BenefitIssueReportRequest: {
             /**
@@ -1217,6 +1585,26 @@ export interface components {
             name: string;
             /** State Code */
             state_code: string | null;
+            /** Category */
+            category: string;
+            /** Description */
+            description: string;
+            /** Eligibility Initial */
+            eligibility_initial: {
+                [key: string]: unknown;
+            };
+            /** Eligibility Renewal */
+            eligibility_renewal: {
+                [key: string]: unknown;
+            } | null;
+            /** Benefits Text */
+            benefits_text: string;
+            /** Documents Required */
+            documents_required: string[];
+            /** Application Process */
+            application_process: string;
+            /** Source Url */
+            source_url: string;
             /** Verification Status */
             verification_status: string;
             /** Is Active */
@@ -1241,10 +1629,16 @@ export interface components {
             valid_from: string | null;
             /** Valid Until */
             valid_until: string | null;
+            /** Localized Summary */
+            localized_summary: {
+                [key: string]: unknown;
+            };
             /** Job Metadata */
             job_metadata: {
                 [key: string]: unknown;
             };
+            /** Content Revision */
+            content_revision: number;
         };
         /** BenefitReviewRequest */
         BenefitReviewRequest: {
@@ -1253,6 +1647,48 @@ export interface components {
             reason: string;
             /** Activate */
             activate?: boolean | null;
+        };
+        /** BenefitRollbackRequest */
+        BenefitRollbackRequest: {
+            /** Version */
+            version: number;
+            /** Reason */
+            reason: string;
+        };
+        /** BenefitVersionListOut */
+        BenefitVersionListOut: {
+            /** Benefit Id */
+            benefit_id: string;
+            /** Current Revision */
+            current_revision: number;
+            /** Versions */
+            versions: components["schemas"]["BenefitVersionOut"][];
+        };
+        /** BenefitVersionOut */
+        BenefitVersionOut: {
+            /** Id */
+            id: string;
+            /** Benefit Id */
+            benefit_id: string;
+            /** Version */
+            version: number;
+            /** Action */
+            action: string;
+            /** Actor Id */
+            actor_id: string;
+            /** Actor Role */
+            actor_role: string;
+            /** Reason */
+            reason: string;
+            /** Snapshot */
+            snapshot: {
+                [key: string]: unknown;
+            };
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
         };
         /** Body_take_telephony_turn_api_telephony_turns_post */
         Body_take_telephony_turn_api_telephony_turns_post: {
@@ -1527,6 +1963,171 @@ export interface components {
             last_data_update?: string | null;
         };
         /**
+         * CriterionOutcome
+         * @description One criterion checked against one caller, kept in human-readable form.
+         *
+         *     The agent reads these back to explain *why* a verdict was reached, which is
+         *     the difference between a trustworthy answer and an oracle.
+         */
+        CriterionOutcome: {
+            slot: components["schemas"]["SlotName"];
+            status: components["schemas"]["CriterionStatus"];
+            /** Requirement */
+            requirement: string;
+            /** Caller Value */
+            caller_value?: string | null;
+        };
+        /**
+         * CriterionStatus
+         * @enum {string}
+         */
+        CriterionStatus: "pass" | "fail" | "unknown";
+        /** DeploymentChangeOut */
+        DeploymentChangeOut: {
+            /** Field */
+            field: string;
+            /** Previous */
+            previous?: unknown;
+            /** Current */
+            current?: unknown;
+        };
+        /** DeploymentComparisonOut */
+        DeploymentComparisonOut: {
+            /**
+             * Generated At
+             * Format: date-time
+             */
+            generated_at: string;
+            current: components["schemas"]["DeploymentOut"] | null;
+            previous: components["schemas"]["DeploymentOut"] | null;
+            /** History */
+            history: components["schemas"]["DeploymentOut"][];
+            /** Changes */
+            changes: components["schemas"]["DeploymentChangeOut"][];
+            /** Note */
+            note: string;
+        };
+        /** DeploymentOut */
+        DeploymentOut: {
+            /** Id */
+            id: string;
+            /** Release Key */
+            release_key: string;
+            /** Environment */
+            environment: string;
+            /** App Version */
+            app_version: string;
+            /** Git Commit Sha */
+            git_commit_sha: string;
+            /** Image Digest */
+            image_digest: string;
+            /** Migration Revision */
+            migration_revision: string | null;
+            /** Data Revision */
+            data_revision: string;
+            /** Prompt Version */
+            prompt_version: string;
+            /** Model Versions */
+            model_versions: {
+                [key: string]: unknown;
+            };
+            /** Active Flags */
+            active_flags: {
+                [key: string]: unknown;
+            };
+            /** Configuration */
+            configuration: {
+                [key: string]: unknown;
+            };
+            /**
+             * Deployed At
+             * Format: date-time
+             */
+            deployed_at: string;
+        };
+        /** DirectoryDecisionRequest */
+        DirectoryDecisionRequest: {
+            /** Reason */
+            reason: string;
+        };
+        /** DirectoryEntryOut */
+        DirectoryEntryOut: {
+            /** Id */
+            id: string;
+            /** Entry Key */
+            entry_key: string;
+            /** State Code */
+            state_code: string;
+            /** District Code */
+            district_code: string;
+            /** District Name */
+            district_name: string;
+            /** Service Domain */
+            service_domain: string;
+            /** Pincode */
+            pincode: string;
+            /** Pincode Prefix */
+            pincode_prefix: string;
+            /** Department Code */
+            department_code: string;
+            /** Department Name */
+            department_name: string;
+            /** Help Centre Name */
+            help_centre_name: string;
+            /** Address */
+            address: string;
+            /** Phone */
+            phone: string;
+            /** Email */
+            email: string;
+            /** Website Url */
+            website_url: string;
+            /** Source Name */
+            source_name: string;
+            /** Source Url */
+            source_url: string;
+            /** Source Record Id */
+            source_record_id: string;
+            /** Source Last Verified */
+            source_last_verified: string | null;
+            /** Approval Status */
+            approval_status: string;
+            /** Is Active */
+            is_active: boolean;
+            /** Stale */
+            stale: boolean;
+            /** Priority */
+            priority: number;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /**
+             * Updated At
+             * Format: date-time
+             */
+            updated_at: string;
+        };
+        /** DirectoryListOut */
+        DirectoryListOut: {
+            /**
+             * Generated At
+             * Format: date-time
+             */
+            generated_at: string;
+            /** Stale After Days */
+            stale_after_days: number;
+            /** Entries */
+            entries: components["schemas"]["DirectoryEntryOut"][];
+            /** Total */
+            total: number;
+            /** Status Counts */
+            status_counts: {
+                [key: string]: number;
+            };
+        };
+        /**
          * Domain
          * @enum {string}
          */
@@ -1666,6 +2267,53 @@ export interface components {
             /** Reason */
             reason: string;
         };
+        /** FreshnessAlertOut */
+        FreshnessAlertOut: {
+            /** Id */
+            id: string;
+            /** Alert Key */
+            alert_key: string;
+            /** Benefit Id */
+            benefit_id: string | null;
+            /** Dataset */
+            dataset: string;
+            /** Alert Type */
+            alert_type: string;
+            /** Severity */
+            severity: string;
+            /** Status */
+            status: string;
+            /** Message */
+            message: string;
+            /**
+             * First Seen At
+             * Format: date-time
+             */
+            first_seen_at: string;
+            /**
+             * Last Seen At
+             * Format: date-time
+             */
+            last_seen_at: string;
+            /** Resolved At */
+            resolved_at: string | null;
+            /** Resolved By */
+            resolved_by: string | null;
+            /** Safe Metadata */
+            safe_metadata: {
+                [key: string]: unknown;
+            };
+        };
+        /** FreshnessAlertUpdate */
+        FreshnessAlertUpdate: {
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "acknowledged" | "resolved";
+            /** Reason */
+            reason: string;
+        };
         /** FreshnessOut */
         FreshnessOut: {
             /**
@@ -1679,6 +2327,12 @@ export interface components {
             data_fresh_at: string | null;
             /** Sources */
             sources: components["schemas"]["FreshnessSourceOut"][];
+            /** Alerts */
+            alerts: components["schemas"]["FreshnessAlertOut"][];
+            /** Alert Counts */
+            alert_counts: {
+                [key: string]: number;
+            };
         };
         /** FreshnessSourceOut */
         FreshnessSourceOut: {
@@ -1820,6 +2474,8 @@ export interface components {
             prompt_ready: boolean;
             /** Interface Status */
             interface_status: string;
+            /** Interface Review Status */
+            interface_review_status: string;
             /** Data Status */
             data_status: string;
             /** Localized Benefits */
@@ -1832,12 +2488,101 @@ export interface components {
             tts_provider: string;
             /** Voice Status */
             voice_status: string;
+            /** Voice Review Status */
+            voice_review_status: string;
+            /** Native Speaker Status */
+            native_speaker_status: string;
+            /** Prompt Status */
+            prompt_status: string;
+            /** Content Status */
+            content_status: string;
+            /** Understanding Status */
+            understanding_status: string;
+            /** Accessibility Status */
+            accessibility_status: string;
+            /** Evidence Url */
+            evidence_url: string;
+            /** Review Notes */
+            review_notes: string;
+            /** Reviewed By */
+            reviewed_by: string | null;
+            /** Reviewed At */
+            reviewed_at: string | null;
+            /** Activated At */
+            activated_at: string | null;
             /** Rollout Status */
             rollout_status: string;
         };
+        /** LanguageReviewUpdateRequest */
+        LanguageReviewUpdateRequest: {
+            /**
+             * Native Speaker Status
+             * @default pending
+             * @enum {string}
+             */
+            native_speaker_status: "pending" | "approved" | "rejected";
+            /**
+             * Interface Status
+             * @default pending
+             * @enum {string}
+             */
+            interface_status: "pending" | "approved" | "rejected";
+            /**
+             * Prompt Status
+             * @default pending
+             * @enum {string}
+             */
+            prompt_status: "pending" | "approved" | "rejected";
+            /**
+             * Content Status
+             * @default pending
+             * @enum {string}
+             */
+            content_status: "pending" | "approved" | "rejected";
+            /**
+             * Understanding Status
+             * @default pending
+             * @enum {string}
+             */
+            understanding_status: "pending" | "approved" | "rejected";
+            /**
+             * Voice Status
+             * @default pending
+             * @enum {string}
+             */
+            voice_status: "pending" | "approved" | "rejected";
+            /**
+             * Accessibility Status
+             * @default pending
+             * @enum {string}
+             */
+            accessibility_status: "pending" | "approved" | "rejected";
+            /**
+             * Evidence Url
+             * @default
+             */
+            evidence_url: string;
+            /** Review Notes */
+            review_notes: string;
+            /**
+             * Attestation
+             * @default false
+             */
+            attestation: boolean;
+            /**
+             * Activate
+             * @default false
+             */
+            activate: boolean;
+        };
         /**
          * MatchSummary
-         * @description A match flattened for the API, without the full criterion trace.
+         * @description A match flattened for the API, including the explainability trace.
+         *
+         *     `reasons` remains as a short, voice-friendly compatibility field. The
+         *     structured criteria are what web and operator surfaces should use when
+         *     they need to show exactly which requirement passed, failed, or is still
+         *     unknown.
          */
         MatchSummary: {
             /** Benefit Id */
@@ -1851,6 +2596,10 @@ export interface components {
             confidence: number;
             /** Reasons */
             reasons?: string[];
+            /** Criteria */
+            criteria?: components["schemas"]["CriterionOutcome"][];
+            /** Caveats */
+            caveats?: string[];
             /** @default illustrative */
             verification_status: components["schemas"]["VerificationStatus"];
             /**
@@ -1904,6 +2653,49 @@ export interface components {
             };
             /** Controls Note */
             controls_note: string;
+        };
+        /** ProviderFailureSimulationListOut */
+        ProviderFailureSimulationListOut: {
+            /**
+             * Generated At
+             * Format: date-time
+             */
+            generated_at: string;
+            /** Language Code */
+            language_code: string;
+            /** State Code */
+            state_code: string;
+            /** Simulations */
+            simulations: components["schemas"]["ProviderFailureSimulationOut"][];
+            /** Note */
+            note: string;
+        };
+        /** ProviderFailureSimulationOut */
+        ProviderFailureSimulationOut: {
+            /** Scenario */
+            scenario: string;
+            /** Provider */
+            provider: string;
+            /** Policy Provider */
+            policy_provider: string | null;
+            /** Flag Key */
+            flag_key: string;
+            /** Flag Enabled */
+            flag_enabled: boolean;
+            /** Policy Enabled */
+            policy_enabled: boolean;
+            /** Circuit State */
+            circuit_state: string;
+            /** Configured */
+            configured: boolean;
+            /** Current Posture */
+            current_posture: string;
+            /** Expected Path */
+            expected_path: string[];
+            /** User Facing Fallback */
+            user_facing_fallback: string;
+            /** Operator Action */
+            operator_action: string;
         };
         /** ProviderListOut */
         ProviderListOut: {
@@ -2371,6 +3163,8 @@ export interface components {
             git_commit_sha: string;
             /** Migration Revision */
             migration_revision: string | null;
+            /** Deployment Id */
+            deployment_id?: string | null;
             /** Database Mode */
             database_mode: string;
             /** Configuration */
@@ -2471,6 +3265,15 @@ export interface components {
             routing_location: string;
             /** Routing Source */
             routing_source: string;
+            /** Routing Directory Entry Id */
+            routing_directory_entry_id?: string | null;
+            /**
+             * Routing Source Url
+             * @default
+             */
+            routing_source_url: string;
+            /** Routing Verified At */
+            routing_verified_at?: string | null;
             /** Operator Notes */
             operator_notes?: components["schemas"]["TicketNoteOut"][];
             /**
@@ -3074,6 +3877,75 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_application_tasks_api_sessions__session_id__tasks_get: {
+        parameters: {
+            query?: {
+                benefit_id?: string | null;
+            };
+            header?: never;
+            path: {
+                session_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApplicationTaskOut"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    update_application_task_api_sessions__session_id__tasks__task_id__post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                session_id: string;
+                task_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ApplicationTaskUpdate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApplicationTaskOut"];
+                };
             };
             /** @description Validation Error */
             422: {
@@ -4018,6 +4890,107 @@ export interface operations {
             };
         };
     };
+    edit_benefit_api_admin_benefits__benefit_id__put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                benefit_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["BenefitEditRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BenefitReviewOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    benefit_versions_api_admin_benefits__benefit_id__versions_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                benefit_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BenefitVersionListOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    rollback_benefit_api_admin_benefits__benefit_id__rollback_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                benefit_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["BenefitRollbackRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BenefitReviewOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     admin_benefit_reports_api_admin_benefit_reports_get: {
         parameters: {
             query?: {
@@ -4165,6 +5138,104 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["FreshnessOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    scan_admin_freshness_api_admin_freshness_scan_post: {
+        parameters: {
+            query?: {
+                stale_days?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FreshnessOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    admin_freshness_alerts_api_admin_freshness_alerts_get: {
+        parameters: {
+            query?: {
+                status?: ("open" | "acknowledged" | "resolved") | null;
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FreshnessAlertOut"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    update_freshness_alert_api_admin_freshness_alerts__alert_id__post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                alert_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["FreshnessAlertUpdate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FreshnessAlertOut"];
                 };
             };
             /** @description Validation Error */
@@ -4400,6 +5471,41 @@ export interface operations {
             };
         };
     };
+    update_language_review_api_admin_languages__code__review_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                code: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["LanguageReviewUpdateRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LanguageReadinessOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     admin_audit_events_api_admin_audit_events_get: {
         parameters: {
             query?: {
@@ -4481,6 +5587,173 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["SystemOut"];
+                };
+            };
+        };
+    };
+    admin_deployment_compare_api_admin_system_deployments_compare_get: {
+        parameters: {
+            query?: {
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DeploymentComparisonOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    admin_provider_failure_simulations_api_admin_providers_simulations_get: {
+        parameters: {
+            query?: {
+                language_code?: string;
+                state_code?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProviderFailureSimulationListOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_directory_entries_api_admin_departments_get: {
+        parameters: {
+            query?: {
+                status?: "pending" | "approved" | "rejected" | "all";
+                state_code?: string | null;
+                district_name?: string | null;
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DirectoryListOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    approve_directory_entry_api_admin_departments__entry_id__approve_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                entry_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DirectoryDecisionRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DirectoryEntryOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    deactivate_directory_entry_api_admin_departments__entry_id__deactivate_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                entry_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DirectoryDecisionRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DirectoryEntryOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };

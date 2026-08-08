@@ -41,6 +41,8 @@ class Settings(BaseSettings):
     openai_reasoning_model: str = "gpt-4o-mini"
     openai_structuring_model: str = "gpt-4o"
     openai_transcription_model: str = "whisper-1"
+    openai_realtime_stt_enabled: bool = False
+    openai_realtime_transcription_model: str = "gpt-4o-transcribe"
     # The data pipeline defaults to a conservative $10 lifetime ledger. The
     # code-level guard refuses any ceiling above $15 and persists reservations
     # across reruns, so a test command cannot reset the budget.
@@ -134,6 +136,10 @@ class Settings(BaseSettings):
     retention_audit_days: int = 365
     retention_escalation_days: int = 365
     retention_expired_session_days: int = 7
+
+    # Department routing is fail-closed: an entry without an approved source
+    # and a recent verification date is never presented as authoritative.
+    department_directory_stale_days: int = 180
 
     # --- Infobip messaging seam --------------------------------------------
     # Every channel is off by default and gated twice: the master switch here

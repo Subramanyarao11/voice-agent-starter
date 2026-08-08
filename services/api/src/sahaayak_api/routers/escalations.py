@@ -48,6 +48,9 @@ class TicketOut(BaseModel):
     department: str
     routing_location: str
     routing_source: str
+    routing_directory_entry_id: str | None = None
+    routing_source_url: str = ""
+    routing_verified_at: datetime | None = None
     operator_notes: list[TicketNoteOut] = Field(default_factory=list)
     created_at: datetime
     updated_at: datetime | None = None
@@ -205,6 +208,9 @@ def route_ticket(
     row.department = payload.department.strip()
     row.routing_location = payload.routing_location.strip()
     row.routing_source = "operator_override"
+    row.routing_directory_entry_id = None
+    row.routing_source_url = ""
+    row.routing_verified_at = None
     row.updated_at = now
     db.add(row)
     db.add(
@@ -325,6 +331,9 @@ def _ticket_out(
         department=row.department,
         routing_location=row.routing_location if privileged else "",
         routing_source=row.routing_source,
+        routing_directory_entry_id=row.routing_directory_entry_id,
+        routing_source_url=row.routing_source_url,
+        routing_verified_at=row.routing_verified_at,
         operator_notes=notes,
         created_at=row.created_at,
         updated_at=row.updated_at,
