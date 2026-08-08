@@ -158,6 +158,7 @@ def _resolve_directory_route(
         for row in rows
         if row.source_last_verified is not None
         and _aware(row.source_last_verified) >= verified_after
+        and (row.valid_until is None or row.valid_until >= datetime.now(UTC).date())
     ]
     matching_rows = [
         row

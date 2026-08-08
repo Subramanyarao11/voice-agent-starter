@@ -15,7 +15,7 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
-from datetime import UTC, datetime
+from datetime import UTC, date, datetime
 from pathlib import Path
 
 from sqlmodel import select
@@ -27,6 +27,7 @@ from sahaayak_common import (
     get_logger,
     init_db,
     new_id,
+    record_directory_version,
     session_scope,
 )
 
@@ -72,11 +73,29 @@ def main() -> None:
                 continue
 
             if existing is None:
-                db.add(DepartmentDirectoryEntry(id=new_id("dept"), **data))
+                created_row = DepartmentDirectoryEntry(id=new_id("dept"), **data)
+                db.add(created_row)
+                record_directory_version(
+                    db,
+                    created_row,
+                    action="import",
+                    actor_id="directory-import",
+                    actor_role="system",
+                    reason="Imported from an official directory snapshot",
+                )
                 created += 1
                 continue
 
             changed = _update_row(existing, data)
+            if changed:
+                record_directory_version(
+                    db,
+                    existing,
+                    action="import",
+                    actor_id="directory-import",
+                    actor_role="system",
+                    reason="Updated from an official directory snapshot",
+                )
             db.add(existing)
             updated += int(changed)
 
@@ -145,6 +164,10 @@ def _normalise(raw: object, *, index: int) -> dict:
         "source_url": source_url,
         "source_record_id": source_record_id,
         "source_last_verified": source_last_verified,
+        "valid_until": _parse_date(raw.get("valid_until")),
+        "working_hours": str(raw.get("working_hours", "")).strip()[:500],
+        "supported_languages": _normalise_languages(raw.get("supported_languages")),
+        "coverage_basis": str(raw.get("coverage_basis", "")).strip()[:120],
         # Import is intentionally not an approval action.
         "approval_status": "pending",
         "is_active": False,
@@ -216,6 +239,24 @@ def _parse_datetime(value: object) -> datetime | None:
         return None
     parsed = datetime.fromisoformat(str(value).replace("Z", "+00:00"))
     return parsed if parsed.tzinfo else parsed.replace(tzinfo=UTC)
+
+
+def _parse_date(value: object) -> date | None:
+    if value in (None, ""):
+        return None
+    return date.fromisoformat(str(value))
+
+
+def _normalise_languages(value: object) -> list[str]:
+    if value is None:
+        return []
+    if isinstance(value, str):
+        values = value.split(",")
+    elif isinstance(value, list):
+        values = value
+    else:
+        raise ValueError("supported_languages must be a list or comma-separated string")
+    return [str(item).strip().lower()[:16] for item in values if str(item).strip()][:20]
 
 
 if __name__ == "__main__":

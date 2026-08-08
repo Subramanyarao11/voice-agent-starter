@@ -1,0 +1,140 @@
+{
+  "pack_name": "ka-two-districts-v1",
+  "captured_at": "2026-08-09T00:00:00Z",
+  "source_policy": "Curated from official Karnataka district administration pages; imported as pending until an admin reviews each row.",
+  "entries": [
+    {
+      "entry_key": "ka-bluru-dc-office-560009-v1",
+      "state_code": "KA",
+      "district_code": "BLURU",
+      "district_name": "Bengaluru Urban",
+      "service_domain": "citizen_support",
+      "pincode": "560009",
+      "department_code": "DC-KA-BLRU",
+      "department_name": "Deputy Commissioner Office, Bengaluru Urban District",
+      "help_centre_name": "Bengaluru Urban Deputy Commissioner and District Magistrate Office",
+      "address": "Kempegowda Road, Behind Kandaya Bhavana, Bengaluru Urban District, Bengaluru - 560009",
+      "phone": "080-22211292",
+      "email": "dcurban@nic.in",
+      "website_url": "https://bengaluruurban.nic.in",
+      "source_name": "Bengaluru Urban district portal — Deputy Commissioner",
+      "source_url": "https://bengaluruurban.nic.in/en/divisions/deputy-commissioner/",
+      "source_record_id": "deputy-commissioner",
+      "source_last_verified": "2026-08-09T00:00:00Z",
+      "working_hours": "Not published on the source page; verify before visiting",
+      "supported_languages": ["en"],
+      "coverage_basis": "exact_pincode",
+      "priority": 10,
+      "safe_metadata": {
+        "source_kind": "official_district_portal",
+        "source_scope": "district_office_directory",
+        "demo_pack": "ka-two-districts-v1",
+        "source_snapshot_hash": "ka-bluru-dc-office-560009-v1",
+        "field_evidence": {
+          "address_phone_email": "https://bengaluruurban.nic.in/en/divisions/deputy-commissioner/",
+          "pincode": "https://bengaluruurban.nic.in/en/service/land-records/",
+          "portal_ownership": "https://bengaluruurban.nic.in/en/contact-us/"
+        }
+      }
+    },
+    {
+      "entry_key": "ka-bluru-land-records-560009-v1",
+      "state_code": "KA",
+      "district_code": "BLURU",
+      "district_name": "Bengaluru Urban",
+      "service_domain": "citizen_support",
+      "pincode": "560009",
+      "department_code": "BHOOMI-KA-BLRU",
+      "department_name": "Bhoomi / Land Records Helpdesk, Bengaluru Urban",
+      "help_centre_name": "Deputy Commissioner Office Building Revenue Complex — Land Records",
+      "address": "DC office building Revenue Complex, K.G. Road, Bengaluru - 560009",
+      "phone": "080-22869741",
+      "email": "bhoomi@karnataka.gov.in",
+      "website_url": "https://landrecords.karnataka.gov.in",
+      "source_name": "Bengaluru Urban district portal — Land Records",
+      "source_url": "https://bengaluruurban.nic.in/en/service/land-records/",
+      "source_record_id": "land-records",
+      "source_last_verified": "2026-08-09T00:00:00Z",
+      "working_hours": "Not published on the source page; verify before visiting",
+      "supported_languages": ["en"],
+      "coverage_basis": "exact_pincode",
+      "priority": 20,
+      "safe_metadata": {
+        "source_kind": "official_district_portal",
+        "source_scope": "district_service_directory",
+        "demo_pack": "ka-two-districts-v1",
+        "source_snapshot_hash": "ka-bluru-land-records-560009-v1",
+        "field_evidence": {
+          "address_pincode_email": "https://bengaluruurban.nic.in/en/service/land-records/",
+          "office_phone": "https://bengaluruurban.nic.in/en/service/birth-certificate/"
+        }
+      }
+    },
+    {
+      "entry_key": "ka-mysuru-dc-office-570011-v1",
+      "state_code": "KA",
+      "district_code": "MYSURU",
+      "district_name": "Mysuru",
+      "service_domain": "citizen_support",
+      "pincode": "570011",
+      "department_code": "DC-KA-MYSURU",
+      "department_name": "Deputy Commissioner Office, Mysuru District",
+      "help_centre_name": "Mysuru Deputy Commissioner and District Magistrate Office",
+      "address": "The Deputy Commissioner Office, Giribhovi Palya, Siddarthanagar, Mysuru - 570011",
+      "phone": "0821-2424079",
+      "email": "dcmys-ka@nic.in",
+      "website_url": "https://mysore.nic.in",
+      "source_name": "Mysuru district portal — DC Office",
+      "source_url": "https://mysore.nic.in/en/department/dc-office-mysuru/",
+      "source_record_id": "dc-office-mysuru",
+      "source_last_verified": "2026-08-09T00:00:00Z",
+      "working_hours": "Not published on the source page; verify before visiting",
+      "supported_languages": ["en"],
+      "coverage_basis": "exact_pincode",
+      "priority": 10,
+      "safe_metadata": {
+        "source_kind": "official_district_portal",
+        "source_scope": "district_office_directory",
+        "demo_pack": "ka-two-districts-v1",
+        "source_snapshot_hash": "ka-mysuru-dc-office-570011-v1",
+        "field_evidence": {
+          "address_phone_email": "https://mysore.nic.in/en/department/dc-office-mysuru/",
+          "portal_address": "https://mysore.nic.in/en/contact-us/"
+        }
+      }
+    },
+    {
+      "entry_key": "ka-mysuru-regional-commissioner-570005-v1",
+      "state_code": "KA",
+      "district_code": "MYSURU",
+      "district_name": "Mysuru",
+      "service_domain": "citizen_support",
+      "pincode": "570005",
+      "department_code": "RC-KA-MYSURU",
+      "department_name": "Regional Commissioner's Office, Mysuru",
+      "help_centre_name": "Regional Commissioner's Office Mysuru",
+      "address": "High View, Vinoba Road, Kalamandir, Mysuru, Karnataka - 570005",
+      "phone": "0821-2414089",
+      "email": "rcmysuru@gmail.com",
+      "website_url": "https://rcmysore.gov.in",
+      "source_name": "Mysuru district portal — Regional Commissioner's Office",
+      "source_url": "https://mysore.nic.in/en/department/regional-commissioners-office-mysuru/",
+      "source_record_id": "regional-commissioners-office-mysuru",
+      "source_last_verified": "2026-08-09T00:00:00Z",
+      "working_hours": "Not published on the source page; verify before visiting",
+      "supported_languages": ["en"],
+      "coverage_basis": "exact_pincode",
+      "priority": 20,
+      "safe_metadata": {
+        "source_kind": "official_state_portal",
+        "source_scope": "regional_department_directory",
+        "demo_pack": "ka-two-districts-v1",
+        "source_snapshot_hash": "ka-mysuru-regional-commissioner-570005-v1",
+        "field_evidence": {
+          "address_phone_email": "https://rcmysore.gov.in/",
+          "official_directory_record": "https://mysore.nic.in/en/department/regional-commissioners-office-mysuru/"
+        }
+      }
+    }
+  ]
+}

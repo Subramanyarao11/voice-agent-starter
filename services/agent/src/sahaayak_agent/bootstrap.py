@@ -15,6 +15,7 @@ from sahaayak_common import (
     State,
     ensure_benefit_baselines,
     ensure_default_feature_flags,
+    ensure_directory_baselines,
     get_logger,
     session_scope,
 )
@@ -27,6 +28,7 @@ def ensure_reference_data() -> None:
 
     with session_scope() as db:
         benefit_baselines = ensure_benefit_baselines(db)
+        directory_baselines = ensure_directory_baselines(db)
         for profile in DEFAULT_CATALOG.profiles:
             db.merge(
                 Language(
@@ -92,4 +94,5 @@ def ensure_reference_data() -> None:
         states=len(DEFAULT_STATES),
         active_states=sum(1 for _, _, lang in DEFAULT_STATES if lang in served),
         benefit_baselines=benefit_baselines,
+        directory_baselines=directory_baselines,
     )

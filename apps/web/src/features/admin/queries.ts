@@ -4,6 +4,7 @@ import {
   getAdminAuditEvents,
   getAdminConversations,
   getAdminDirectory,
+  getAdminDirectoryVersions,
   getAdminBenefitReports,
   getAdminEscalations,
   getAdminImports,
@@ -38,6 +39,8 @@ import {
   updateAdminLanguageReview,
   approveAdminDirectoryEntry,
   deactivateAdminDirectoryEntry,
+  rollbackAdminDirectoryEntry,
+  updateAdminDirectoryEntry,
 } from "@/features/admin/api";
 
 export function useAdminMeQuery(token: string) {
@@ -145,6 +148,45 @@ export function useDeactivateAdminDirectoryMutation(token: string) {
     onSuccess: () => {
       void queryClient.invalidateQueries({queryKey: ["admin", "directory"]});
       void queryClient.invalidateQueries({queryKey: ["admin", "escalations"]});
+      void queryClient.invalidateQueries({queryKey: ["admin", "audit"]});
+    },
+  });
+}
+
+export function useAdminDirectoryVersionsQuery(token: string, entryId: string, enabled = true) {
+  return useQuery({
+    queryKey: ["admin", "directory-versions", entryId],
+    queryFn: () => getAdminDirectoryVersions(token, entryId),
+    enabled: Boolean(token) && enabled,
+  });
+}
+
+export function useUpdateAdminDirectoryMutation(token: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (input: {entryId: string; payload: Parameters<typeof updateAdminDirectoryEntry>[2]}) =>
+      updateAdminDirectoryEntry(token, input.entryId, input.payload),
+    onSuccess: (_data, variables) => {
+      void queryClient.invalidateQueries({queryKey: ["admin", "directory"]});
+      void queryClient.invalidateQueries({queryKey: ["admin", "directory-versions", variables.entryId]});
+      void queryClient.invalidateQueries({queryKey: ["admin", "freshness"]});
+      void queryClient.invalidateQueries({queryKey: ["admin", "audit"]});
+    },
+  });
+}
+
+export function useRollbackAdminDirectoryMutation(token: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (input: {entryId: string; version: number; reason: string}) =>
+      rollbackAdminDirectoryEntry(token, input.entryId, {
+        version: input.version,
+        reason: input.reason,
+      }),
+    onSuccess: (_data, variables) => {
+      void queryClient.invalidateQueries({queryKey: ["admin", "directory"]});
+      void queryClient.invalidateQueries({queryKey: ["admin", "directory-versions", variables.entryId]});
+      void queryClient.invalidateQueries({queryKey: ["admin", "freshness"]});
       void queryClient.invalidateQueries({queryKey: ["admin", "audit"]});
     },
   });

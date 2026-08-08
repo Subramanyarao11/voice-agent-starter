@@ -2,7 +2,7 @@
 .PHONY: help setup up down infra api web lint fmt test check types seed validate-data migrate \
 pipeline extract prefilter structure spotcheck jobs jobs-state jobs-ncs evaluate retention rate-limit-smoke \
 notifications notifications-dry-run freshness-scan language-release-check language-ui-check \
-language-voice-smoke freshness-worker logs-api ps clean
+language-voice-smoke freshness-worker directory-india-gov directory-demo logs-api ps clean
 
 help: ## Show every available target
 	@grep -hE '^[a-zA-Z_-]+:.*?## ' $(MAKEFILE_LIST) \
@@ -90,6 +90,9 @@ pipeline: extract prefilter structure ## Run the full myScheme ingestion pipelin
 
 directory-india-gov: ## Fetch official India.gov department/district directory rows into a pending snapshot
 	uv run python scripts/21_ingest_india_gov_directory.py --all-states
+
+directory-demo: ## Import the source-attested Karnataka two-district demo pack as pending rows
+	DATABASE_URL="$${DATABASE_URL:-postgresql+psycopg://sahaayak:sahaayak@localhost:5433/sahaayak}" REDIS_URL="" ENV=development uv run python scripts/16_import_department_directory.py --file data/directory/demo/ka-two-districts.json
 
 extract: ## Step 1 — download myScheme PDFs and extract raw text
 	uv run --group pipeline python scripts/01_download_and_extract.py

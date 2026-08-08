@@ -2,8 +2,8 @@
 
 from __future__ import annotations
 
-from datetime import UTC, datetime, timedelta
-from typing import Literal
+from datetime import UTC, date, datetime, timedelta
+from typing import Any, Literal
 
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
@@ -11,7 +11,16 @@ from sqlmodel import Session, select
 
 from sahaayak_api.admin_auth import AdminPrincipal, require_admin_role
 from sahaayak_api.telemetry import make_audit_event
-from sahaayak_common import DepartmentDirectoryEntry, State, get_session, settings
+from sahaayak_common import (
+    DepartmentDirectoryEntry,
+    DepartmentDirectoryVersion,
+    State,
+    apply_directory_snapshot,
+    directory_snapshot,
+    get_session,
+    record_directory_version,
+    settings,
+)
 
 router = APIRouter(prefix="/api/admin/departments", tags=["admin"])
 
@@ -36,12 +45,17 @@ class DirectoryEntryOut(BaseModel):
     source_url: str
     source_record_id: str
     source_last_verified: datetime | None
+    valid_until: date | None
+    working_hours: str
+    supported_languages: list[str]
+    coverage_basis: str
     source_kind: str
     source_scope: str
     approval_status: str
     is_active: bool
     stale: bool
     priority: int
+    content_revision: int
     created_at: datetime
     updated_at: datetime
 
@@ -70,6 +84,56 @@ class DirectoryListOut(BaseModel):
 
 
 class DirectoryDecisionRequest(BaseModel):
+    reason: str = Field(min_length=3, max_length=500)
+
+
+class DirectoryEditRequest(BaseModel):
+    expected_revision: int | None = Field(default=None, ge=1)
+    state_code: str = Field(min_length=2, max_length=16)
+    district_code: str = Field(default="", max_length=80)
+    district_name: str = Field(default="", max_length=120)
+    service_domain: Literal["scheme", "scholarship", "job", "citizen_support"] = "citizen_support"
+    pincode: str = Field(default="", max_length=6)
+    pincode_prefix: str = Field(default="", max_length=5)
+    department_code: str = Field(default="", max_length=120)
+    department_name: str = Field(min_length=2, max_length=200)
+    help_centre_name: str = Field(default="", max_length=200)
+    address: str = Field(default="", max_length=500)
+    phone: str = Field(default="", max_length=80)
+    email: str = Field(default="", max_length=160)
+    website_url: str = Field(default="", max_length=500)
+    source_name: str = Field(min_length=2, max_length=160)
+    source_url: str = Field(min_length=8, max_length=500)
+    source_record_id: str = Field(default="", max_length=160)
+    source_last_verified: datetime | None = None
+    valid_until: date | None = None
+    working_hours: str = Field(default="", max_length=500)
+    supported_languages: list[str] = Field(default_factory=list, max_length=20)
+    coverage_basis: str = Field(default="", max_length=120)
+    priority: int = Field(default=100, ge=0, le=10_000)
+    reason: str = Field(min_length=3, max_length=500)
+
+
+class DirectoryVersionOut(BaseModel):
+    id: str
+    entry_id: str
+    version: int
+    action: str
+    actor_id: str
+    actor_role: str
+    reason: str
+    snapshot: dict[str, Any]
+    created_at: datetime
+
+
+class DirectoryVersionListOut(BaseModel):
+    entry_id: str
+    current_revision: int
+    versions: list[DirectoryVersionOut]
+
+
+class DirectoryRollbackRequest(BaseModel):
+    version: int = Field(ge=1)
     reason: str = Field(min_length=3, max_length=500)
 
 
@@ -148,10 +212,18 @@ def approve_directory_entry(
                 "official directory first"
             ),
         )
-    before = {"approval_status": row.approval_status, "is_active": row.is_active}
+    before = directory_snapshot(row)
     row.approval_status = "approved"
     row.is_active = True
     row.updated_at = datetime.now(UTC)
+    record_directory_version(
+        db,
+        row,
+        action="approve",
+        actor_id=principal.actor_id,
+        actor_role=principal.role,
+        reason=payload.reason.strip(),
+    )
     db.add(row)
     db.add(
         make_audit_event(
@@ -161,7 +233,11 @@ def approve_directory_entry(
             target_id=row.id,
             reason=payload.reason.strip(),
             safe_before=before,
-            safe_after={"approval_status": row.approval_status, "is_active": row.is_active},
+            safe_after={
+                "approval_status": row.approval_status,
+                "is_active": row.is_active,
+                "content_revision": row.content_revision,
+            },
         )
     )
     db.commit()
@@ -177,10 +253,18 @@ def deactivate_directory_entry(
     principal: AdminPrincipal = Depends(require_admin_role("reviewer", "admin")),
 ) -> DirectoryEntryOut:
     row = _get_entry(db, entry_id)
-    before = {"approval_status": row.approval_status, "is_active": row.is_active}
+    before = directory_snapshot(row)
     row.is_active = False
     row.approval_status = "rejected"
     row.updated_at = datetime.now(UTC)
+    record_directory_version(
+        db,
+        row,
+        action="deactivate",
+        actor_id=principal.actor_id,
+        actor_role=principal.role,
+        reason=payload.reason.strip(),
+    )
     db.add(row)
     db.add(
         make_audit_event(
@@ -190,7 +274,174 @@ def deactivate_directory_entry(
             target_id=row.id,
             reason=payload.reason.strip(),
             safe_before=before,
-            safe_after={"approval_status": row.approval_status, "is_active": row.is_active},
+            safe_after={
+                "approval_status": row.approval_status,
+                "is_active": row.is_active,
+                "content_revision": row.content_revision,
+            },
+        )
+    )
+    db.commit()
+    db.refresh(row)
+    return _entry_out(row)
+
+
+@router.patch("/{entry_id}", response_model=DirectoryEntryOut)
+def edit_directory_entry(
+    entry_id: str,
+    payload: DirectoryEditRequest,
+    db: Session = Depends(get_session),
+    principal: AdminPrincipal = Depends(require_admin_role("reviewer", "admin")),
+) -> DirectoryEntryOut:
+    row = _get_entry(db, entry_id)
+    if payload.expected_revision is not None and payload.expected_revision != row.content_revision:
+        raise HTTPException(
+            status_code=409,
+            detail=(
+                f"Directory row changed since it was loaded; expected revision "
+                f"{payload.expected_revision}, current revision {row.content_revision}"
+            ),
+        )
+    _validate_edit_payload(payload)
+    normalized_state = payload.state_code.strip().upper()
+    if db.get(State, normalized_state) is None:
+        raise HTTPException(status_code=422, detail="state_code must reference a configured state")
+    before = directory_snapshot(row)
+    fields = (
+        "state_code",
+        "district_code",
+        "district_name",
+        "service_domain",
+        "pincode",
+        "pincode_prefix",
+        "department_code",
+        "department_name",
+        "help_centre_name",
+        "address",
+        "phone",
+        "email",
+        "website_url",
+        "source_name",
+        "source_url",
+        "source_record_id",
+        "source_last_verified",
+        "valid_until",
+        "working_hours",
+        "supported_languages",
+        "coverage_basis",
+        "priority",
+    )
+    for field in fields:
+        value = getattr(payload, field)
+        if field == "state_code":
+            value = normalized_state
+        if isinstance(value, str):
+            value = value.strip()
+        setattr(row, field, value)
+    # Any content edit is re-reviewable. This prevents a valid old approval
+    # from silently covering a changed phone number or routing key.
+    row.approval_status = "pending"
+    row.is_active = False
+    row.updated_at = datetime.now(UTC)
+    record_directory_version(
+        db,
+        row,
+        action="edit",
+        actor_id=principal.actor_id,
+        actor_role=principal.role,
+        reason=payload.reason.strip(),
+    )
+    db.add(
+        make_audit_event(
+            principal=principal,
+            action="department_directory.edit",
+            target_type="department_directory_entry",
+            target_id=row.id,
+            reason=payload.reason.strip(),
+            safe_before={
+                "content_revision": row.content_revision - 1,
+                "snapshot": before,
+            },
+            safe_after={
+                "content_revision": row.content_revision,
+                "snapshot": directory_snapshot(row),
+            },
+        )
+    )
+    db.commit()
+    db.refresh(row)
+    return _entry_out(row)
+
+
+@router.get("/{entry_id}/versions", response_model=DirectoryVersionListOut)
+def directory_versions(
+    entry_id: str,
+    db: Session = Depends(get_session),
+    _principal: AdminPrincipal = Depends(
+        require_admin_role("observer", "operator", "reviewer", "admin")
+    ),
+) -> DirectoryVersionListOut:
+    row = _get_entry(db, entry_id)
+    versions = db.exec(
+        select(DepartmentDirectoryVersion)
+        .where(DepartmentDirectoryVersion.entry_id == entry_id)
+        .order_by(DepartmentDirectoryVersion.version.desc())
+        .limit(100)
+    ).all()
+    return DirectoryVersionListOut(
+        entry_id=entry_id,
+        current_revision=row.content_revision,
+        versions=[DirectoryVersionOut.model_validate(version.model_dump()) for version in versions],
+    )
+
+
+@router.post("/{entry_id}/rollback", response_model=DirectoryEntryOut)
+def rollback_directory_entry(
+    entry_id: str,
+    payload: DirectoryRollbackRequest,
+    db: Session = Depends(get_session),
+    principal: AdminPrincipal = Depends(require_admin_role("admin")),
+) -> DirectoryEntryOut:
+    row = _get_entry(db, entry_id)
+    target = db.exec(
+        select(DepartmentDirectoryVersion).where(
+            DepartmentDirectoryVersion.entry_id == entry_id,
+            DepartmentDirectoryVersion.version == payload.version,
+        )
+    ).first()
+    if target is None:
+        raise HTTPException(status_code=404, detail="Directory version not found")
+    if target.version == row.content_revision:
+        raise HTTPException(status_code=400, detail="Directory row is already at that version")
+    before = directory_snapshot(row)
+    apply_directory_snapshot(row, dict(target.snapshot))
+    # Restoring contact data must still pass a fresh human approval. A rollback
+    # must not re-enable an old or now-stale office record by accident.
+    row.approval_status = "pending"
+    row.is_active = False
+    row.updated_at = datetime.now(UTC)
+    record_directory_version(
+        db,
+        row,
+        action="rollback",
+        actor_id=principal.actor_id,
+        actor_role=principal.role,
+        reason=payload.reason.strip(),
+    )
+    db.add(
+        make_audit_event(
+            principal=principal,
+            action="department_directory.rollback",
+            target_type="department_directory_entry",
+            target_id=row.id,
+            reason=payload.reason.strip(),
+            safe_before={"content_revision": row.content_revision - 1, "snapshot": before},
+            safe_after={
+                "restored_version": target.version,
+                "content_revision": row.content_revision,
+                "approval_status": row.approval_status,
+                "is_active": row.is_active,
+            },
         )
     )
     db.commit()
@@ -206,6 +457,8 @@ def _get_entry(db: Session, entry_id: str) -> DepartmentDirectoryEntry:
 
 
 def _is_stale(row: DepartmentDirectoryEntry, now: datetime) -> bool:
+    if row.valid_until is not None and row.valid_until < now.date():
+        return True
     if row.source_last_verified is None:
         return True
     verified_at = row.source_last_verified
@@ -237,15 +490,38 @@ def _entry_out(row: DepartmentDirectoryEntry, *, now: datetime | None = None) ->
         source_url=row.source_url,
         source_record_id=row.source_record_id,
         source_last_verified=row.source_last_verified,
+        valid_until=row.valid_until,
+        working_hours=row.working_hours,
+        supported_languages=list(row.supported_languages or []),
+        coverage_basis=row.coverage_basis,
         source_kind=str(metadata.get("source_kind") or "manual_import"),
         source_scope=str(metadata.get("source_scope") or "unspecified"),
         approval_status=row.approval_status,
         is_active=row.is_active,
         stale=_is_stale(row, current),
         priority=row.priority,
+        content_revision=row.content_revision,
         created_at=row.created_at,
         updated_at=row.updated_at,
     )
+
+
+def _validate_edit_payload(payload: DirectoryEditRequest) -> None:
+    if payload.pincode and (len(payload.pincode) != 6 or not payload.pincode.isdigit()):
+        raise HTTPException(status_code=422, detail="pincode must be exactly six digits")
+    if payload.pincode_prefix and (
+        not payload.pincode_prefix.isdigit() or not 1 <= len(payload.pincode_prefix) <= 5
+    ):
+        raise HTTPException(
+            status_code=422,
+            detail="pincode_prefix must contain one to five digits",
+        )
+    for field_name in ("source_url", "website_url"):
+        value = getattr(payload, field_name)
+        if value and not value.startswith(("https://", "http://")):
+            raise HTTPException(status_code=422, detail=f"{field_name} must be an http(s) URL")
+    if payload.valid_until is not None and payload.valid_until < date.today():
+        raise HTTPException(status_code=422, detail="valid_until cannot be in the past")
 
 
 def _coverage_by_state(

@@ -112,6 +112,7 @@ def scan_source_freshness(
             "source_last_verified": (
                 row.source_last_verified.isoformat() if row.source_last_verified else None
             ),
+            "valid_until": row.valid_until.isoformat() if row.valid_until else None,
         }
         if not row.source_url:
             key = f"directory:{row.id}:missing_source"
@@ -136,6 +137,19 @@ def scan_source_freshness(
                 "message": (
                     f"{row.department_name} has not been checked within the "
                     f"{stale_days}-day directory freshness window."
+                ),
+                "metadata": metadata,
+            }
+        if row.valid_until and row.valid_until < now.date():
+            key = f"directory:{row.id}:expired"
+            expected[key] = {
+                "benefit_id": None,
+                "dataset": "department_directory",
+                "alert_type": "expired",
+                "severity": "critical",
+                "message": (
+                    f"{row.department_name} has passed its directory validity date; "
+                    "refresh the official source before routing."
                 ),
                 "metadata": metadata,
             }

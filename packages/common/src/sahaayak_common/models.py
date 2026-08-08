@@ -695,12 +695,54 @@ class DepartmentDirectoryEntry(SQLModel, table=True):
     source_url: str
     source_record_id: str = ""
     source_last_verified: datetime | None = None
+    valid_until: date | None = None
+    working_hours: str = ""
+    supported_languages: list[str] = Field(default_factory=list, sa_column=json_list())
+    # Describes the evidence behind the routing key so an operator can tell
+    # whether a row is an exact office/pincode record or a broader district
+    # directory hint.
+    coverage_basis: str = ""
     approval_status: str = Field(default="pending", index=True)  # pending | approved | rejected
     is_active: bool = Field(default=False, index=True)
     priority: int = 100
     safe_metadata: dict = Field(default_factory=dict, sa_column=json_dict())
+    content_revision: int = 0
     created_at: datetime = Field(default_factory=_utcnow, index=True)
     updated_at: datetime = Field(default_factory=_utcnow)
+
+
+class DepartmentDirectoryVersion(SQLModel, table=True):
+    """Immutable governance snapshot for a department directory row.
+
+    A rollback appends a new version; it never deletes an earlier contact or
+    silently changes the audit trail. Snapshots contain only directory and
+    publication fields, never caller or transcript data.
+    """
+
+    __tablename__ = "department_directory_version"
+    __table_args__ = (
+        Index(
+            "ix_department_directory_version_entry_version",
+            "entry_id",
+            "version",
+            unique=True,
+        ),
+        Index(
+            "ix_department_directory_version_entry_created",
+            "entry_id",
+            "created_at",
+        ),
+    )
+
+    id: str = Field(primary_key=True)
+    entry_id: str = Field(foreign_key="department_directory_entry.id", index=True)
+    version: int = Field(index=True)
+    action: str = Field(index=True)  # baseline | import | edit | approve | deactivate | rollback
+    actor_id: str = Field(index=True)
+    actor_role: str = ""
+    reason: str = ""
+    snapshot: dict = Field(default_factory=dict, sa_column=json_dict())
+    created_at: datetime = Field(default_factory=_utcnow, index=True)
 
 
 class EscalationTicket(SQLModel, table=True):

@@ -22,6 +22,13 @@ from sahaayak_common.contact_crypto import (
     reset_encryption_cache,
 )
 from sahaayak_common.db import engine, get_session, init_db, run_migrations, session_scope
+from sahaayak_common.directory_governance import (
+    apply_directory_snapshot,
+    directory_snapshot,
+    ensure_directory_baseline,
+    ensure_directory_baselines,
+    record_directory_version,
+)
 from sahaayak_common.feature_flags import (
     CORE_LANGUAGE_CODES,
     DEFAULT_FEATURE_FLAGS,
@@ -47,6 +54,7 @@ from sahaayak_common.models import (
     ConversationTurnLog,
     DataImportRun,
     DepartmentDirectoryEntry,
+    DepartmentDirectoryVersion,
     DeploymentRevision,
     EscalationTicket,
     EvaluationRun,
@@ -100,6 +108,7 @@ __all__ = [
     "ConversationTurnLog",
     "DataImportRun",
     "DepartmentDirectoryEntry",
+    "DepartmentDirectoryVersion",
     "DeploymentRevision",
     "EvaluationRun",
     "EscalationTicket",
@@ -128,10 +137,13 @@ __all__ = [
     "configure_logging",
     "decrypt_destination",
     "destination_hash",
+    "directory_snapshot",
     "encrypt_destination",
     "engine",
     "ensure_benefit_baseline",
     "ensure_benefit_baselines",
+    "ensure_directory_baseline",
+    "ensure_directory_baselines",
     "ensure_default_feature_flags",
     "evaluate_budget",
     "get_cache",
@@ -148,6 +160,8 @@ __all__ = [
     "normalize_destination",
     "request_id_var",
     "record_benefit_version",
+    "record_directory_version",
+    "apply_directory_snapshot",
     "reset_cache",
     "reset_encryption_cache",
     "resolve_escalation_route",

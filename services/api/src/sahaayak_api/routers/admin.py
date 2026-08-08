@@ -1266,6 +1266,10 @@ def admin_freshness(
             < now - timedelta(days=stale_days)
             for row in directory_rows
         )
+        directory_expired = sum(
+            row.valid_until is not None and row.valid_until < now.date()
+            for row in directory_rows
+        )
         directory_missing_source = sum(not row.source_url for row in directory_rows)
         directory_active = sum(
             row.approval_status == "approved" and row.is_active for row in directory_rows
@@ -1288,12 +1292,16 @@ def admin_freshness(
                     row.approval_status == "pending" for row in directory_rows
                 ),
                 stale_rows=directory_stale,
-                expired_rows=0,
+                expired_rows=directory_expired,
                 missing_source_rows=directory_missing_source,
                 oldest_verified_date=min(directory_verified, default=None),
                 latest_verified_date=max(directory_verified, default=None),
                 latest_import_at=directory_latest_update,
-                status=("warning" if directory_stale or directory_missing_source else "healthy"),
+                status=(
+                    "warning"
+                    if directory_stale or directory_expired or directory_missing_source
+                    else "healthy"
+                ),
             )
         )
 
@@ -2227,8 +2235,9 @@ def _release_gates(db: Session) -> list[ReleaseGateOut]:
                 if row.source_last_verified.tzinfo is None
                 else row.source_last_verified
             )
-            >= now - timedelta(days=max(1, settings.department_directory_stale_days))
+                >= now - timedelta(days=max(1, settings.department_directory_stale_days))
         )
+        and (row.valid_until is None or row.valid_until >= now.date())
     ]
     if authoritative:
         gates.append(

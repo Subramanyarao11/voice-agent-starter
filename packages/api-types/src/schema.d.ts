@@ -1297,6 +1297,57 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/admin/departments/{entry_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Edit Directory Entry */
+        patch: operations["edit_directory_entry_api_admin_departments__entry_id__patch"];
+        trace?: never;
+    };
+    "/api/admin/departments/{entry_id}/versions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Directory Versions */
+        get: operations["directory_versions_api_admin_departments__entry_id__versions_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/admin/departments/{entry_id}/rollback": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Rollback Directory Entry */
+        post: operations["rollback_directory_entry_api_admin_departments__entry_id__rollback_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/admin/notifications": {
         parameters: {
             query?: never;
@@ -2069,6 +2120,103 @@ export interface components {
             /** Reason */
             reason: string;
         };
+        /** DirectoryEditRequest */
+        DirectoryEditRequest: {
+            /** Expected Revision */
+            expected_revision?: number | null;
+            /** State Code */
+            state_code: string;
+            /**
+             * District Code
+             * @default
+             */
+            district_code: string;
+            /**
+             * District Name
+             * @default
+             */
+            district_name: string;
+            /**
+             * Service Domain
+             * @default citizen_support
+             * @enum {string}
+             */
+            service_domain: "scheme" | "scholarship" | "job" | "citizen_support";
+            /**
+             * Pincode
+             * @default
+             */
+            pincode: string;
+            /**
+             * Pincode Prefix
+             * @default
+             */
+            pincode_prefix: string;
+            /**
+             * Department Code
+             * @default
+             */
+            department_code: string;
+            /** Department Name */
+            department_name: string;
+            /**
+             * Help Centre Name
+             * @default
+             */
+            help_centre_name: string;
+            /**
+             * Address
+             * @default
+             */
+            address: string;
+            /**
+             * Phone
+             * @default
+             */
+            phone: string;
+            /**
+             * Email
+             * @default
+             */
+            email: string;
+            /**
+             * Website Url
+             * @default
+             */
+            website_url: string;
+            /** Source Name */
+            source_name: string;
+            /** Source Url */
+            source_url: string;
+            /**
+             * Source Record Id
+             * @default
+             */
+            source_record_id: string;
+            /** Source Last Verified */
+            source_last_verified?: string | null;
+            /** Valid Until */
+            valid_until?: string | null;
+            /**
+             * Working Hours
+             * @default
+             */
+            working_hours: string;
+            /** Supported Languages */
+            supported_languages?: string[];
+            /**
+             * Coverage Basis
+             * @default
+             */
+            coverage_basis: string;
+            /**
+             * Priority
+             * @default 100
+             */
+            priority: number;
+            /** Reason */
+            reason: string;
+        };
         /** DirectoryEntryOut */
         DirectoryEntryOut: {
             /** Id */
@@ -2109,6 +2257,14 @@ export interface components {
             source_record_id: string;
             /** Source Last Verified */
             source_last_verified: string | null;
+            /** Valid Until */
+            valid_until: string | null;
+            /** Working Hours */
+            working_hours: string;
+            /** Supported Languages */
+            supported_languages: string[];
+            /** Coverage Basis */
+            coverage_basis: string;
             /** Source Kind */
             source_kind: string;
             /** Source Scope */
@@ -2121,6 +2277,8 @@ export interface components {
             stale: boolean;
             /** Priority */
             priority: number;
+            /** Content Revision */
+            content_revision: number;
             /**
              * Created At
              * Format: date-time
@@ -2159,6 +2317,48 @@ export interface components {
             active_approved_count: number;
             /** Coverage By State */
             coverage_by_state: components["schemas"]["DirectoryCoverageOut"][];
+        };
+        /** DirectoryRollbackRequest */
+        DirectoryRollbackRequest: {
+            /** Version */
+            version: number;
+            /** Reason */
+            reason: string;
+        };
+        /** DirectoryVersionListOut */
+        DirectoryVersionListOut: {
+            /** Entry Id */
+            entry_id: string;
+            /** Current Revision */
+            current_revision: number;
+            /** Versions */
+            versions: components["schemas"]["DirectoryVersionOut"][];
+        };
+        /** DirectoryVersionOut */
+        DirectoryVersionOut: {
+            /** Id */
+            id: string;
+            /** Entry Id */
+            entry_id: string;
+            /** Version */
+            version: number;
+            /** Action */
+            action: string;
+            /** Actor Id */
+            actor_id: string;
+            /** Actor Role */
+            actor_role: string;
+            /** Reason */
+            reason: string;
+            /** Snapshot */
+            snapshot: {
+                [key: string]: unknown;
+            };
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
         };
         /**
          * Domain
@@ -5809,6 +6009,107 @@ export interface operations {
         requestBody: {
             content: {
                 "application/json": components["schemas"]["DirectoryDecisionRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DirectoryEntryOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    edit_directory_entry_api_admin_departments__entry_id__patch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                entry_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DirectoryEditRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DirectoryEntryOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    directory_versions_api_admin_departments__entry_id__versions_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                entry_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DirectoryVersionListOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    rollback_directory_entry_api_admin_departments__entry_id__rollback_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                entry_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DirectoryRollbackRequest"];
             };
         };
         responses: {

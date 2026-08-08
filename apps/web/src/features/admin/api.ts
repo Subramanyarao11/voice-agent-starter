@@ -267,14 +267,37 @@ const directoryEntrySchema = z.object({
   source_url: z.string(),
   source_record_id: z.string(),
   source_last_verified: z.string().nullable(),
+  valid_until: z.string().nullable(),
+  working_hours: z.string(),
+  supported_languages: z.array(z.string()),
+  coverage_basis: z.string(),
   source_kind: z.string(),
   source_scope: z.string(),
   approval_status: z.string(),
   is_active: z.boolean(),
   stale: z.boolean(),
   priority: z.number(),
+  content_revision: z.number(),
   created_at: z.string(),
   updated_at: z.string(),
+});
+
+const directoryVersionSchema = z.object({
+  id: z.string(),
+  entry_id: z.string(),
+  version: z.number(),
+  action: z.string(),
+  actor_id: z.string(),
+  actor_role: z.string(),
+  reason: z.string(),
+  snapshot: z.record(z.string(), z.unknown()),
+  created_at: z.string(),
+});
+
+const directoryVersionListSchema = z.object({
+  entry_id: z.string(),
+  current_revision: z.number(),
+  versions: z.array(directoryVersionSchema),
 });
 
 const directoryListSchema = z.object({
@@ -572,6 +595,7 @@ export type ReviewItem = z.infer<typeof reviewSchema>;
 export type AdminTicket = z.infer<typeof ticketSchema>;
 export type AdminDirectoryEntry = z.infer<typeof directoryEntrySchema>;
 export type AdminDirectory = z.infer<typeof directoryListSchema>;
+export type DirectoryVersionList = z.infer<typeof directoryVersionListSchema>;
 export type ProviderList = z.infer<typeof providerListSchema>;
 export type LanguageReadiness = z.infer<typeof languageReadinessSchema>;
 export type AuditEvent = z.infer<typeof auditEventSchema>;
@@ -782,6 +806,68 @@ export function deactivateAdminDirectoryEntry(token: string, entryId: string, re
     `/api/admin/departments/${encodeURIComponent(entryId)}/deactivate`,
     directoryEntrySchema,
     adminInit(token, {method: "POST", body: JSON.stringify({reason})}),
+  );
+}
+
+export type DirectoryEditPayload = {
+  expected_revision?: number;
+  state_code: string;
+  district_code: string;
+  district_name: string;
+  service_domain: "scheme" | "scholarship" | "job" | "citizen_support";
+  pincode: string;
+  pincode_prefix: string;
+  department_code: string;
+  department_name: string;
+  help_centre_name: string;
+  address: string;
+  phone: string;
+  email: string;
+  website_url: string;
+  source_name: string;
+  source_url: string;
+  source_record_id: string;
+  source_last_verified: string | null;
+  valid_until: string | null;
+  working_hours: string;
+  supported_languages: string[];
+  coverage_basis: string;
+  priority: number;
+  reason: string;
+};
+
+export function updateAdminDirectoryEntry(
+  token: string,
+  entryId: string,
+  payload: DirectoryEditPayload,
+): Promise<AdminDirectoryEntry> {
+  return request(
+    `/api/admin/departments/${encodeURIComponent(entryId)}`,
+    directoryEntrySchema,
+    adminInit(token, {method: "PATCH", body: JSON.stringify(payload)}),
+  );
+}
+
+export function getAdminDirectoryVersions(
+  token: string,
+  entryId: string,
+): Promise<DirectoryVersionList> {
+  return request(
+    `/api/admin/departments/${encodeURIComponent(entryId)}/versions`,
+    directoryVersionListSchema,
+    adminInit(token),
+  );
+}
+
+export function rollbackAdminDirectoryEntry(
+  token: string,
+  entryId: string,
+  payload: {version: number; reason: string},
+): Promise<AdminDirectoryEntry> {
+  return request(
+    `/api/admin/departments/${encodeURIComponent(entryId)}/rollback`,
+    directoryEntrySchema,
+    adminInit(token, {method: "POST", body: JSON.stringify(payload)}),
   );
 }
 

@@ -44,6 +44,22 @@ new fetch updates the source verification timestamp. If its stable source hash
 changes, the row is reset to pending/inactive so the reviewer can inspect the
 new source. An unchanged approved row keeps its approval.
 
+## Two-district demo pack
+
+For a deterministic end-to-end demo, import the curated official snapshot for
+Bengaluru Urban and Mysuru:
+
+```bash
+make directory-demo
+```
+
+It contains four enriched records: two offices/services in each district,
+with address, phone, email, public portal, source record, exact pincode,
+working-hours disclosure, supported-language evidence, and a coverage basis.
+The source pages were checked on 2026-08-09. The rows remain pending until a
+reviewer confirms them. This is an importer fixture, not a runtime seed or an
+eligibility dataset.
+
 ## Runtime safety rules
 
 Routing only considers rows that are all of the following:
@@ -61,9 +77,22 @@ final eligibility evidence for a benefit.
 ## Review and monitoring
 
 The admin Directory view exposes source counts, state/UT coverage, approved
-versus pending rows, and stale rows. The regular freshness scan also creates a
-deduplicated `department_directory` alert for an active approved row whose
-source is missing or outside the configured freshness window.
+versus pending rows, stale rows, enriched contact fields, and the current
+content revision. Reviewers can edit a row, inspect immutable history, and
+send an edit back to pending. Every import, edit, approval, deactivation, and
+rollback appends a version and an audit event.
+
+The regular freshness scan also creates a deduplicated
+`department_directory` alert for an active approved row whose source is
+missing, outside the configured freshness window, or past `valid_until`.
+
+Rollback is administrator-only. It restores the selected snapshot as a new
+version but deliberately leaves the row pending/inactive; the administrator
+must re-check freshness and approve it again before callers can use it.
+
+The five automated demo scenarios are covered in
+`tests/test_department_directory.py`: exact pincode, pincode prefix, exact
+district, stale-source fallback, and pending/unapproved fallback.
 
 Reviewers should open both the India.gov source URL and the linked public portal,
 confirm that the organization is still active, check the district/office

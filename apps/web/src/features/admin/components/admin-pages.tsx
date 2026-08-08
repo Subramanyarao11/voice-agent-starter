@@ -22,6 +22,7 @@ import {
   useAdminMeQuery,
   useAdminOverviewQuery,
   useAdminBenefitVersionsQuery,
+  useAdminDirectoryVersionsQuery,
   useAdminDeploymentComparisonQuery,
   useAdminProviderFailureSimulationsQuery,
   useAdminProvidersQuery,
@@ -36,7 +37,9 @@ import {
   useResolveAdminEscalationMutation,
   useReviewAdminBenefitMutation,
   useRollbackAdminBenefitMutation,
+  useRollbackAdminDirectoryMutation,
   useUpdateAdminBenefitMutation,
+  useUpdateAdminDirectoryMutation,
   useUpdateFreshnessAlertMutation,
   useUpdateAdminProviderPolicyMutation,
   useUpdateAdminFeatureFlagMutation,
@@ -233,10 +236,12 @@ function DirectoryPage({ token, role }: { token: string; role: string }) {
   const query = useAdminDirectoryQuery(token);
   const approve = useApproveAdminDirectoryMutation(token);
   const deactivate = useDeactivateAdminDirectoryMutation(token);
+  const edit = useUpdateAdminDirectoryMutation(token);
+  const rollback = useRollbackAdminDirectoryMutation(token);
   if (query.isPending) return <Loading label="Loading department directory…" />;
   if (query.isError || !query.data) return <ErrorPanel error={query.error} />;
   const canReview = role === "reviewer" || role === "admin";
-  const mutationError = approve.error ?? deactivate.error;
+  const mutationError = approve.error ?? deactivate.error ?? edit.error ?? rollback.error;
   return (
     <div className="space-y-6">
       <PageIntro
@@ -330,33 +335,195 @@ function DirectoryPage({ token, role }: { token: string; role: string }) {
         </CardHeader>
         <CardContent className="space-y-3">
           {query.data.entries.map((entry) => (
-            <article key={entry.id} className="rounded-xl border border-paper/10 bg-ink/20 p-4">
-              <div className="flex flex-wrap items-start justify-between gap-3">
-                <div>
-                  <div className="flex flex-wrap items-center gap-2">
-                    <Badge variant={entry.approval_status === "approved" && entry.is_active ? "success" : "warning"}>{entry.approval_status}{entry.is_active ? " · active" : " · inactive"}</Badge>
-                    {entry.stale && <Badge variant="warning">stale</Badge>}
-                    <span className="font-mono text-xs text-paper/40">{entry.id}</span>
-                  </div>
-                  <h3 className="mt-2 font-semibold">{entry.department_name}</h3>
-                  <p className="mt-1 text-sm text-paper/65">{entry.state_code} · {entry.district_name || "statewide"} · {entry.pincode || (entry.pincode_prefix ? `${entry.pincode_prefix}xxx` : "district")}</p>
-                </div>
-                {canReview && <div className="flex flex-wrap gap-2">{entry.approval_status !== "approved" && <Button size="sm" disabled={approve.isPending || deactivate.isPending || entry.stale} onClick={() => approve.mutate({entryId: entry.id, reason: "Verified official department source in the directory review queue"})}>Approve</Button>}{entry.is_active && <Button size="sm" variant="outline" disabled={approve.isPending || deactivate.isPending} onClick={() => deactivate.mutate({entryId: entry.id, reason: "Deactivated from the department directory review queue"})}>Deactivate</Button>}</div>}
-              </div>
-              <div className="mt-3 flex flex-wrap gap-x-5 gap-y-1 text-xs text-paper/45">
-                <span>{entry.source_kind} · {entry.source_scope}</span>
-                <span>{entry.service_domain}</span>
-                <span>{entry.help_centre_name || "Help centre name not supplied"}</span>
-                <span>Verified {entry.source_last_verified ? formatTime(entry.source_last_verified) : "never"}</span>
-                {entry.source_url && <a className="text-acid underline-offset-4 hover:underline" href={entry.source_url} target="_blank" rel="noreferrer">Official source</a>}
-                {entry.website_url && <a className="text-acid underline-offset-4 hover:underline" href={entry.website_url} target="_blank" rel="noreferrer">Public portal</a>}
-              </div>
-            </article>
+            <DirectoryEntryCard
+              key={entry.id}
+              token={token}
+              entry={entry}
+              canReview={canReview}
+              canRollback={role === "admin"}
+              pending={approve.isPending || deactivate.isPending || edit.isPending || rollback.isPending}
+              onApprove={(reason) => approve.mutate({entryId: entry.id, reason})}
+              onDeactivate={(reason) => deactivate.mutate({entryId: entry.id, reason})}
+              onEdit={(payload) => edit.mutate({entryId: entry.id, payload})}
+              onRollback={(version, reason) => rollback.mutate({entryId: entry.id, version, reason})}
+            />
           ))}
           {!query.data.entries.length && <EmptyState label="No directory rows imported. Run the official directory import script, then review the pending rows here." />}
         </CardContent>
       </Card>
     </div>
+  );
+}
+
+type DirectoryEditDraft = {
+  state_code: string;
+  district_code: string;
+  district_name: string;
+  service_domain: "scheme" | "scholarship" | "job" | "citizen_support";
+  pincode: string;
+  pincode_prefix: string;
+  department_code: string;
+  department_name: string;
+  help_centre_name: string;
+  address: string;
+  phone: string;
+  email: string;
+  website_url: string;
+  source_name: string;
+  source_url: string;
+  source_record_id: string;
+  source_last_verified: string;
+  valid_until: string;
+  working_hours: string;
+  supported_languages_text: string;
+  coverage_basis: string;
+  priority: string;
+  reason: string;
+};
+
+function directoryEditDraft(entry: import("@/features/admin/api").AdminDirectoryEntry): DirectoryEditDraft {
+  return {
+    state_code: entry.state_code,
+    district_code: entry.district_code,
+    district_name: entry.district_name,
+    service_domain: entry.service_domain === "scheme" || entry.service_domain === "scholarship" || entry.service_domain === "job" ? entry.service_domain : "citizen_support",
+    pincode: entry.pincode,
+    pincode_prefix: entry.pincode_prefix,
+    department_code: entry.department_code,
+    department_name: entry.department_name,
+    help_centre_name: entry.help_centre_name,
+    address: entry.address,
+    phone: entry.phone,
+    email: entry.email,
+    website_url: entry.website_url,
+    source_name: entry.source_name,
+    source_url: entry.source_url,
+    source_record_id: entry.source_record_id,
+    source_last_verified: entry.source_last_verified ? entry.source_last_verified.slice(0, 16) : "",
+    valid_until: entry.valid_until ?? "",
+    working_hours: entry.working_hours,
+    supported_languages_text: entry.supported_languages.join(", "),
+    coverage_basis: entry.coverage_basis,
+    priority: String(entry.priority),
+    reason: "Updated directory evidence and contact details",
+  };
+}
+
+function DirectoryEntryCard({
+  token,
+  entry,
+  canReview,
+  canRollback,
+  pending,
+  onApprove,
+  onDeactivate,
+  onEdit,
+  onRollback,
+}: {
+  token: string;
+  entry: import("@/features/admin/api").AdminDirectoryEntry;
+  canReview: boolean;
+  canRollback: boolean;
+  pending: boolean;
+  onApprove: (reason: string) => void;
+  onDeactivate: (reason: string) => void;
+  onEdit: (payload: import("@/features/admin/api").DirectoryEditPayload) => void;
+  onRollback: (version: number, reason: string) => void;
+}) {
+  const [editing, setEditing] = useState(false);
+  const [showHistory, setShowHistory] = useState(false);
+  const [draft, setDraft] = useState(() => directoryEditDraft(entry));
+  const history = useAdminDirectoryVersionsQuery(token, entry.id, showHistory);
+  const setField = <K extends keyof DirectoryEditDraft>(key: K, value: DirectoryEditDraft[K]) => {
+    setDraft((current) => ({...current, [key]: value}));
+  };
+  const submitEdit = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    onEdit({
+      expected_revision: entry.content_revision,
+      state_code: draft.state_code.trim().toUpperCase(),
+      district_code: draft.district_code.trim(),
+      district_name: draft.district_name.trim(),
+      service_domain: draft.service_domain,
+      pincode: draft.pincode.trim(),
+      pincode_prefix: draft.pincode_prefix.trim(),
+      department_code: draft.department_code.trim(),
+      department_name: draft.department_name.trim(),
+      help_centre_name: draft.help_centre_name.trim(),
+      address: draft.address.trim(),
+      phone: draft.phone.trim(),
+      email: draft.email.trim(),
+      website_url: draft.website_url.trim(),
+      source_name: draft.source_name.trim(),
+      source_url: draft.source_url.trim(),
+      source_record_id: draft.source_record_id.trim(),
+      source_last_verified: draft.source_last_verified ? new Date(draft.source_last_verified).toISOString() : null,
+      valid_until: draft.valid_until || null,
+      working_hours: draft.working_hours.trim(),
+      supported_languages: draft.supported_languages_text.split(",").map((value) => value.trim().toLowerCase()).filter(Boolean),
+      coverage_basis: draft.coverage_basis.trim(),
+      priority: Number(draft.priority) || 100,
+      reason: draft.reason.trim(),
+    });
+    setEditing(false);
+  };
+  return (
+    <article className="rounded-xl border border-paper/10 bg-ink/20 p-4">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <div className="flex flex-wrap items-center gap-2">
+            <Badge variant={entry.approval_status === "approved" && entry.is_active ? "success" : "warning"}>{entry.approval_status}{entry.is_active ? " · active" : " · inactive"}</Badge>
+            {entry.stale && <Badge variant="warning">stale</Badge>}
+            <span className="font-mono text-xs text-paper/40">{entry.id}</span>
+            <span className="font-mono text-xs text-paper/40">revision {entry.content_revision}</span>
+          </div>
+          <h3 className="mt-2 font-semibold">{entry.department_name}</h3>
+          <p className="mt-1 text-sm text-paper/65">{entry.state_code} · {entry.district_name || "statewide"} · {entry.pincode || (entry.pincode_prefix ? `${entry.pincode_prefix}xxx` : "district")}</p>
+        </div>
+        {canReview && <div className="flex flex-wrap gap-2">
+          {entry.approval_status !== "approved" && <Button size="sm" disabled={pending || entry.stale} onClick={() => onApprove("Verified the current official department source in the review queue")}>Approve</Button>}
+          {entry.is_active && <Button size="sm" variant="outline" disabled={pending} onClick={() => onDeactivate("Deactivated from the department directory review queue")}>Deactivate</Button>}
+        </div>}
+      </div>
+      <div className="mt-3 flex flex-wrap gap-x-5 gap-y-1 text-xs text-paper/45">
+        <span>{entry.source_kind} · {entry.source_scope}</span>
+        <span>{entry.service_domain} · {entry.coverage_basis || "coverage basis not recorded"}</span>
+        <span>{entry.help_centre_name || "Help centre name not supplied"}</span>
+        <span>Verified {entry.source_last_verified ? formatTime(entry.source_last_verified) : "never"}</span>
+        <span>{entry.working_hours || "Working hours not supplied"}</span>
+        {entry.source_url && <a className="text-acid underline-offset-4 hover:underline" href={entry.source_url} target="_blank" rel="noreferrer">Official source</a>}
+        {entry.website_url && <a className="text-acid underline-offset-4 hover:underline" href={entry.website_url} target="_blank" rel="noreferrer">Public portal</a>}
+      </div>
+      <div className="mt-4 flex flex-wrap gap-2 border-t border-paper/10 pt-4">
+        {canReview && <Button type="button" size="sm" variant="outline" onClick={() => setEditing((value) => !value)}>{editing ? "Close editor" : "Edit directory row"}</Button>}
+        <Button type="button" size="sm" variant="ghost" onClick={() => setShowHistory((value) => !value)}>{showHistory ? "Hide history" : "View version history"}</Button>
+      </div>
+      {editing && canReview && <form className="mt-4 grid gap-3 rounded-xl border border-acid/20 bg-acid/[0.04] p-4 md:grid-cols-2" onSubmit={submitEdit}>
+        <label className="grid gap-1 text-xs font-semibold text-paper/60">Department name<input required value={draft.department_name} onChange={(event) => setField("department_name", event.target.value)} className="h-10 rounded-lg border border-paper/15 bg-ink px-3 text-sm text-paper" /></label>
+        <label className="grid gap-1 text-xs font-semibold text-paper/60">Service domain<select value={draft.service_domain} onChange={(event) => setField("service_domain", event.target.value as DirectoryEditDraft["service_domain"])} className="h-10 rounded-lg border border-paper/15 bg-ink px-2 text-sm text-paper"><option value="scheme">Scheme</option><option value="scholarship">Scholarship</option><option value="job">Jobs</option><option value="citizen_support">Citizen support</option></select></label>
+        <label className="grid gap-1 text-xs font-semibold text-paper/60">State code<input required value={draft.state_code} onChange={(event) => setField("state_code", event.target.value)} className="h-10 rounded-lg border border-paper/15 bg-ink px-3 text-sm text-paper" /></label>
+        <label className="grid gap-1 text-xs font-semibold text-paper/60">District<input value={draft.district_name} onChange={(event) => setField("district_name", event.target.value)} className="h-10 rounded-lg border border-paper/15 bg-ink px-3 text-sm text-paper" /></label>
+        <label className="grid gap-1 text-xs font-semibold text-paper/60">Exact pincode<input inputMode="numeric" value={draft.pincode} onChange={(event) => setField("pincode", event.target.value)} className="h-10 rounded-lg border border-paper/15 bg-ink px-3 text-sm text-paper" placeholder="e.g. 560001" /></label>
+        <label className="grid gap-1 text-xs font-semibold text-paper/60">Pincode prefix<input inputMode="numeric" value={draft.pincode_prefix} onChange={(event) => setField("pincode_prefix", event.target.value)} className="h-10 rounded-lg border border-paper/15 bg-ink px-3 text-sm text-paper" placeholder="e.g. 570" /></label>
+        <label className="grid gap-1 text-xs font-semibold text-paper/60">Help-centre name<input value={draft.help_centre_name} onChange={(event) => setField("help_centre_name", event.target.value)} className="h-10 rounded-lg border border-paper/15 bg-ink px-3 text-sm text-paper" /></label>
+        <label className="grid gap-1 text-xs font-semibold text-paper/60">Department code<input value={draft.department_code} onChange={(event) => setField("department_code", event.target.value)} className="h-10 rounded-lg border border-paper/15 bg-ink px-3 text-sm text-paper" /></label>
+        <label className="grid gap-1 text-xs font-semibold text-paper/60 md:col-span-2">Address<textarea value={draft.address} onChange={(event) => setField("address", event.target.value)} className="min-h-20 rounded-lg border border-paper/15 bg-ink px-3 py-2 text-sm text-paper" /></label>
+        <label className="grid gap-1 text-xs font-semibold text-paper/60">Phone<input value={draft.phone} onChange={(event) => setField("phone", event.target.value)} className="h-10 rounded-lg border border-paper/15 bg-ink px-3 text-sm text-paper" /></label>
+        <label className="grid gap-1 text-xs font-semibold text-paper/60">Email<input type="email" value={draft.email} onChange={(event) => setField("email", event.target.value)} className="h-10 rounded-lg border border-paper/15 bg-ink px-3 text-sm text-paper" /></label>
+        <label className="grid gap-1 text-xs font-semibold text-paper/60">Working hours<input value={draft.working_hours} onChange={(event) => setField("working_hours", event.target.value)} className="h-10 rounded-lg border border-paper/15 bg-ink px-3 text-sm text-paper" placeholder="Mon–Fri, 10:00–17:30 IST" /></label>
+        <label className="grid gap-1 text-xs font-semibold text-paper/60">Supported languages<input value={draft.supported_languages_text} onChange={(event) => setField("supported_languages_text", event.target.value)} className="h-10 rounded-lg border border-paper/15 bg-ink px-3 text-sm text-paper" placeholder="en, kn, hi" /></label>
+        <label className="grid gap-1 text-xs font-semibold text-paper/60">Coverage basis<input value={draft.coverage_basis} onChange={(event) => setField("coverage_basis", event.target.value)} className="h-10 rounded-lg border border-paper/15 bg-ink px-3 text-sm text-paper" placeholder="district_portal or exact_pincode" /></label>
+        <label className="grid gap-1 text-xs font-semibold text-paper/60">Valid until<input type="date" value={draft.valid_until} onChange={(event) => setField("valid_until", event.target.value)} className="h-10 rounded-lg border border-paper/15 bg-ink px-3 text-sm text-paper" /></label>
+        <label className="grid gap-1 text-xs font-semibold text-paper/60">Source last verified<input type="datetime-local" value={draft.source_last_verified} onChange={(event) => setField("source_last_verified", event.target.value)} className="h-10 rounded-lg border border-paper/15 bg-ink px-3 text-sm text-paper" /></label>
+        <label className="grid gap-1 text-xs font-semibold text-paper/60">Source name<input required value={draft.source_name} onChange={(event) => setField("source_name", event.target.value)} className="h-10 rounded-lg border border-paper/15 bg-ink px-3 text-sm text-paper" /></label>
+        <label className="grid gap-1 text-xs font-semibold text-paper/60">Source URL<input required type="url" value={draft.source_url} onChange={(event) => setField("source_url", event.target.value)} className="h-10 rounded-lg border border-paper/15 bg-ink px-3 text-sm text-paper" /></label>
+        <label className="grid gap-1 text-xs font-semibold text-paper/60">Public portal URL<input type="url" value={draft.website_url} onChange={(event) => setField("website_url", event.target.value)} className="h-10 rounded-lg border border-paper/15 bg-ink px-3 text-sm text-paper" /></label>
+        <label className="grid gap-1 text-xs font-semibold text-paper/60">Priority<input type="number" min="0" max="10000" value={draft.priority} onChange={(event) => setField("priority", event.target.value)} className="h-10 rounded-lg border border-paper/15 bg-ink px-3 text-sm text-paper" /></label>
+        <label className="grid gap-1 text-xs font-semibold text-paper/60 md:col-span-2">Edit reason<input required minLength={3} value={draft.reason} onChange={(event) => setField("reason", event.target.value)} className="h-10 rounded-lg border border-paper/15 bg-ink px-3 text-sm text-paper" /></label>
+        <div className="flex items-center justify-between gap-3 md:col-span-2"><p className="text-xs leading-5 text-orange/80">Saving returns this row to pending review and creates a new immutable version.</p><Button type="submit" size="sm" disabled={pending}>{pending ? "Saving…" : "Save directory edit"}</Button></div>
+      </form>}
+      {showHistory && <div className="mt-4 space-y-2 rounded-xl border border-paper/10 bg-ink/20 p-4"><p className="text-xs font-semibold uppercase tracking-[0.12em] text-paper/40">Immutable version history</p>{history.isPending && <p className="text-sm text-paper/45">Loading history…</p>}{history.isError && <p role="alert" className="text-sm text-orange">Could not load version history.</p>}{history.data?.versions.map((version) => <div key={version.id} className="flex flex-wrap items-center justify-between gap-3 border-b border-paper/10 py-2 text-sm last:border-0"><div><p><span className="font-mono text-acid">v{version.version}</span> · <span className="font-semibold">{version.action}</span> · {version.actor_id}</p><p className="text-xs text-paper/45">{version.reason} · {formatTime(version.created_at)}</p></div>{canRollback && version.version !== entry.content_revision && <Button type="button" size="sm" variant="outline" disabled={pending} onClick={() => onRollback(version.version, `Restore directory version ${version.version}`)}><RotateCcw className="size-3.5" aria-hidden="true" />Restore v{version.version}</Button>}</div>)}{history.data && !history.data.versions.length && <p className="text-sm text-paper/45">No history recorded yet.</p>}</div>}
+    </article>
   );
 }
 
