@@ -1,17 +1,23 @@
 import { useState, type FormEvent } from "react";
 
-import { AlertTriangle, CheckCircle2, Clock3, ExternalLink, RefreshCw, ShieldAlert } from "lucide-react";
+import { AlertTriangle, CheckCircle2, Clock3, Download, ExternalLink, RefreshCw, RotateCcw, ShieldAlert } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Textarea } from "@/components/ui/textarea";
 import { useAdminSessionStore } from "@/features/admin/store";
 import {
   useAdminAuditQuery,
+  useAdminBenefitReportsQuery,
   useAdminConversationsQuery,
   useAdminEscalationsQuery,
   useAdminImportsQuery,
   useAdminLanguagesQuery,
+  useAdminNotificationsQuery,
+  useAdminFreshnessQuery,
+  useAdminEvaluationsQuery,
+  useAdminFeatureFlagsQuery,
   useAdminMeQuery,
   useAdminOverviewQuery,
   useAdminProvidersQuery,
@@ -19,9 +25,16 @@ import {
   useAdminSystemQuery,
   useAdminTelemetryQuery,
   useRollbackAdminProviderPolicyMutation,
+  useRollbackAdminFeatureFlagMutation,
+  useAddAdminEscalationNoteMutation,
+  useClaimAdminEscalationMutation,
+  useRouteAdminEscalationMutation,
   useResolveAdminEscalationMutation,
   useReviewAdminBenefitMutation,
   useUpdateAdminProviderPolicyMutation,
+  useUpdateAdminFeatureFlagMutation,
+  useUpdateAdminBenefitReportMutation,
+  useDownloadAdminAuditMutation,
 } from "@/features/admin/queries";
 import type { AdminView } from "@/features/admin/components/admin-shell";
 import type { ProviderPolicy, ProviderPolicyUpdate } from "@/features/admin/api";
@@ -44,6 +57,12 @@ export function AdminPage({ view }: { view: AdminView }) {
       return <BenefitsPage token={token} role={meQuery.data?.role ?? "observer"} />;
     case "providers":
       return <ProvidersPage token={token} role={meQuery.data?.role ?? "observer"} />;
+    case "messaging":
+      return <MessagingPage token={token} />;
+    case "quality":
+      return <QualityPage token={token} />;
+    case "flags":
+      return <FeatureFlagsPage token={token} role={meQuery.data?.role ?? "observer"} />;
     case "languages":
       return <LanguagesPage token={token} />;
     case "audit":
@@ -127,22 +146,62 @@ function TelemetryPage({ token }: { token: string }) {
 
 function EscalationsPage({ token, role }: { token: string; role: string }) {
   const query = useAdminEscalationsQuery(token);
-  const mutation = useResolveAdminEscalationMutation(token);
+  const claim = useClaimAdminEscalationMutation(token);
+  const note = useAddAdminEscalationNoteMutation(token);
+  const route = useRouteAdminEscalationMutation(token);
+  const resolve = useResolveAdminEscalationMutation(token);
   if (query.isPending) return <Loading label="Loading escalation queue…" />;
   if (query.isError || !query.data) return <ErrorPanel error={query.error} />;
-  const canResolve = role === "operator" || role === "admin";
+  const canOperate = role === "operator" || role === "admin";
+  const mutationError = [claim, note, route, resolve].find((item) => item.isError)?.error;
   return (
-    <div className="space-y-6"><PageIntro title="Escalation queue" description="Operator handoffs created when the agent declines to guess. Raw context is available only to operator and admin roles." />
-      <div className="grid gap-4">{query.data.map((ticket) => <Card key={ticket.id} className="border-paper/10 bg-paper/[0.04] text-paper"><CardContent className="flex flex-wrap items-start justify-between gap-5 p-5"><div><div className="flex flex-wrap items-center gap-2"><Badge variant="warning">{ticket.reason}</Badge><span className="font-mono text-xs text-paper/40">{ticket.id}</span></div><p className="mt-3 max-w-3xl text-sm leading-6 text-paper/70">{ticket.transcript_excerpt || "Sensitive context is redacted for this role."}</p><p className="mt-2 text-xs text-paper/40">Created {formatTime(ticket.created_at)} · session {ticket.session_id}</p></div>{canResolve && <Button size="sm" variant="outline" disabled={mutation.isPending} onClick={() => mutation.mutate(ticket.id)}>{mutation.isPending ? "Resolving…" : "Resolve"}</Button>}</CardContent></Card>)}</div>
+    <div className="space-y-6"><PageIntro title="Escalation queue" description="Operator handoffs created when the agent declines to guess. Claim ownership, verify the fallback route, leave a bounded note, and record the resolution." />
+      {mutationError && <div role="alert" className="rounded-xl border border-orange/30 bg-orange/10 px-4 py-3 text-sm text-orange">{toUserMessage(mutationError)}</div>}
+      <div className="grid gap-4">{query.data.map((ticket) => <EscalationCard key={ticket.id} ticket={ticket} canOperate={canOperate} busy={claim.isPending || note.isPending || route.isPending || resolve.isPending} onClaim={() => claim.mutate(ticket.id)} onNote={(text) => note.mutate({ticketId: ticket.id, text})} onRoute={(department, routingLocation) => route.mutate({ticketId: ticket.id, department, routing_location: routingLocation})} onResolve={(resolutionCode, resolutionNote) => resolve.mutate({ticketId: ticket.id, resolution_code: resolutionCode, note: resolutionNote})} />)}</div>
       {!query.data.length && <EmptyState label="No open escalations." />}
     </div>
   );
 }
 
+function EscalationCard({
+  ticket,
+  canOperate,
+  busy,
+  onClaim,
+  onNote,
+  onRoute,
+  onResolve,
+}: {
+  ticket: import("@/features/admin/api").AdminTicket;
+  canOperate: boolean;
+  busy: boolean;
+  onClaim: () => void;
+  onNote: (text: string) => void;
+  onRoute: (department: string, routingLocation: string) => void;
+  onResolve: (resolutionCode: string, resolutionNote: string) => void;
+}) {
+  const [note, setNote] = useState("");
+  const [department, setDepartment] = useState(ticket.department);
+  const [routingLocation, setRoutingLocation] = useState(ticket.routing_location);
+  const [resolutionCode, setResolutionCode] = useState("answered");
+  const [resolutionNote, setResolutionNote] = useState("");
+  const fallbackRoute = ticket.routing_source === "state_domain_fallback";
+
+  return <Card className="border-paper/10 bg-paper/[0.04] text-paper"><CardContent className="space-y-5 p-5">
+    <div className="flex flex-wrap items-start justify-between gap-4"><div><div className="flex flex-wrap items-center gap-2"><Badge variant="warning">{ticket.reason}</Badge><Badge variant={ticket.status === "claimed" ? "success" : "outline"}>{ticket.status}</Badge>{ticket.sla_breached && <Badge variant="warning">SLA overdue</Badge>}<span className="font-mono text-xs text-paper/40">{ticket.id}</span></div><p className="mt-3 max-w-3xl text-sm leading-6 text-paper/70">{ticket.transcript_excerpt || "Sensitive context is redacted for this role."}</p><p className="mt-2 text-xs text-paper/40">Created {formatTime(ticket.created_at)} · session {ticket.session_id}{ticket.assigned_to ? ` · owner ${ticket.assigned_to}` : ""}</p></div>{canOperate && ticket.status === "open" && <Button size="sm" variant="outline" disabled={busy} onClick={onClaim}>{busy ? "Claiming…" : "Claim ticket"}</Button>}</div>
+    <div className="grid gap-3 rounded-xl border border-paper/10 bg-ink/20 p-4 text-sm sm:grid-cols-3"><div><p className="text-xs uppercase tracking-[0.12em] text-paper/40">Department</p><p className="mt-1 font-semibold">{ticket.department}</p></div><div><p className="text-xs uppercase tracking-[0.12em] text-paper/40">Location hint</p><p className="mt-1 text-paper/70">{ticket.routing_location || "Not stated"}</p></div><div><p className="text-xs uppercase tracking-[0.12em] text-paper/40">SLA</p><p className={ticket.sla_breached ? "mt-1 font-semibold text-orange" : "mt-1 text-paper/70"}>{ticket.sla_due_at ? formatTime(ticket.sla_due_at) : "Legacy ticket — no deadline"}</p></div></div>
+    {fallbackRoute && <p className="text-xs leading-5 text-orange/80">Fallback route based on state and conversation domain. Confirm the real department or help centre before referring the caller.</p>}
+    {!!ticket.operator_notes.length && <div className="space-y-2"><p className="text-xs uppercase tracking-[0.12em] text-paper/40">Operator notes</p>{ticket.operator_notes.map((item) => <div key={item.id} className="rounded-lg border border-paper/10 bg-paper/[0.03] px-3 py-2 text-sm"><p className="text-paper/75">{item.text}</p><p className="mt-1 text-xs text-paper/40">{item.actor_id} · {formatTime(item.created_at)}</p></div>)}</div>}
+    {canOperate && <div className="grid gap-4 border-t border-paper/10 pt-4 lg:grid-cols-3"><div className="space-y-2"><label className="text-xs font-semibold uppercase tracking-[0.12em] text-paper/50" htmlFor={`route-${ticket.id}`}>Department route</label><input id={`route-${ticket.id}`} value={department} onChange={(event) => setDepartment(event.target.value)} className="h-10 w-full rounded-lg border border-paper/15 bg-background/40 px-3 text-sm text-paper outline-none focus:ring-2 focus:ring-ring" maxLength={160} /><input aria-label="District or pincode routing hint" value={routingLocation} onChange={(event) => setRoutingLocation(event.target.value)} placeholder="District or pincode hint" className="h-10 w-full rounded-lg border border-paper/15 bg-background/40 px-3 text-sm text-paper outline-none focus:ring-2 focus:ring-ring" maxLength={120} /><Button size="sm" variant="outline" disabled={busy || department.trim().length < 2} onClick={() => onRoute(department.trim(), routingLocation.trim())}>Save route</Button></div><div className="space-y-2"><label className="text-xs font-semibold uppercase tracking-[0.12em] text-paper/50" htmlFor={`note-${ticket.id}`}>Add note</label><Textarea id={`note-${ticket.id}`} value={note} onChange={(event) => setNote(event.target.value)} maxLength={2000} placeholder="Record only operational facts; do not paste unnecessary personal data." /><Button size="sm" variant="outline" disabled={busy || note.trim().length < 1} onClick={() => { onNote(note.trim()); setNote(""); }}>Add note</Button></div><div className="space-y-2"><label className="text-xs font-semibold uppercase tracking-[0.12em] text-paper/50" htmlFor={`resolution-${ticket.id}`}>Resolution</label><select id={`resolution-${ticket.id}`} value={resolutionCode} onChange={(event) => setResolutionCode(event.target.value)} className="h-10 w-full rounded-lg border border-paper/15 bg-background/40 px-3 text-sm text-paper outline-none focus:ring-2 focus:ring-ring"><option value="answered">Answered</option><option value="referred">Referred</option><option value="no_action">No action</option><option value="duplicate">Duplicate</option><option value="unreachable">Could not reach</option></select><Textarea value={resolutionNote} onChange={(event) => setResolutionNote(event.target.value)} maxLength={2000} placeholder="Optional resolution summary" /><Button size="sm" disabled={busy || ticket.status === "resolved"} onClick={() => onResolve(resolutionCode, resolutionNote.trim())}>Resolve ticket</Button></div></div>}
+  </CardContent></Card>;
+}
+
 function BenefitsPage({ token, role }: { token: string; role: string }) {
   const query = useAdminReviewsQuery(token);
   const imports = useAdminImportsQuery(token);
+  const reports = useAdminBenefitReportsQuery(token);
   const mutation = useReviewAdminBenefitMutation(token);
+  const reportMutation = useUpdateAdminBenefitReportMutation(token);
   if (query.isPending) return <Loading label="Loading benefit review queue…" />;
   if (query.isError || !query.data) return <ErrorPanel error={query.error} />;
   const canReview = role === "reviewer" || role === "admin";
@@ -152,8 +211,25 @@ function BenefitsPage({ token, role }: { token: string; role: string }) {
       <div className="grid gap-4">{query.data.items.map((item) => <ReviewCard key={item.id} item={item} canReview={canReview} onSubmit={(input) => mutation.mutate({benefitId: item.id, ...input})} pending={mutation.isPending} />)}</div>
       {!query.data.items.length && <EmptyState label="No benefits are currently waiting for human review." />}
       <Card className="border-paper/10 bg-paper/[0.04] text-paper"><CardHeader><CardTitle className="text-paper">Import history</CardTitle></CardHeader><CardContent className="space-y-3">{imports.data?.map((run) => <div key={run.id} className="flex flex-wrap justify-between gap-3 border-b border-paper/10 pb-3 text-sm last:border-0"><div><p className="font-semibold">{run.source_name}</p><p className="text-xs text-paper/45">{run.model_name || "No model recorded"} · prompt {run.prompt_version || "—"}</p></div><span className="text-xs text-paper/55">{run.accepted_count}/{run.input_count} accepted · {formatTime(run.started_at)}</span></div>)}{imports.data && !imports.data.length && <EmptyState label="No import manifests recorded." />}</CardContent></Card>
+      <IssueReportsPanel reports={reports.data ?? []} loading={reports.isPending} canResolve={role === "operator" || role === "admin"} pending={reportMutation.isPending} onUpdate={(reportId, status) => reportMutation.mutate({ reportId, status, reason: "Reviewed from the benefits operations queue" })} />
     </div>
   );
+}
+
+function IssueReportsPanel({
+  reports,
+  loading,
+  canResolve,
+  pending,
+  onUpdate,
+}: {
+  reports: import("@/features/admin/api").BenefitIssueReport[];
+  loading: boolean;
+  canResolve: boolean;
+  pending: boolean;
+  onUpdate: (reportId: string, status: "acknowledged" | "resolved" | "dismissed") => void;
+}) {
+  return <Card className="border-paper/10 bg-paper/[0.04] text-paper"><CardHeader><CardTitle className="text-paper">Citizen issue reports</CardTitle><p className="text-sm leading-6 text-paper/50">Reports are rate-limited, linked to the public source, and kept separate from private caller profile data.</p></CardHeader><CardContent className="space-y-3">{loading && <p className="text-sm text-paper/45">Loading reports…</p>}{!loading && reports.map((report) => <article key={report.id} className="rounded-xl border border-orange/20 bg-orange/[0.05] p-4"><div className="flex flex-wrap items-start justify-between gap-3"><div><div className="flex flex-wrap items-center gap-2"><Badge variant="warning">{report.category}</Badge><span className="font-mono text-xs text-paper/40">{report.id}</span></div><h3 className="mt-2 font-semibold">{report.benefit_name}</h3><p className="mt-2 text-sm leading-6 text-paper/70">{report.description || "Description redacted for this role."}</p><p className="mt-2 text-xs text-paper/40">{report.locale} · {formatTime(report.created_at)} · {report.source_title || "Source title missing"}</p></div>{report.source_document_url && <a className="inline-flex items-center gap-1 text-xs font-semibold text-acid underline-offset-4 hover:underline" href={report.source_document_url} target="_blank" rel="noreferrer">Source <ExternalLink className="size-3" aria-hidden="true" /></a>}</div>{canResolve && <div className="mt-4 flex flex-wrap gap-2 border-t border-paper/10 pt-3"><Button size="sm" variant="outline" disabled={pending} onClick={() => onUpdate(report.id, "acknowledged")}>Acknowledge</Button><Button size="sm" disabled={pending} onClick={() => onUpdate(report.id, "resolved")}>Resolve</Button><Button size="sm" variant="ghost" disabled={pending} onClick={() => onUpdate(report.id, "dismissed")}>Dismiss</Button></div>}</article>)}{!loading && !reports.length && <EmptyState label="No open citizen issue reports." />}</CardContent></Card>;
 }
 
 function ProvidersPage({ token, role }: { token: string; role: string }) {
@@ -166,6 +242,82 @@ function ProvidersPage({ token, role }: { token: string; role: string }) {
   return <div className="space-y-6"><PageIntro title="Providers, spend, and fallback" description="Configuration and request-level posture are visible here. Cost values are estimates where the provider does not expose a reconciliation API." /><div className="grid gap-4 lg:grid-cols-2">{query.data.providers.map((provider) => <Card key={provider.name} className="border-paper/10 bg-paper/[0.04] text-paper"><CardHeader className="flex-row items-center justify-between space-y-0"><CardTitle className="text-paper">{provider.name}</CardTitle>{provider.configured ? <Badge variant="success">{provider.health}</Badge> : <Badge variant="warning">not configured</Badge>}</CardHeader><CardContent className="space-y-3"><div className="grid grid-cols-2 gap-3 text-sm"><Stat label="Requests" value={provider.requests} /><Stat label="Failures" value={provider.failures} tone={provider.failures ? "warning" : "default"} />{provider.budget_usd != null && <Stat label="Budget remaining" value={`$${provider.remaining_usd?.toFixed(2) ?? "—"}`} tone="good" />}{provider.cache_hits > 0 && <Stat label="Cache hits" value={provider.cache_hits} tone="good" />}</div><p className="text-xs leading-5 text-paper/45">{provider.note}</p></CardContent></Card>)}</div><Card className="border-paper/10 bg-paper/[0.04] text-paper"><CardHeader><CardTitle className="text-paper">Audited provider policies</CardTitle><p className="text-sm leading-6 text-paper/50">{query.data.controls_note}</p></CardHeader><CardContent className="grid gap-4">{query.data.policies.map((policy) => <ProviderPolicyCard key={`${policy.id}-${policy.revision}`} policy={policy} canManage={canManage} onUpdate={(input) => update.mutate(input)} onRollback={(input) => rollback.mutate(input)} pending={update.isPending || rollback.isPending} />)}</CardContent></Card>{!canManage && <p className="rounded-xl border border-paper/10 bg-paper/[0.03] px-4 py-3 text-sm leading-6 text-paper/50">Your role can inspect effective policy posture, but only an admin can change or roll back provider routing.</p>}</div>;
 }
 
+function MessagingPage({ token }: { token: string }) {
+  const query = useAdminNotificationsQuery(token);
+  if (query.isPending) return <Loading label="Loading messaging cost and delivery posture…" />;
+  if (query.isError || !query.data) return <ErrorPanel error={query.error} />;
+  const data = query.data;
+  return (
+    <div className="space-y-6">
+      <PageIntro title="Messaging cost and delivery" description={`Last ${data.window_hours} hours · accepted is not delivered · ${data.controls_note}`} />
+      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        <MetricCard label="Daily spend" value={`${formatMinor(data.budget_daily_spent_minor_units)} ${data.cost_currency}`} detail={data.budget_daily_limit_minor_units == null ? "No daily cap configured" : `Limit ${formatMinor(data.budget_daily_limit_minor_units)} ${data.cost_currency}`} tone={data.budget_daily_limit_minor_units != null && data.budget_daily_spent_minor_units > data.budget_daily_limit_minor_units ? "warning" : "default"} />
+        <MetricCard label="Monthly spend" value={`${formatMinor(data.budget_monthly_spent_minor_units)} ${data.cost_currency}`} detail={data.budget_monthly_limit_minor_units == null ? "No monthly cap configured" : `Limit ${formatMinor(data.budget_monthly_limit_minor_units)} ${data.cost_currency}`} />
+        <MetricCard label="SMS delivery" value={formatPercent(data.channels.find((channel) => channel.channel === "sms")?.delivery_rate ?? 0)} detail="Reported delivered or seen" />
+        <MetricCard label="Stale callbacks" value={formatNumber(data.channels.reduce((total, channel) => total + channel.stale_awaiting_report, 0))} detail="Accepted messages without a timely report" tone={data.channels.some((channel) => channel.stale_awaiting_report > 0) ? "warning" : "default"} />
+      </div>
+      <div className="grid gap-4 lg:grid-cols-2">
+        {data.channels.map((channel) => (
+          <Card key={channel.channel} className="border-paper/10 bg-paper/[0.04] text-paper">
+            <CardHeader className="flex-row items-center justify-between space-y-0"><CardTitle className="capitalize text-paper">{channel.channel}</CardTitle><Badge variant={channel.configured && channel.policy_enabled && channel.template_ready ? "success" : "warning"}>{channel.configured ? (channel.policy_enabled ? "ready" : "policy off") : "not configured"}</Badge></CardHeader>
+            <CardContent className="grid gap-3 sm:grid-cols-2">
+              <Stat label="Delivered / seen" value={channel.delivered} tone="good" />
+              <Stat label="Failed" value={channel.failed} tone={channel.failed ? "warning" : "default"} />
+              <Stat label="Cost" value={`${formatMinor(channel.cost_minor_units)} ${channel.cost_currency}`} />
+              <Stat label="Verified contacts" value={channel.verified_contacts} />
+              <p className="sm:col-span-2 text-xs leading-5 text-paper/45">{channel.note} {channel.top_error_class ? `Top error: ${channel.top_error_class}.` : ""}</p>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+      <div className="grid gap-4 lg:grid-cols-2">
+        <CostBreakdown title="Cost by language" values={data.cost_by_language} currency={data.cost_currency} />
+        <CostBreakdown title="Cost by provider" values={data.cost_by_provider} currency={data.cost_currency} />
+      </div>
+    </div>
+  );
+}
+
+function CostBreakdown({ title, values, currency }: { title: string; values: Record<string, number>; currency: string }) {
+  return <Card className="border-paper/10 bg-paper/[0.04] text-paper"><CardHeader><CardTitle className="text-paper">{title}</CardTitle></CardHeader><CardContent className="space-y-2">{Object.entries(values).map(([key, value]) => <div key={key} className="flex items-center justify-between gap-4 border-b border-paper/5 py-2 text-sm last:border-0"><span className="text-paper/60">{key}</span><span className="font-mono text-acid">{formatMinor(value)} {currency}</span></div>)}{!Object.keys(values).length && <EmptyState label="No billable delivery data in this window." />}</CardContent></Card>;
+}
+
+function QualityPage({ token }: { token: string }) {
+  const freshness = useAdminFreshnessQuery(token);
+  const evaluations = useAdminEvaluationsQuery(token);
+  if (freshness.isPending || evaluations.isPending) return <Loading label="Loading freshness and evaluation evidence…" />;
+  if (freshness.isError) return <ErrorPanel error={freshness.error} />;
+  if (evaluations.isError) return <ErrorPanel error={evaluations.error} />;
+  if (!freshness.data || !evaluations.data) return <ErrorPanel error={new Error("Quality data is unavailable.")} />;
+  return (
+    <div className="space-y-6">
+      <PageIntro title="Data freshness and evaluations" description={`Freshness threshold ${freshness.data.stale_after_days} days · generated ${formatTime(freshness.data.generated_at)}. Machine-structured rows remain visible but are not publication evidence.`} />
+      <Card className="border-paper/10 bg-paper/[0.04] text-paper"><CardContent className="overflow-x-auto p-0"><table className="w-full min-w-[920px] text-left text-sm"><caption className="sr-only">Data freshness by source dataset</caption><thead className="border-b border-paper/10 text-xs uppercase tracking-[0.12em] text-paper/40"><tr><th className="px-5 py-4">Dataset</th><th className="px-5 py-4">Status</th><th className="px-5 py-4">Rows</th><th className="px-5 py-4">Active</th><th className="px-5 py-4">Human verified</th><th className="px-5 py-4">Stale / expired</th><th className="px-5 py-4">Latest check</th></tr></thead><tbody>{freshness.data.sources.map((source) => <tr key={source.dataset} className="border-b border-paper/5 last:border-0"><td className="px-5 py-4 font-semibold">{source.dataset}</td><td className="px-5 py-4"><Badge variant={source.status === "healthy" ? "success" : "warning"}>{source.status}</Badge></td><td className="px-5 py-4">{source.total_rows}</td><td className="px-5 py-4">{source.active_rows}</td><td className="px-5 py-4">{source.human_verified_rows}</td><td className="px-5 py-4">{source.stale_rows} / {source.expired_rows}</td><td className="px-5 py-4 text-xs text-paper/50">{source.latest_verified_date ?? "not checked"}</td></tr>)}</tbody></table>{!freshness.data.sources.length && <EmptyState label="No benefit or job source rows are loaded." />}</CardContent></Card>
+      <div className="grid gap-4">{evaluations.data.map((run) => <Card key={run.id} className="border-paper/10 bg-paper/[0.04] text-paper"><CardContent className="flex flex-wrap items-center justify-between gap-4 p-5"><div><div className="flex items-center gap-2"><Badge variant={run.passed ? "success" : "warning"}>{run.passed ? "passed" : "failed"}</Badge><span className="font-semibold">{run.suite_name}</span></div><p className="mt-2 text-xs text-paper/45">suite {run.suite_version} · {formatTime(run.completed_at ?? run.started_at)} · languages {Object.entries(run.language_counts).map(([language, count]) => `${language} ${count}`).join(", ") || "—"}</p></div><div className="text-right"><p className="font-mono text-2xl text-acid">{run.passed_count}/{run.case_count}</p><p className="text-xs text-paper/45">cases passed</p></div></CardContent></Card>)}{!evaluations.data.length && <Card className="border-paper/10 bg-paper/[0.04] text-paper"><CardContent><EmptyState label="No evaluation runs recorded yet. Run make evaluate to create evidence." /></CardContent></Card>}</div>
+    </div>
+  );
+}
+
+function FeatureFlagsPage({ token, role }: { token: string; role: string }) {
+  const query = useAdminFeatureFlagsQuery(token);
+  const update = useUpdateAdminFeatureFlagMutation(token);
+  const rollback = useRollbackAdminFeatureFlagMutation(token);
+  if (query.isPending) return <Loading label="Loading feature flags…" />;
+  if (query.isError || !query.data) return <ErrorPanel error={query.error} />;
+  const canManage = role === "admin";
+  return <div className="space-y-6"><PageIntro title="Feature flags and staged rollout" description="Flags are persisted, scoped by language/state, percentage-bucketed deterministically, and every change has an audited rollback path." /><div className="grid gap-4">{query.data.flags.map((flag) => <FeatureFlagCard key={flag.key} flag={flag} canManage={canManage} pending={update.isPending || rollback.isPending} onUpdate={(payload) => update.mutate({key: flag.key, payload})} onRollback={(reason) => rollback.mutate({key: flag.key, reason})} />)}</div>{!canManage && <p className="rounded-xl border border-paper/10 bg-paper/[0.03] px-4 py-3 text-sm leading-6 text-paper/50">Your role can inspect rollout posture. Only an admin can change or roll back flags.</p>}</div>;
+}
+
+function FeatureFlagCard({ flag, canManage, pending, onUpdate, onRollback }: { flag: import("@/features/admin/api").FeatureFlag; canManage: boolean; pending: boolean; onUpdate: (payload: import("@/features/admin/api").FeatureFlagUpdate) => void; onRollback: (reason: string) => void }) {
+  const [enabled, setEnabled] = useState(flag.enabled);
+  const [percentage, setPercentage] = useState(String(flag.rollout_percentage));
+  const [languages, setLanguages] = useState(flag.target_languages.join(", "));
+  const [states, setStates] = useState(flag.target_states.join(", "));
+  const [reason, setReason] = useState("Reviewed rollout posture");
+  const submit = (event: FormEvent<HTMLFormElement>) => { event.preventDefault(); onUpdate({enabled, rollout_percentage: Math.max(0, Math.min(100, Number(percentage) || 0)), target_languages: languages.split(",").map((value) => value.trim().toLowerCase()).filter(Boolean), target_states: states.split(",").map((value) => value.trim().toUpperCase()).filter(Boolean), reason: reason.trim()}); };
+  return <Card className="border-paper/10 bg-paper/[0.04] text-paper"><CardContent className="space-y-4 p-5"><div className="flex flex-wrap items-start justify-between gap-4"><div><div className="flex items-center gap-2"><Badge variant={flag.enabled ? "success" : "warning"}>{flag.enabled ? `${flag.rollout_percentage}% live` : "off"}</Badge><h3 className="font-semibold">{flag.key}</h3><span className="font-mono text-xs text-paper/40">revision {flag.revision}</span></div><p className="mt-2 max-w-2xl text-sm leading-6 text-paper/55">{flag.description}</p></div>{canManage && <Button type="button" size="sm" variant="outline" disabled={pending || flag.revision < 1} onClick={() => onRollback(reason.trim() || "Rollback reviewed feature flag") }><RotateCcw className="size-3.5" aria-hidden="true" />Rollback</Button>}</div>{canManage ? <form className="grid gap-3 border-t border-paper/10 pt-4 md:grid-cols-2" onSubmit={submit}><label className="flex items-center gap-2 text-sm font-semibold"><input type="checkbox" checked={enabled} onChange={(event) => setEnabled(event.target.checked)} /> Enabled</label><label className="grid gap-1 text-xs font-semibold text-paper/60">Rollout percentage<input type="number" min="0" max="100" value={percentage} onChange={(event) => setPercentage(event.target.value)} className="h-10 rounded-lg border border-paper/15 bg-ink px-3 text-sm text-paper" /></label><label className="grid gap-1 text-xs font-semibold text-paper/60">Languages (comma separated)<input value={languages} onChange={(event) => setLanguages(event.target.value)} className="h-10 rounded-lg border border-paper/15 bg-ink px-3 text-sm text-paper" placeholder="kn, hi" /></label><label className="grid gap-1 text-xs font-semibold text-paper/60">States (comma separated)<input value={states} onChange={(event) => setStates(event.target.value)} className="h-10 rounded-lg border border-paper/15 bg-ink px-3 text-sm text-paper" placeholder="KA, DL" /></label><label className="grid gap-1 text-xs font-semibold text-paper/60 md:col-span-2">Reason<input value={reason} onChange={(event) => setReason(event.target.value)} className="h-10 rounded-lg border border-paper/15 bg-ink px-3 text-sm text-paper" minLength={3} /></label><div className="flex items-center justify-between gap-3 md:col-span-2"><p className="text-xs text-paper/40">Target lists are optional. Empty lists mean all supported locales/states.</p><Button type="submit" size="sm" disabled={pending || reason.trim().length < 3}>{pending ? "Saving…" : "Save flag"}</Button></div></form> : <p className="border-t border-paper/10 pt-4 text-xs text-paper/45">Targets: {flag.target_languages.join(", ") || "all languages"} · {flag.target_states.join(", ") || "all states"}</p>}</CardContent></Card>;
+}
+
 function LanguagesPage({ token }: { token: string }) {
   const query = useAdminLanguagesQuery(token);
   if (query.isPending) return <Loading label="Loading language readiness…" />;
@@ -175,9 +327,19 @@ function LanguagesPage({ token }: { token: string }) {
 
 function AuditPage({ token }: { token: string }) {
   const query = useAdminAuditQuery(token);
+  const download = useDownloadAdminAuditMutation(token);
+  const exportCsv = async () => {
+    const blob = await download.mutateAsync("csv");
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement("a");
+    anchor.href = url;
+    anchor.download = "sahaayak-audit.csv";
+    anchor.click();
+    URL.revokeObjectURL(url);
+  };
   if (query.isPending) return <Loading label="Loading audit history…" />;
   if (query.isError || !query.data) return <ErrorPanel error={query.error} />;
-  return <div className="space-y-6"><PageIntro title="Audit log" description="Append-only workforce actions with safe before/after state. Audit entries are created in the same transaction as review and escalation changes." /><Card className="border-paper/10 bg-paper/[0.04] text-paper"><CardContent className="space-y-3 p-5">{query.data.map((event) => <article key={event.id} className="rounded-xl border border-paper/10 bg-ink/20 p-4"><div className="flex flex-wrap items-center justify-between gap-3"><div className="flex flex-wrap items-center gap-2"><Badge variant="outline" className="border-acid/25 text-acid">{event.action}</Badge><span className="font-mono text-xs text-paper/45">{event.actor_id} · {event.actor_role}</span></div><time className="text-xs text-paper/40">{formatTime(event.created_at)}</time></div><p className="mt-3 text-sm text-paper/70">{event.reason}</p><p className="mt-2 font-mono text-xs text-paper/40">{event.target_type}/{event.target_id} · request {event.request_id ?? "—"}</p></article>)}{!query.data.length && <EmptyState label="No audited workforce actions yet." />}</CardContent></Card></div>;
+  return <div className="space-y-6"><div className="flex flex-wrap items-end justify-between gap-4"><PageIntro title="Audit log" description="Append-only workforce actions with safe before/after state. Exports contain only the redacted audit projection, never transcripts, contacts, or secrets." /><Button type="button" variant="outline" disabled={download.isPending} onClick={() => { void exportCsv(); }}><Download className="size-3.5" aria-hidden="true" />{download.isPending ? "Preparing…" : "Export CSV"}</Button></div>{download.isError && <ErrorPanel error={download.error} />}<Card className="border-paper/10 bg-paper/[0.04] text-paper"><CardContent className="space-y-3 p-5">{query.data.map((event) => <article key={event.id} className="rounded-xl border border-paper/10 bg-ink/20 p-4"><div className="flex flex-wrap items-center justify-between gap-3"><div className="flex flex-wrap items-center gap-2"><Badge variant="outline" className="border-acid/25 text-acid">{event.action}</Badge><span className="font-mono text-xs text-paper/45">{event.actor_id} · {event.actor_role}</span></div><time className="text-xs text-paper/40">{formatTime(event.created_at)}</time></div><p className="mt-3 text-sm text-paper/70">{event.reason}</p><p className="mt-2 font-mono text-xs text-paper/40">{event.target_type}/{event.target_id} · request {event.request_id ?? "—"}</p></article>)}{!query.data.length && <EmptyState label="No audited workforce actions yet." />}</CardContent></Card></div>;
 }
 
 function SystemPage({ token }: { token: string }) {
@@ -296,4 +458,5 @@ function EmptyState({ label }: { label: string }) { return <p className="px-4 py
 function outcomeBadge(outcome: string) { if (outcome === "success") return <Badge variant="success"><CheckCircle2 className="size-3" aria-hidden="true" />success</Badge>; if (outcome === "error" || outcome === "escalated") return <Badge variant="warning"><ShieldAlert className="size-3" aria-hidden="true" />{outcome}</Badge>; return <Badge variant="outline" className="border-paper/15 text-paper/55"><Clock3 className="size-3" aria-hidden="true" />{outcome || "event"}</Badge>; }
 function formatTime(value: string) { const date = new Date(value); return Number.isNaN(date.valueOf()) ? value : date.toLocaleString([], {dateStyle: "medium", timeStyle: "short"}); }
 function formatNumber(value: number) { return new Intl.NumberFormat().format(value); }
+function formatMinor(value: number) { return new Intl.NumberFormat(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2}).format(value / 100); }
 function formatPercent(value: number) { return `${(value * 100).toFixed(value > 0 && value < 0.1 ? 1 : 0)}%`; }

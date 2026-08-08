@@ -330,6 +330,20 @@ def test_an_opted_out_contact_is_blocked(
     assert result.gate == dispatcher.GATE_CONSENT_WITHDRAWN
 
 
+def test_consent_for_another_purpose_does_not_unlock_reminders(
+    db: Session, session_row: UserSession, encryption_key
+) -> None:
+    contact = make_contact(db, session_row)
+    contact.consent_purpose = "support"
+    db.add(contact)
+    db.commit()
+
+    result = check_channel(
+        db, channel=NotificationChannel.SMS, contact=contact, session_id=session_row.id
+    )
+    assert result.gate == dispatcher.GATE_CONSENT_PURPOSE
+
+
 def test_a_contact_from_another_session_is_refused(
     db: Session, session_row: UserSession, encryption_key
 ) -> None:

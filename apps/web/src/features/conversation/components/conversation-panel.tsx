@@ -16,6 +16,7 @@ type ConversationPanelProps = {
   isSending: boolean;
   isResetting: boolean;
   disabled: boolean;
+  voiceDisabled: boolean;
   recording: boolean;
   voiceInputAvailable: boolean;
   textToSpeechAvailable: boolean;
@@ -65,6 +66,7 @@ export function ConversationPanel({
   isSending,
   isResetting,
   disabled,
+  voiceDisabled,
   recording,
   voiceInputAvailable,
   textToSpeechAvailable,
@@ -104,6 +106,7 @@ export function ConversationPanel({
         selectedLanguageName={selectedLanguageName}
         isSending={isSending}
         disabled={disabled}
+        voiceDisabled={voiceDisabled}
         recording={recording}
         voiceInputAvailable={voiceInputAvailable}
         textToSpeechAvailable={textToSpeechAvailable}

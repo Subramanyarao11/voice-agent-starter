@@ -8,8 +8,16 @@ them a form fee or a wasted trip to an office.
 
 from __future__ import annotations
 
+from datetime import UTC, datetime, timedelta
+
 from sahaayak_agent.nodes.deps import GraphDeps
-from sahaayak_common import EscalationTicket, get_logger, settings, ticket_id
+from sahaayak_common import (
+    EscalationTicket,
+    get_logger,
+    resolve_escalation_route,
+    settings,
+    ticket_id,
+)
 from sahaayak_contracts import AgentState, EscalationReason, Intent, MatchVerdict
 
 log = get_logger(__name__)
@@ -57,6 +65,12 @@ async def assess_escalation(state: AgentState, deps: GraphDeps) -> dict:
     # A durable row rather than a webhook call: if the volunteer queue is down,
     # the request is still recorded and can be picked up later.
     try:
+        route = resolve_escalation_route(
+            state_code=state.state_code,
+            domain=state.domain,
+            slots=state.slots,
+        )
+        now = datetime.now(UTC)
         with deps.session_factory() as session:
             session.add(
                 EscalationTicket(
@@ -70,6 +84,12 @@ async def assess_escalation(state: AgentState, deps: GraphDeps) -> dict:
                         "slots": {k.value: v for k, v in state.slots.items()},
                     },
                     transcript_excerpt=state.transcript[:500],
+                    sla_due_at=now + timedelta(hours=max(1, settings.escalation_sla_hours)),
+                    department=route.department,
+                    routing_location=route.routing_location,
+                    routing_source=route.routing_source,
+                    created_at=now,
+                    updated_at=now,
                 )
             )
     except Exception as exc:

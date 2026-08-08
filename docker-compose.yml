@@ -41,6 +41,7 @@ services:
       REDIS_URL: redis://redis:6379/0
       ADMIN_API_TOKEN: ${ADMIN_API_TOKEN:-}
       ADMIN_TOKENS_JSON: ${ADMIN_TOKENS_JSON:-}
+      ADMIN_OIDC_ENABLED: ${ADMIN_OIDC_ENABLED:-}
     ports:
       - "8000:8000"
     depends_on:

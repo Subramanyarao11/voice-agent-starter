@@ -1,8 +1,9 @@
 # Hosted RAG operations
 
 This repository uses one OpenAI-hosted Vector Store as the durable knowledge
-base for the already extracted myScheme corpus. Docker may run the API and web
-application, but the knowledge base is not stored in a container volume.
+base for the extracted myScheme corpus and official government-job source
+documents. Docker may run the API and web application, but the knowledge base
+is not stored in a container volume.
 OpenAI's [Retrieval guide](https://developers.openai.com/api/docs/guides/retrieval)
 and [File Search guide](https://developers.openai.com/api/docs/guides/tools-file-search)
 describe the managed chunking, embedding, indexing, and search primitives used
@@ -14,14 +15,16 @@ here.
   pass.
 - Raw records: 2,876.
 - Exact-content-unique documents: 2,066.
+- UPSC recruitment source documents: 3 (synced as a separate dataset).
+- Current remote total: 2,069 documents (2,066 myScheme + 3 UPSC).
 - UTF-8 source payload: 19,753,394 bytes (about 19.8 MB).
 - Remote store: configured in `OPENAI_VECTOR_STORE_ID`; the local development
   ID is written to the ignored `data/rag/vector-store-manifest.json`.
 - Source status: raw machine extraction, not human-verified eligibility data.
 
-The sync uploads normalized `.txt` files with source ID, canonical myScheme URL,
-content hash, and verification metadata. OpenAI performs the vector indexing;
-the application does not maintain a local embedding database.
+The sync uploads normalized `.txt` files with source ID, canonical source URL,
+content hash, dataset, and verification metadata. OpenAI performs the vector
+indexing; the application does not maintain a local embedding database.
 
 ## Initial sync and resuming
 
@@ -36,7 +39,7 @@ uv run python scripts/07_sync_openai_vector_store.py
 
 The script is manifest-driven and resumable:
 
-1. It reads the existing JSONL and deduplicates by normalized content hash.
+1. It reads the selected dataset JSONL and deduplicates by normalized content hash.
 2. It uploads only hashes absent from the manifest.
 3. It attaches uploaded files to the same Vector Store in bounded batches.
 4. It writes the manifest after each upload and completed batch.
@@ -64,8 +67,9 @@ The API exposes the same behavior:
 
 The shared dialogue graph also routes informational intents such as “tell me
 about this benefit” and “how do I apply?” through the same answer path. This
-means `/api/voice/turns` now follows `audio → STT → intent → hosted RAG →
-source-aware response → TTS` when the hosted store is configured. RAG answers
+means `/api/voice/turns` and `/api/voice/stream` follow `audio → STT → intent →
+hosted RAG → source-aware response → TTS` when the hosted store is configured.
+RAG answers
 are requested in the caller's language; citation markers are kept in
 `grounded_answer` and source cards, while `response_text` removes `[Source N]`
 markers before synthesis so they are not read aloud.

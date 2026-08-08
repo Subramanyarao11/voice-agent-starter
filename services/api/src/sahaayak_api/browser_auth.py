@@ -52,6 +52,23 @@ def principal_for_row(row: UserSession) -> BrowserSessionPrincipal:
     )
 
 
+def principal_for_access_token(
+    db: Session, token: str
+) -> BrowserSessionPrincipal | None:
+    """Resolve a server-issued guest token for non-HTTP transports."""
+    if not token.strip():
+        return None
+    row = db.exec(
+        select(UserSession).where(
+            UserSession.access_token_hash == token_digest(token),
+            UserSession.auth_mode == "guest",
+        )
+    ).first()
+    if row is None or _expired(row.expires_at):
+        return None
+    return principal_for_row(row)
+
+
 async def require_browser_session(
     request: Request,
     db: Session = Depends(get_session),

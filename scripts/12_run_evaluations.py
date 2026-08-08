@@ -3,9 +3,10 @@
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import uuid
-from datetime import date
+from datetime import UTC, datetime
 
 from sqlmodel import select
 
@@ -17,6 +18,7 @@ from sahaayak_common import (
     Benefit,
     ConversationTurnLog,
     EscalationTicket,
+    EvaluationRun,
     Reminder,
     SavedBenefit,
     UserSession,
@@ -45,12 +47,36 @@ def main() -> None:
     if args.seed_demo:
         _seed_demo_rows()
 
-    cases = json.loads((REPO_ROOT / "evals" / "conversations.json").read_text(encoding="utf-8"))
+    suite_path = REPO_ROOT / "evals" / "conversations.json"
+    suite_bytes = suite_path.read_bytes()
+    cases = json.loads(suite_bytes)
     selected = [case for case in cases if not args.case_ids or case["id"] in args.case_ids]
     runtime = AgentRuntime(deps=GraphDeps(understanding=Understanding()))
     run_id = uuid.uuid4().hex[:12]
+    started_at = datetime.now(UTC)
     results = [_run_case(runtime, case, run_id, keep=args.keep) for case in selected]
     payload = {"passed": all(result["passed"] for result in results), "cases": results}
+    completed_at = datetime.now(UTC)
+    language_counts: dict[str, int] = {}
+    for case in selected:
+        language = str(case.get("language") or "unknown")
+        language_counts[language] = language_counts.get(language, 0) + 1
+    with session_scope() as db:
+        db.add(
+            EvaluationRun(
+                id=f"eval_{run_id}",
+                suite_name="conversation-regression",
+                suite_version=hashlib.sha256(suite_bytes).hexdigest()[:16],
+                passed=bool(payload["passed"]),
+                case_count=len(results),
+                passed_count=sum(bool(result["passed"]) for result in results),
+                failed_count=sum(not bool(result["passed"]) for result in results),
+                language_counts=language_counts,
+                report_json=payload,
+                started_at=started_at,
+                completed_at=completed_at,
+            )
+        )
     print(json.dumps(payload, ensure_ascii=False, indent=2))
     if not payload["passed"]:
         raise SystemExit(1)
@@ -108,6 +134,8 @@ def _delete_session(session_id: str | None) -> None:
 
 
 def _seed_demo_rows() -> None:
+    from datetime import date
+
     from scripts.seed_demo import DEMO_BENEFITS
 
     with session_scope() as db:

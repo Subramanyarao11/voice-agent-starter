@@ -19,6 +19,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { useBenefitDetailQuery } from "@/features/benefits/queries";
+import { ReportIssuePanel } from "@/features/benefits/components/report-issue-panel";
 import { useConversationStore } from "@/features/conversation/store";
 import { useGuestSessionStore } from "@/features/session/store";
 import type { BenefitDetail } from "@/lib/api";
@@ -96,6 +97,7 @@ export function BenefitDetailPage() {
   const { benefitId } = useParams({ from: "/benefits/$benefitId" });
   const detailQuery = useBenefitDetailQuery(benefitId);
   const sessionId = useGuestSessionStore((state) => state.sessionId);
+  const accessToken = useGuestSessionStore((state) => state.accessToken);
   const lastTurn = useConversationStore((state) => state.lastTurn);
   const [shareNotice, setShareNotice] = useState("");
 
@@ -307,6 +309,7 @@ export function BenefitDetailPage() {
                 )}
               </CardContent>
             </Card>
+            <ReportIssuePanel benefitId={benefitId} accessToken={accessToken} />
           </>
         )}
       </div>

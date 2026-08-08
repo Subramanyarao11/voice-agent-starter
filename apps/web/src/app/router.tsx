@@ -84,6 +84,24 @@ const adminProvidersRoute = createRoute({
   component: () => <AdminRoutePage view="providers" />,
 });
 
+const adminMessagingRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/admin/messaging",
+  component: () => <AdminRoutePage view="messaging" />,
+});
+
+const adminQualityRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/admin/quality",
+  component: () => <AdminRoutePage view="quality" />,
+});
+
+const adminFlagsRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/admin/flags",
+  component: () => <AdminRoutePage view="flags" />,
+});
+
 const adminLanguagesRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/admin/languages",
@@ -113,6 +131,9 @@ const routeTree = rootRoute.addChildren([
   adminEscalationsRoute,
   adminBenefitsRoute,
   adminProvidersRoute,
+  adminMessagingRoute,
+  adminQualityRoute,
+  adminFlagsRoute,
   adminLanguagesRoute,
   adminAuditRoute,
   adminSystemRoute,

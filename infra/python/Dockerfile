@@ -25,6 +25,7 @@ RUN uv sync --frozen --no-install-workspace --no-dev
 COPY packages/ packages/
 COPY services/ services/
 COPY scripts/ scripts/
+COPY evals/ evals/
 RUN uv sync --frozen --no-dev
 
 ENV PATH="/app/.venv/bin:$PATH"

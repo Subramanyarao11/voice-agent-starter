@@ -65,6 +65,7 @@ GATE_CONTACT_UNVERIFIED = Gate("contact_unverified")
 GATE_CONTACT_REVOKED = Gate("contact_revoked")
 GATE_CONSENT_MISSING = Gate("consent_missing")
 GATE_CONSENT_WITHDRAWN = Gate("consent_withdrawn")
+GATE_CONSENT_PURPOSE = Gate("consent_purpose_mismatch")
 GATE_POLICY_DISABLED = Gate("policy_disabled")
 GATE_CIRCUIT_OPEN = Gate("circuit_open")
 GATE_PROVIDER_NOT_CONFIGURED = Gate("provider_not_configured")
@@ -83,6 +84,7 @@ GATE_MESSAGES: dict[str, str] = {
     GATE_CONTACT_REVOKED: "This contact has been removed. Add it again to use it.",
     GATE_CONSENT_MISSING: "Agree to receive messages on this channel first.",
     GATE_CONSENT_WITHDRAWN: "You opted out of messages on this channel.",
+    GATE_CONSENT_PURPOSE: "This contact was not approved for benefit reminders.",
     GATE_POLICY_DISABLED: "This channel is currently switched off. In-app reminders still work.",
     GATE_CIRCUIT_OPEN: "This channel is paused after repeated failures. In-app reminders "
     "still work.",
@@ -124,6 +126,7 @@ def check_channel(
     session_id: str = "",
     template_key: str = "",
     locale: str = "en",
+    consent_purpose: str = "reminders",
 ) -> ChannelAvailability:
     """Whether one message could be sent on one channel right now."""
     if channel is NotificationChannel.IN_APP:
@@ -138,7 +141,11 @@ def check_channel(
     ):
         return ChannelAvailability(channel, False, GATE_CHANNEL_UNKNOWN)
 
-    gate = _contact_gate(contact, session_id=session_id)
+    gate = _contact_gate(
+        contact,
+        session_id=session_id,
+        consent_purpose=consent_purpose,
+    )
     if gate is not GATE_OK:
         return ChannelAvailability(channel, False, gate)
 
@@ -177,7 +184,12 @@ def check_channel(
     )
 
 
-def _contact_gate(contact: ContactPoint | None, *, session_id: str) -> Gate:
+def _contact_gate(
+    contact: ContactPoint | None,
+    *,
+    session_id: str,
+    consent_purpose: str,
+) -> Gate:
     if contact is None:
         return GATE_CONTACT_MISSING
     if session_id and contact.session_id != session_id:
@@ -192,6 +204,8 @@ def _contact_gate(contact: ContactPoint | None, *, session_id: str) -> Gate:
         return GATE_CONSENT_WITHDRAWN
     if contact.consent_status != ConsentStatus.OPTED_IN.value:
         return GATE_CONSENT_MISSING
+    if contact.consent_purpose != consent_purpose:
+        return GATE_CONSENT_PURPOSE
     return GATE_OK
 
 

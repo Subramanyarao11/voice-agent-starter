@@ -1,6 +1,6 @@
 .DEFAULT_GOAL := help
 .PHONY: help setup up down infra api web lint fmt test check types seed validate-data migrate \
-pipeline extract prefilter structure spotcheck jobs evaluate retention rate-limit-smoke \
+pipeline extract prefilter structure spotcheck jobs jobs-state jobs-ncs evaluate retention rate-limit-smoke \
 notifications notifications-dry-run logs-api ps clean
 
 help: ## Show every available target
@@ -86,6 +86,12 @@ spotcheck: ## Step 5 — review structured rows against their source text
 
 jobs: ## Import current UPSC postings into the inactive job review queue
 	uv run --group pipeline python scripts/ingest_upsc_jobs.py --dry-run
+
+jobs-state: ## Preview official Karnataka state recruitment notifications
+	uv run --group pipeline python scripts/ingest_state_jobs.py --state-code KA --dry-run
+
+jobs-ncs: ## Import NCS Government jobs (requires an authorized NCS API endpoint)
+	uv run --group pipeline python scripts/ingest_ncs_jobs.py --dry-run
 
 logs-api: ## Tail API container logs
 	docker compose logs -f api

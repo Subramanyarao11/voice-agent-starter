@@ -1,13 +1,16 @@
-"""Sync the complete extracted corpus into an OpenAI-hosted Vector Store.
+"""Sync source-backed public-service corpora into one OpenAI-hosted Vector Store.
 
-This uses the existing ``data/structured/raw_text.jsonl`` output. It does not
-download PDFs or run the paid structuring pass again. Exact-text duplicates are
-collapsed before upload, UTF-8 text is uploaded with source metadata, and a
-local manifest makes reruns resumable by source content hash.
+This uses the existing ``data/structured/raw_text.jsonl`` output and the
+full-text job notification outputs from the official-source adapters. It does
+not download PDFs or run the paid structuring pass again. Exact-text
+duplicates are collapsed before upload, UTF-8 text is uploaded with source
+metadata, and a local manifest makes reruns resumable by source content hash.
 
 Usage:
     uv run python scripts/07_sync_openai_vector_store.py --dry-run
     uv run python scripts/07_sync_openai_vector_store.py
+    uv run python scripts/07_sync_openai_vector_store.py --dataset upsc_recruitment --dry-run
+    uv run python scripts/07_sync_openai_vector_store.py --dataset state_government_jobs --dry-run
 
 The created vector-store ID is written to ``data/rag/vector-store-manifest.json``
 and should be copied into ``OPENAI_VECTOR_STORE_ID`` in deployment secrets.
@@ -40,8 +43,19 @@ from sahaayak_common import (
 )
 
 INPUT_PATH = REPO_ROOT / "data" / "structured" / "raw_text.jsonl"
+JOB_INPUT_PATH = REPO_ROOT / "data" / "structured" / "job_sources.jsonl"
+STATE_JOB_INPUT_PATH = REPO_ROOT / "data" / "structured" / "state_job_sources.jsonl"
+NCS_JOB_INPUT_PATH = REPO_ROOT / "data" / "structured" / "ncs_job_sources.jsonl"
 UPLOAD_DIR = REPO_ROOT / "data" / "rag" / "source_text"
 DATASET_NAME = "shrijayan/gov_myscheme"
+JOB_DATASET_NAME = "upsc_recruitment"
+STATE_JOB_DATASET_NAME = "state_government_jobs"
+NCS_JOB_DATASET_NAME = "ncs_government_jobs"
+JOB_DATASET_NAMES = (
+    JOB_DATASET_NAME,
+    STATE_JOB_DATASET_NAME,
+    NCS_JOB_DATASET_NAME,
+)
 VECTOR_STORE_NAME = "sahaayak-gov-myscheme"
 BATCH_SIZE = 250
 UPLOAD_CONCURRENCY = 4
@@ -61,6 +75,9 @@ class SourceRecord:
     raw_text: str
     source_hash: str
     source_url: str
+    dataset: str
+    verification: str
+    source_title: str
 
 
 def canonical_source_id(record_id: str) -> str:
@@ -84,39 +101,94 @@ def source_url(source_id: str) -> str:
     return f"https://www.myscheme.gov.in/schemes/{quote(source_id, safe='')}"
 
 
-def load_unique_sources(limit: int | None = None) -> list[SourceRecord]:
-    if not INPUT_PATH.exists():
-        raise SystemExit(f"{INPUT_PATH} not found — run step 01 first.")
+def _load_jsonl(path: Path, *, required: bool) -> list[dict]:
+    if not path.exists():
+        if required:
+            raise SystemExit(f"{path} not found — run the corresponding ingestion step first.")
+        return []
+    with path.open(encoding="utf-8") as handle:
+        return [json.loads(line) for line in handle if line.strip()]
+
+
+def _job_source_path(dataset: str) -> Path:
+    """Resolve a job path at call time so tests and operators can override it."""
+    if dataset == JOB_DATASET_NAME:
+        # Keep this alias separate: existing operators and tests override the
+        # original UPSC path directly.
+        return JOB_INPUT_PATH
+    if dataset == STATE_JOB_DATASET_NAME:
+        return STATE_JOB_INPUT_PATH
+    if dataset == NCS_JOB_DATASET_NAME:
+        return NCS_JOB_INPUT_PATH
+    raise ValueError(f"Unsupported job dataset: {dataset}")
+
+
+def load_unique_sources(
+    limit: int | None = None, dataset: str = "all"
+) -> list[SourceRecord]:
+    supported_datasets = {"all", "myscheme", *JOB_DATASET_NAMES}
+    if dataset not in supported_datasets:
+        raise SystemExit(f"Unsupported RAG dataset: {dataset}")
+    raw_records: list[dict] = []
+    if dataset in {"all", "myscheme"}:
+        myscheme_records = _load_jsonl(INPUT_PATH, required=True)
+        raw_records.extend(
+            {**record, "dataset": DATASET_NAME, "verification": "raw_extracted"}
+            for record in myscheme_records
+        )
+    for job_dataset in JOB_DATASET_NAMES:
+        if dataset not in {"all", job_dataset}:
+            continue
+        job_records = _load_jsonl(
+            _job_source_path(job_dataset), required=dataset == job_dataset
+        )
+        raw_records.extend(
+            {
+                **record,
+                "dataset": job_dataset,
+                "verification": record.get("verification") or "raw_machine_extracted",
+            }
+            for record in job_records
+        )
 
     grouped: dict[str, list[dict]] = {}
-    with INPUT_PATH.open(encoding="utf-8") as handle:
-        for line in handle:
-            if not line.strip():
-                continue
-            record = json.loads(line)
-            normalized = " ".join(record.get("raw_text", "").split())
-            if not normalized:
-                continue
-            fingerprint = hashlib.sha256(normalized.encode("utf-8")).hexdigest()
-            grouped.setdefault(fingerprint, []).append(record)
+    for record in raw_records:
+        normalized = " ".join(str(record.get("raw_text", "")).split())
+        if not normalized:
+            continue
+        fingerprint = hashlib.sha256(normalized.encode("utf-8")).hexdigest()
+        grouped.setdefault(fingerprint, []).append(record)
 
     selected: list[SourceRecord] = []
     for fingerprint, records in grouped.items():
         record = min(records, key=canonical_score)
-        record_id = canonical_source_id(str(record.get("id", "")))
+        record_dataset = str(record.get("dataset") or DATASET_NAME)
+        raw_id = str(record.get("id") or record.get("source_id") or "")
+        record_id = (
+            canonical_source_id(raw_id)
+            if record_dataset == DATASET_NAME
+            else raw_id
+        )
         raw_text = str(record.get("raw_text", ""))
-        content_hash = hashlib.sha256(raw_text.encode("utf-8")).hexdigest()
+        content_hash = str(record.get("source_hash") or "")
+        content_hash = content_hash or hashlib.sha256(raw_text.encode("utf-8")).hexdigest()
+        record_url = str(record.get("source_url") or "")
+        if record_dataset == DATASET_NAME:
+            record_url = source_url(record_id)
         selected.append(
             SourceRecord(
                 source_id=record_id,
                 filename=str(record.get("filename") or f"{record_id}.pdf"),
                 raw_text=raw_text,
                 source_hash=content_hash or fingerprint,
-                source_url=source_url(record_id),
+                source_url=record_url,
+                dataset=record_dataset,
+                verification=str(record.get("verification") or "raw_extracted"),
+                source_title=str(record.get("source_title") or ""),
             )
         )
 
-    selected.sort(key=lambda item: (item.source_id.casefold(), item.source_hash))
+    selected.sort(key=lambda item: (item.dataset, item.source_id.casefold(), item.source_hash))
     return selected[:limit] if limit else selected
 
 
@@ -147,10 +219,12 @@ def write_manifest(manifest: dict) -> None:
 
 def render_source(record: SourceRecord) -> str:
     return (
+        f"Source dataset: {record.dataset}\n"
         f"Source ID: {record.source_id}\n"
         f"Source filename: {record.filename}\n"
         f"Source URL: {record.source_url}\n"
-        "Verification status: raw machine extraction; not human verified.\n\n"
+        f"Source title: {record.source_title}\n"
+        f"Verification status: {record.verification}; not human verified.\n\n"
         f"{record.raw_text}"
     )
 
@@ -162,11 +236,11 @@ def upload_path(record: SourceRecord) -> Path:
 
 def attributes_for(record: SourceRecord) -> dict[str, str]:
     return {
-        "dataset": DATASET_NAME,
+        "dataset": record.dataset,
         "source_id": record.source_id,
         "source_hash": record.source_hash,
         "source_url": record.source_url,
-        "verification": "raw_extracted",
+        "verification": record.verification,
     }
 
 
@@ -285,11 +359,13 @@ async def attach_batch(
         raise RuntimeError(f"vector-store batch failed: {exc}") from exc
 
 
-async def sync(limit: int | None, concurrency: int, batch_size: int) -> None:
+async def sync(
+    limit: int | None, concurrency: int, batch_size: int, dataset: str
+) -> None:
     if not settings.openai_api_key:
         raise SystemExit("OPENAI_API_KEY is not set — this step needs OpenAI.")
 
-    sources = load_unique_sources(limit)
+    sources = load_unique_sources(limit, dataset)
     estimated_bytes = sum(len(render_source(source).encode("utf-8")) for source in sources)
     if estimated_bytes > settings.openai_rag_max_source_bytes:
         raise SystemExit(
@@ -306,6 +382,11 @@ async def sync(limit: int | None, concurrency: int, batch_size: int) -> None:
 
     try:
         vector_store_id = await ensure_vector_store(client, manifest, len(sources))
+        for source in sources:
+            entry = manifest_record(manifest, source)
+            if entry:
+                entry["dataset"] = source.dataset
+                entry["verification"] = source.verification
         pending_uploads = [
             source
             for source in sources
@@ -333,6 +414,8 @@ async def sync(limit: int | None, concurrency: int, batch_size: int) -> None:
                 "source_id": source.source_id,
                 "filename": source.filename,
                 "source_hash": source.source_hash,
+                "dataset": source.dataset,
+                "verification": source.verification,
                 "file_id": file_id,
                 "status": "uploaded",
                 "uploaded_at": datetime.now(UTC).isoformat(),
@@ -359,8 +442,13 @@ async def sync(limit: int | None, concurrency: int, batch_size: int) -> None:
                 budget,
             )
 
-        manifest["dataset"] = DATASET_NAME
-        manifest["source_count"] = len(sources)
+        manifest["dataset"] = "all"
+        dataset_counts: dict[str, int] = {}
+        for record in manifest["records"].values():
+            record_dataset = str(record.get("dataset") or "unknown")
+            dataset_counts[record_dataset] = dataset_counts.get(record_dataset, 0) + 1
+        manifest["source_count"] = len(manifest["records"])
+        manifest["dataset_counts"] = dataset_counts
         manifest["estimated_source_bytes"] = estimated_bytes
         manifest["last_sync_at"] = datetime.now(UTC).isoformat()
         write_manifest(manifest)
@@ -380,6 +468,12 @@ def main() -> None:
     )
     parser.add_argument("--concurrency", type=int, default=UPLOAD_CONCURRENCY)
     parser.add_argument("--batch-size", type=int, default=BATCH_SIZE)
+    parser.add_argument(
+        "--dataset",
+        choices=("all", "myscheme", *JOB_DATASET_NAMES),
+        default="all",
+        help="source corpus to preview or sync",
+    )
     parser.add_argument("--dry-run", action="store_true")
     args = parser.parse_args()
 
@@ -388,7 +482,7 @@ def main() -> None:
     if args.batch_size < 1 or args.batch_size > 500:
         raise SystemExit("--batch-size must be between 1 and 500")
 
-    sources = load_unique_sources(args.limit)
+    sources = load_unique_sources(args.limit, args.dataset)
     estimated_bytes = sum(len(render_source(source).encode("utf-8")) for source in sources)
     print(f"Unique source documents: {len(sources)}")
     print(f"Estimated UTF-8 upload size: {estimated_bytes:,} bytes")
@@ -411,7 +505,7 @@ def main() -> None:
         print(f"Maximum new ledger reservation: ${estimated_reservation:.4f}")
         return
 
-    asyncio.run(sync(args.limit, args.concurrency, args.batch_size))
+    asyncio.run(sync(args.limit, args.concurrency, args.batch_size, args.dataset))
 
 
 if __name__ == "__main__":

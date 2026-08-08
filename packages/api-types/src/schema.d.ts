@@ -284,6 +284,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/benefits/{benefit_id}/reports": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Report Benefit Issue */
+        post: operations["report_benefit_issue_api_benefits__benefit_id__reports_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/sessions/{session_id}/contact-points": {
         parameters: {
             query?: never;
@@ -587,6 +604,57 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/escalations/{ticket_id}/claim": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Claim Ticket */
+        post: operations["claim_ticket_api_escalations__ticket_id__claim_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/escalations/{ticket_id}/notes": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Add Ticket Note */
+        post: operations["add_ticket_note_api_escalations__ticket_id__notes_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/escalations/{ticket_id}/route": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Route Ticket */
+        post: operations["route_ticket_api_escalations__ticket_id__route_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/escalations/{ticket_id}/resolve": {
         parameters: {
             query?: never;
@@ -706,6 +774,40 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/admin/benefit-reports": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Admin Benefit Reports */
+        get: operations["admin_benefit_reports_api_admin_benefit_reports_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/admin/benefit-reports/{report_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Update Benefit Report */
+        post: operations["update_benefit_report_api_admin_benefit_reports__report_id__post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/admin/imports": {
         parameters: {
             query?: never;
@@ -715,6 +817,40 @@ export interface paths {
         };
         /** Admin Imports */
         get: operations["admin_imports_api_admin_imports_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/admin/evaluations": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Admin Evaluations */
+        get: operations["admin_evaluations_api_admin_evaluations_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/admin/freshness": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Admin Freshness */
+        get: operations["admin_freshness_api_admin_freshness_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -791,6 +927,57 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/admin/feature-flags": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Admin Feature Flags */
+        get: operations["admin_feature_flags_api_admin_feature_flags_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/admin/feature-flags/{key}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Update Feature Flag */
+        put: operations["update_feature_flag_api_admin_feature_flags__key__put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/admin/feature-flags/{key}/rollback": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Rollback Feature Flag */
+        post: operations["rollback_feature_flag_api_admin_feature_flags__key__rollback_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/admin/languages": {
         parameters: {
             query?: never;
@@ -817,6 +1004,23 @@ export interface paths {
         };
         /** Admin Audit Events */
         get: operations["admin_audit_events_api_admin_audit_events_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/admin/audit-events/export": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Export Admin Audit Events */
+        get: operations["export_admin_audit_events_api_admin_audit_events_export_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -863,6 +1067,11 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        /** AddNoteRequest */
+        AddNoteRequest: {
+            /** Text */
+            text: string;
+        };
         /** AdminMeOut */
         AdminMeOut: {
             /** Actor Id */
@@ -977,6 +1186,26 @@ export interface components {
             job_metadata: {
                 [key: string]: unknown;
             };
+        };
+        /** BenefitIssueReportRequest */
+        BenefitIssueReportRequest: {
+            /**
+             * Category
+             * @enum {string}
+             */
+            category: "source" | "eligibility" | "deadline" | "application" | "other";
+            /** Description */
+            description: string;
+        };
+        /** BenefitIssueReportUpdate */
+        BenefitIssueReportUpdate: {
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "acknowledged" | "resolved" | "dismissed";
+            /** Reason */
+            reason: string;
         };
         /** BenefitReviewOut */
         BenefitReviewOut: {
@@ -1307,6 +1536,177 @@ export interface components {
          * @enum {string}
          */
         EscalationReason: "low_confidence" | "caller_requested" | "repeated_misunderstanding" | "no_matches";
+        /** EvaluationRunOut */
+        EvaluationRunOut: {
+            /** Id */
+            id: string;
+            /** Suite Name */
+            suite_name: string;
+            /** Suite Version */
+            suite_version: string;
+            /** Passed */
+            passed: boolean;
+            /** Case Count */
+            case_count: number;
+            /** Passed Count */
+            passed_count: number;
+            /** Failed Count */
+            failed_count: number;
+            /** Language Counts */
+            language_counts: {
+                [key: string]: unknown;
+            };
+            /** Report Json */
+            report_json: {
+                [key: string]: unknown;
+            };
+            /**
+             * Started At
+             * Format: date-time
+             */
+            started_at: string;
+            /** Completed At */
+            completed_at: string | null;
+        };
+        /** FeatureFlagListOut */
+        FeatureFlagListOut: {
+            /**
+             * Generated At
+             * Format: date-time
+             */
+            generated_at: string;
+            /** Flags */
+            flags: components["schemas"]["FeatureFlagOut"][];
+            /** Revisions */
+            revisions: components["schemas"]["FeatureFlagRevisionOut"][];
+        };
+        /** FeatureFlagOut */
+        FeatureFlagOut: {
+            /** Id */
+            id: string;
+            /** Key */
+            key: string;
+            /** Description */
+            description: string;
+            /** Enabled */
+            enabled: boolean;
+            /** Rollout Percentage */
+            rollout_percentage: number;
+            /** Target Languages */
+            target_languages: string[];
+            /** Target States */
+            target_states: string[];
+            /** Config */
+            config: {
+                [key: string]: unknown;
+            };
+            /** Revision */
+            revision: number;
+            /** Updated By */
+            updated_by: string;
+            /**
+             * Updated At
+             * Format: date-time
+             */
+            updated_at: string;
+        };
+        /** FeatureFlagRevisionOut */
+        FeatureFlagRevisionOut: {
+            /** Id */
+            id: string;
+            /** Flag Id */
+            flag_id: string;
+            /** Revision */
+            revision: number;
+            /** Action */
+            action: string;
+            /** Actor Id */
+            actor_id: string;
+            /** Actor Role */
+            actor_role: string;
+            /** Reason */
+            reason: string;
+            /** Before */
+            before: {
+                [key: string]: unknown;
+            };
+            /** After */
+            after: {
+                [key: string]: unknown;
+            };
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+        };
+        /** FeatureFlagRollbackRequest */
+        FeatureFlagRollbackRequest: {
+            /** Reason */
+            reason: string;
+            /** Revision Id */
+            revision_id?: string | null;
+        };
+        /** FeatureFlagUpdateRequest */
+        FeatureFlagUpdateRequest: {
+            /**
+             * Enabled
+             * @default false
+             */
+            enabled: boolean;
+            /**
+             * Rollout Percentage
+             * @default 0
+             */
+            rollout_percentage: number;
+            /** Target Languages */
+            target_languages?: string[];
+            /** Target States */
+            target_states?: string[];
+            /** Reason */
+            reason: string;
+        };
+        /** FreshnessOut */
+        FreshnessOut: {
+            /**
+             * Generated At
+             * Format: date-time
+             */
+            generated_at: string;
+            /** Stale After Days */
+            stale_after_days: number;
+            /** Data Fresh At */
+            data_fresh_at: string | null;
+            /** Sources */
+            sources: components["schemas"]["FreshnessSourceOut"][];
+        };
+        /** FreshnessSourceOut */
+        FreshnessSourceOut: {
+            /** Dataset */
+            dataset: string;
+            /** Total Rows */
+            total_rows: number;
+            /** Active Rows */
+            active_rows: number;
+            /** Human Verified Rows */
+            human_verified_rows: number;
+            /** Machine Structured Rows */
+            machine_structured_rows: number;
+            /** Stale Rows */
+            stale_rows: number;
+            /** Expired Rows */
+            expired_rows: number;
+            /** Missing Source Rows */
+            missing_source_rows: number;
+            /** Oldest Verified Date */
+            oldest_verified_date: string | null;
+            /** Latest Verified Date */
+            latest_verified_date: string | null;
+            /** Latest Import At */
+            latest_import_at: string | null;
+            /** Status */
+            status: string;
+        };
         /** HTTPValidationError */
         HTTPValidationError: {
             /** Detail */
@@ -1494,6 +1894,14 @@ export interface components {
             budget_monthly_limit_minor_units: number | null;
             /** Cost Currency */
             cost_currency: string;
+            /** Cost By Language */
+            cost_by_language: {
+                [key: string]: number;
+            };
+            /** Cost By Provider */
+            cost_by_provider: {
+                [key: string]: number;
+            };
             /** Controls Note */
             controls_note: string;
         };
@@ -1803,6 +2211,20 @@ export interface components {
              */
             delivery_status: string;
         };
+        /** ResolveRequest */
+        ResolveRequest: {
+            /**
+             * Resolution Code
+             * @default answered
+             * @enum {string}
+             */
+            resolution_code: "answered" | "referred" | "no_action" | "duplicate" | "unreachable";
+            /**
+             * Note
+             * @default
+             */
+            note: string;
+        };
         /** RetrievedSource */
         RetrievedSource: {
             /** Source Id */
@@ -1835,6 +2257,16 @@ export interface components {
             };
             /** Data Fresh At */
             data_fresh_at: string | null;
+        };
+        /** RouteRequest */
+        RouteRequest: {
+            /** Department */
+            department: string;
+            /**
+             * Routing Location
+             * @default
+             */
+            routing_location: string;
         };
         /** SaveBenefitRequest */
         SaveBenefitRequest: {
@@ -1990,6 +2422,22 @@ export interface components {
              */
             created_at: string;
         };
+        /** TicketNoteOut */
+        TicketNoteOut: {
+            /** Id */
+            id: string;
+            /** Actor Id */
+            actor_id: string;
+            /** Actor Role */
+            actor_role: string;
+            /** Text */
+            text: string;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+        };
         /** TicketOut */
         TicketOut: {
             /** Id */
@@ -2006,13 +2454,43 @@ export interface components {
             transcript_excerpt: string;
             /** Status */
             status: string;
+            /** Assigned To */
+            assigned_to?: string | null;
+            /** Claimed At */
+            claimed_at?: string | null;
+            /** Sla Due At */
+            sla_due_at?: string | null;
+            /**
+             * Sla Breached
+             * @default false
+             */
+            sla_breached: boolean;
+            /** Department */
+            department: string;
+            /** Routing Location */
+            routing_location: string;
+            /** Routing Source */
+            routing_source: string;
+            /** Operator Notes */
+            operator_notes?: components["schemas"]["TicketNoteOut"][];
             /**
              * Created At
              * Format: date-time
              */
             created_at: string;
+            /** Updated At */
+            updated_at?: string | null;
             /** Resolved At */
             resolved_at?: string | null;
+            /** Resolved By */
+            resolved_by?: string | null;
+            /** Resolution Code */
+            resolution_code?: string | null;
+            /**
+             * Resolution Note
+             * @default
+             */
+            resolution_note: string;
         };
         /** TrafficOut */
         TrafficOut: {
@@ -2171,6 +2649,52 @@ export interface components {
              * @default 0
              */
             processed: number;
+        };
+        /** BenefitIssueReportOut */
+        sahaayak_api__routers__admin__BenefitIssueReportOut: {
+            /** Id */
+            id: string;
+            /** Benefit Id */
+            benefit_id: string;
+            /** Benefit Name */
+            benefit_name: string;
+            /** Category */
+            category: string;
+            /** Description */
+            description: string;
+            /** Locale */
+            locale: string;
+            /** Status */
+            status: string;
+            /** Source Title */
+            source_title: string;
+            /** Source Document Url */
+            source_document_url: string;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Resolved At */
+            resolved_at: string | null;
+            /** Resolved By */
+            resolved_by: string | null;
+        };
+        /** BenefitIssueReportOut */
+        sahaayak_api__routers__benefit_feedback__BenefitIssueReportOut: {
+            /** Id */
+            id: string;
+            /** Benefit Id */
+            benefit_id: string;
+            /** Category */
+            category: string;
+            /** Status */
+            status: string;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
         };
     };
     responses: never;
@@ -2658,6 +3182,41 @@ export interface operations {
             };
         };
     };
+    report_benefit_issue_api_benefits__benefit_id__reports_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                benefit_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["BenefitIssueReportRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["sahaayak_api__routers__benefit_feedback__BenefitIssueReportOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     list_contact_points_api_sessions__session_id__contact_points_get: {
         parameters: {
             query?: never;
@@ -3105,8 +3664,10 @@ export interface operations {
     list_tickets_api_escalations_get: {
         parameters: {
             query?: {
-                status?: string;
+                status?: "open" | "claimed" | "resolved" | "active" | "all";
                 limit?: number;
+                department?: string | null;
+                overdue_only?: boolean;
             };
             header?: never;
             path?: never;
@@ -3134,7 +3695,7 @@ export interface operations {
             };
         };
     };
-    resolve_ticket_api_escalations__ticket_id__resolve_post: {
+    claim_ticket_api_escalations__ticket_id__claim_post: {
         parameters: {
             query?: never;
             header?: never;
@@ -3144,6 +3705,111 @@ export interface operations {
             cookie?: never;
         };
         requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TicketOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    add_ticket_note_api_escalations__ticket_id__notes_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                ticket_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AddNoteRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TicketOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    route_ticket_api_escalations__ticket_id__route_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                ticket_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RouteRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TicketOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    resolve_ticket_api_escalations__ticket_id__resolve_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                ticket_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["ResolveRequest"] | null;
+            };
+        };
         responses: {
             /** @description Successful Response */
             200: {
@@ -3352,6 +4018,73 @@ export interface operations {
             };
         };
     };
+    admin_benefit_reports_api_admin_benefit_reports_get: {
+        parameters: {
+            query?: {
+                status?: string;
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["sahaayak_api__routers__admin__BenefitIssueReportOut"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    update_benefit_report_api_admin_benefit_reports__report_id__post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                report_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["BenefitIssueReportUpdate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["sahaayak_api__routers__admin__BenefitIssueReportOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     admin_imports_api_admin_imports_get: {
         parameters: {
             query?: {
@@ -3370,6 +4103,68 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ImportRunOut"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    admin_evaluations_api_admin_evaluations_get: {
+        parameters: {
+            query?: {
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EvaluationRunOut"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    admin_freshness_api_admin_freshness_get: {
+        parameters: {
+            query?: {
+                stale_days?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FreshnessOut"];
                 };
             };
             /** @description Validation Error */
@@ -3495,6 +4290,96 @@ export interface operations {
             };
         };
     };
+    admin_feature_flags_api_admin_feature_flags_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FeatureFlagListOut"];
+                };
+            };
+        };
+    };
+    update_feature_flag_api_admin_feature_flags__key__put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                key: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["FeatureFlagUpdateRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FeatureFlagOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    rollback_feature_flag_api_admin_feature_flags__key__rollback_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                key: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["FeatureFlagRollbackRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FeatureFlagOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     admin_languages_api_admin_languages_get: {
         parameters: {
             query?: never;
@@ -3534,6 +4419,39 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["AuditEventOut"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    export_admin_audit_events_api_admin_audit_events_export_get: {
+        parameters: {
+            query?: {
+                format?: "csv" | "json";
+                limit?: number;
+                action?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
                 };
             };
             /** @description Validation Error */

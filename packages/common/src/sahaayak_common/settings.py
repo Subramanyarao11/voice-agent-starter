@@ -187,6 +187,8 @@ class Settings(BaseSettings):
     contact_verification_max_attempts: int = 5
     rate_limit_contact_verify_per_session: int = 5
     rate_limit_contact_verify_per_ip: int = 20
+    rate_limit_feedback_per_session: int = 5
+    rate_limit_feedback_per_ip: int = 20
 
     # --- Telephony seam ----------------------------------------------------
     # The generic signed webhook is disabled until a telephony provider and
@@ -206,6 +208,7 @@ class Settings(BaseSettings):
     # A verdict below this is offered to a human instead of being read out as
     # fact. See docs/spec-v2.md on escalation.
     escalation_confidence_threshold: float = 0.7
+    escalation_sla_hours: int = 24
 
     @property
     def resolved_database_url(self) -> str:

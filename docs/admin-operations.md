@@ -50,8 +50,19 @@ transaction as the state change.
   and reviewer publication decisions.
 - Providers: OpenAI budget ledger, Sarvam request/cache telemetry, Redis state,
   and Langfuse configuration.
+- Messaging: Infobip channel readiness, consent/contact counts, accepted versus
+  delivered/failed/stale callbacks, spend by channel/provider/language, and
+  daily/monthly budget posture. This page is an observability surface; it does
+  not enable a paid channel by itself.
+- Data & evals: freshness by corpus/source, active versus inactive rows,
+  human-verification counts, expiry/missing-source warnings, and persisted
+  deterministic evaluation runs.
+- Feature flags: audited enablement, deterministic percentage rollout, optional
+  language/state targeting, and admin-only rollback. A flag is a rollout
+  control, not a substitute for provider credentials or content review.
 - Languages: interface, prompt, data, and voice readiness matrix.
-- Audit log: workforce actions and safe before/after state.
+- Audit log: workforce actions and safe before/after state, with a CSV export
+  of the same redacted projection.
 - System: migration, commit, environment, and redacted configuration posture.
 
 ## Managed workforce authentication
@@ -116,3 +127,21 @@ The policy store controls routing and availability; it does not create a
 provider implementation or claim that an unconfigured provider is healthy. If
 the primary provider is unavailable, the existing text/rules fallback remains
 the only safe fallback until a separately tested provider adapter is enabled.
+
+## Quality and rollback operations
+
+`GET /api/admin/freshness` groups loaded benefits and jobs by source dataset and
+reports stale, expired, missing-source, and publication counts. The default
+freshness threshold is 90 days and can be changed for an inspection request;
+changing the threshold does not change any benefit row.
+
+`make evaluate` runs the versioned, deterministic conversation suite without
+provider calls and persists a redacted `EvaluationRun`. The admin quality page
+shows pass/fail counts and language coverage; it does not treat a passing
+conversation test as human verification of a benefit.
+
+Feature-flag updates and provider-policy updates use append-only revisions.
+Rollback writes a new revision containing the prior snapshot, so the audit log
+can reconstruct who changed a rollout and why. Exported audit files contain
+only the safe before/after projection and can be retained according to the
+deployment audit-retention policy.

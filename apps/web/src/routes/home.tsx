@@ -3,6 +3,8 @@ import { useCallback, useEffect, useMemo, useState, type FormEvent } from "react
 import { motion } from "motion/react";
 
 import { Topbar } from "@/components/app/topbar";
+import { ComparisonPanel } from "@/features/benefits/components/comparison-panel";
+import { useCompareStore } from "@/features/benefits/compare-store";
 import { CatalogControls } from "@/features/catalog/components/catalog-controls";
 import { ConversationPanel } from "@/features/conversation/components/conversation-panel";
 import { MatchesPanel } from "@/features/conversation/components/matches-panel";
@@ -20,6 +22,7 @@ import {
 } from "@/features/saved/queries";
 import { ContactSettingsPanel } from "@/features/contacts/components/contact-settings-panel";
 import { SavedBenefitsPanel } from "@/features/saved/components/saved-benefits-panel";
+import { useStreamingVoice } from "@/hooks/use-streaming-voice";
 import { useVoiceRecorder } from "@/hooks/use-voice-recorder";
 import { audioDataUrl, cn } from "@/lib/utils";
 import { ApiError, toUserMessage } from "@/lib/api";
@@ -53,6 +56,8 @@ export function HomePage() {
   const savedBenefitsQuery = useSavedBenefitsQuery(sessionId, accessToken);
   const saveBenefitMutation = useSaveBenefitMutation(sessionId, accessToken);
   const removeSavedBenefitMutation = useRemoveSavedBenefitMutation(sessionId, accessToken);
+  const comparedBenefitIds = useCompareStore((state) => state.benefitIds);
+  const toggleCompare = useCompareStore((state) => state.toggle);
 
   const [feedback, setFeedback] = useState<{ kind: "error" | "notice"; text: string } | null>(null);
 
@@ -68,9 +73,25 @@ export function HomePage() {
   const selectedState = activeStates.find((state) => state.code === stateCode);
   const stateCoverage =
     (catalogQuery.data?.coverage.by_state[stateCode] ?? 0) + (catalogQuery.data?.coverage.by_state.central ?? 0);
-  const isSending = textMutation.isPending || voiceMutation.isPending;
+  const voiceInputAvailable = healthQuery.data?.speech_to_text ?? false;
+  const baseSending = textMutation.isPending || voiceMutation.isPending;
+  const handleStreamingTurn = useCallback(
+    (response: Parameters<typeof appendTurn>[1]) => {
+      appendTurn(response.transcript || "Voice turn", response);
+    },
+    [appendTurn],
+  );
+  const streamingVoice = useStreamingVoice({
+    accessToken,
+    languageCode,
+    stateCode,
+    enabled: Boolean(accessToken && languageCode && stateCode && voiceInputAvailable),
+    onTurn: handleStreamingTurn,
+  });
+  const isSending = baseSending || streamingVoice.isBusy;
   const catalogLoading = catalogQuery.isPending;
   const disabled = catalogLoading || isSending || sessionPending || !accessToken || !languageCode || !stateCode;
+  const voiceDisabled = catalogLoading || baseSending || sessionPending || !accessToken || !languageCode || !stateCode;
   const audioSource = audioDataUrl(lastTurn?.audio_base64, lastTurn?.audio_mime_type);
   const savedBenefitIds = useMemo(
     () => new Set(savedBenefitsQuery.data?.map((benefit) => benefit.benefit_id) ?? []),
@@ -79,7 +100,7 @@ export function HomePage() {
 
   const handleVoiceComplete = useCallback(
     async (audio: Blob) => {
-      if (isSending || !languageCode || !stateCode) return;
+      if (baseSending || streamingVoice.isBusy || !languageCode || !stateCode) return;
       setFeedback(null);
       try {
         const response = await voiceMutation.mutateAsync({ audio, accessToken, languageCode, stateCode });
@@ -89,7 +110,7 @@ export function HomePage() {
         setFeedback({ kind: "error", text: toUserMessage(error) });
       }
     },
-    [accessToken, appendTurn, clearSession, isSending, languageCode, stateCode, voiceMutation],
+    [accessToken, appendTurn, baseSending, clearSession, languageCode, stateCode, streamingVoice.isBusy, voiceMutation],
   );
   const recorder = useVoiceRecorder(handleVoiceComplete);
 
@@ -156,12 +177,20 @@ export function HomePage() {
 
   const startRecording = useCallback(() => {
     setFeedback(null);
+    if (streamingVoice.supported) {
+      void streamingVoice.start();
+      return;
+    }
     recorder.startRecording();
-  }, [recorder]);
+  }, [recorder.startRecording, streamingVoice.start, streamingVoice.supported]);
 
   const stopRecording = useCallback(() => {
+    if (streamingVoice.supported) {
+      streamingVoice.stop();
+      return;
+    }
     recorder.stopRecording();
-  }, [recorder]);
+  }, [recorder.stopRecording, streamingVoice.stop, streamingVoice.supported]);
 
   const handleReset = useCallback(async () => {
     if (isSending || resetMutation.isPending) return;
@@ -187,7 +216,6 @@ export function HomePage() {
   );
 
   const connected = healthQuery.data?.status === "ok" && Boolean(accessToken);
-  const voiceInputAvailable = healthQuery.data?.speech_to_text ?? false;
 
   return (
     <main
@@ -272,10 +300,11 @@ export function HomePage() {
             isSending={isSending}
             isResetting={resetMutation.isPending}
             disabled={disabled}
-            recording={recorder.isRecording}
+            voiceDisabled={voiceDisabled}
+            recording={streamingVoice.supported ? streamingVoice.isListening : recorder.isRecording}
             voiceInputAvailable={voiceInputAvailable}
             textToSpeechAvailable={healthQuery.data?.text_to_speech ?? false}
-            recorderError={recorder.error}
+            recorderError={streamingVoice.supported ? streamingVoice.error : recorder.error}
             onDraftChange={setDraft}
             onSubmit={(event) => void handleTextSubmit(event)}
             onSuggestion={setDraft}
@@ -306,7 +335,12 @@ export function HomePage() {
           turn={lastTurn}
           savedBenefitIds={savedBenefitIds}
           onToggleSaved={handleToggleSaved}
+          comparedBenefitIds={new Set(comparedBenefitIds)}
+          onToggleCompare={(benefitId, compared) => {
+            if (compared || comparedBenefitIds.length < 3) toggleCompare(benefitId);
+          }}
         />
+        <ComparisonPanel />
         <SavedBenefitsPanel
           sessionId={sessionId}
           accessToken={accessToken}

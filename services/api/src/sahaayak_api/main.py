@@ -17,6 +17,7 @@ from sahaayak_api.observability import (
 from sahaayak_api.routers import (
     admin,
     admin_notifications,
+    benefit_feedback,
     browser_sessions,
     catalog,
     contact_points,
@@ -27,6 +28,7 @@ from sahaayak_api.routers import (
     sessions,
     telephony,
     turns,
+    voice_stream,
     webhooks_infobip,
 )
 from sahaayak_common import configure_logging, get_logger, init_db, settings
@@ -80,8 +82,10 @@ app.add_middleware(
 app.include_router(health.router)
 app.include_router(catalog.router)
 app.include_router(turns.router)
+app.include_router(voice_stream.router)
 app.include_router(rag.router)
 app.include_router(saved_benefits.router)
+app.include_router(benefit_feedback.router)
 app.include_router(contact_points.router)
 app.include_router(browser_sessions.router)
 app.include_router(sessions.router)

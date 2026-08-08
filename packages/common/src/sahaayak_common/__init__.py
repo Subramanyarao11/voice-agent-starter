@@ -15,18 +15,27 @@ from sahaayak_common.contact_crypto import (
     reset_encryption_cache,
 )
 from sahaayak_common.db import engine, get_session, init_db, run_migrations, session_scope
+from sahaayak_common.feature_flags import (
+    DEFAULT_FEATURE_FLAGS,
+    ensure_default_feature_flags,
+    feature_flag_enabled,
+)
 from sahaayak_common.ids import new_id, session_id, slugify, ticket_id, turn_id
 from sahaayak_common.logging import configure_logging, get_logger, request_id_var
 from sahaayak_common.messaging_budget import BudgetPosture, evaluate_budget, spend_since
 from sahaayak_common.models import (
     AuditEvent,
     Benefit,
+    BenefitIssueReport,
     CallSession,
     ConsentEvent,
     ContactPoint,
     ConversationTurnLog,
     DataImportRun,
     EscalationTicket,
+    EvaluationRun,
+    FeatureFlag,
+    FeatureFlagRevision,
     Language,
     NotificationDelivery,
     NotificationTemplate,
@@ -48,12 +57,14 @@ from sahaayak_common.provider_policy import (
     DEFAULT_PROVIDER_POLICIES,
     get_effective_provider_policy,
 )
+from sahaayak_common.routing import EscalationRoute, resolve_escalation_route
 from sahaayak_common.settings import REPO_ROOT, Settings, get_settings, settings
 
 __all__ = [
     "REPO_ROOT",
     "AuditEvent",
     "Benefit",
+    "BenefitIssueReport",
     "BudgetError",
     "BudgetExceeded",
     "BudgetPosture",
@@ -65,7 +76,10 @@ __all__ = [
     "ContactPoint",
     "ConversationTurnLog",
     "DataImportRun",
+    "EvaluationRun",
     "EscalationTicket",
+    "FeatureFlag",
+    "FeatureFlagRevision",
     "InMemoryCache",
     "Language",
     "NotificationDelivery",
@@ -76,6 +90,8 @@ __all__ = [
     "Reminder",
     "SavedBenefit",
     "DEFAULT_PROVIDER_POLICIES",
+    "DEFAULT_FEATURE_FLAGS",
+    "EscalationRoute",
     "RedisCache",
     "Settings",
     "State",
@@ -87,6 +103,7 @@ __all__ = [
     "destination_hash",
     "encrypt_destination",
     "engine",
+    "ensure_default_feature_flags",
     "evaluate_budget",
     "get_cache",
     "get_logger",
@@ -103,9 +120,11 @@ __all__ = [
     "request_id_var",
     "reset_cache",
     "reset_encryption_cache",
+    "resolve_escalation_route",
     "run_migrations",
     "session_id",
     "session_scope",
+    "feature_flag_enabled",
     "spend_since",
     "settings",
     "slugify",

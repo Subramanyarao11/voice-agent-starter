@@ -7,14 +7,18 @@ transcript, audio, phone/session identifier, or sensitive profile values.
 
 from __future__ import annotations
 
+import csv
 import hashlib
+import io
+import json
 import os
+import re
 from collections import Counter
 from datetime import UTC, date, datetime, timedelta
 from enum import Enum
 from typing import Any, Literal, cast
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, Response
 from pydantic import BaseModel, Field
 from sqlalchemy import func, text
 from sqlmodel import Session, select
@@ -27,9 +31,13 @@ from sahaayak_common import (
     DEFAULT_PROVIDER_POLICIES,
     AuditEvent,
     Benefit,
+    BenefitIssueReport,
     ConversationTurnLog,
     DataImportRun,
     EscalationTicket,
+    EvaluationRun,
+    FeatureFlag,
+    FeatureFlagRevision,
     Language,
     OpenAIBudgetLedger,
     ProviderPolicy,
@@ -255,6 +263,26 @@ class BenefitReviewRequest(BaseModel):
     activate: bool | None = None
 
 
+class BenefitIssueReportOut(BaseModel):
+    id: str
+    benefit_id: str
+    benefit_name: str
+    category: str
+    description: str
+    locale: str
+    status: str
+    source_title: str
+    source_document_url: str
+    created_at: datetime
+    resolved_at: datetime | None
+    resolved_by: str | None
+
+
+class BenefitIssueReportUpdate(BaseModel):
+    status: Literal["acknowledged", "resolved", "dismissed"]
+    reason: str = Field(min_length=3, max_length=500)
+
+
 class ImportRunOut(BaseModel):
     id: str
     source_name: str
@@ -268,6 +296,88 @@ class ImportRunOut(BaseModel):
     failed_count: int
     review_sample_size: int
     manifest_json: dict
+
+
+class EvaluationRunOut(BaseModel):
+    id: str
+    suite_name: str
+    suite_version: str
+    passed: bool
+    case_count: int
+    passed_count: int
+    failed_count: int
+    language_counts: dict
+    report_json: dict
+    started_at: datetime
+    completed_at: datetime | None
+
+
+class FreshnessSourceOut(BaseModel):
+    dataset: str
+    total_rows: int
+    active_rows: int
+    human_verified_rows: int
+    machine_structured_rows: int
+    stale_rows: int
+    expired_rows: int
+    missing_source_rows: int
+    oldest_verified_date: date | None
+    latest_verified_date: date | None
+    latest_import_at: datetime | None
+    status: str
+
+
+class FreshnessOut(BaseModel):
+    generated_at: datetime
+    stale_after_days: int
+    data_fresh_at: datetime | None
+    sources: list[FreshnessSourceOut]
+
+
+class FeatureFlagOut(BaseModel):
+    id: str
+    key: str
+    description: str
+    enabled: bool
+    rollout_percentage: int
+    target_languages: list[str]
+    target_states: list[str]
+    config: dict
+    revision: int
+    updated_by: str
+    updated_at: datetime
+
+
+class FeatureFlagRevisionOut(BaseModel):
+    id: str
+    flag_id: str
+    revision: int
+    action: str
+    actor_id: str
+    actor_role: str
+    reason: str
+    before: dict
+    after: dict
+    created_at: datetime
+
+
+class FeatureFlagListOut(BaseModel):
+    generated_at: datetime
+    flags: list[FeatureFlagOut]
+    revisions: list[FeatureFlagRevisionOut]
+
+
+class FeatureFlagUpdateRequest(BaseModel):
+    enabled: bool = False
+    rollout_percentage: int = Field(default=0, ge=0, le=100)
+    target_languages: list[str] = Field(default_factory=list, max_length=20)
+    target_states: list[str] = Field(default_factory=list, max_length=20)
+    reason: str = Field(min_length=3, max_length=500)
+
+
+class FeatureFlagRollbackRequest(BaseModel):
+    reason: str = Field(min_length=3, max_length=500)
+    revision_id: str | None = Field(default=None, max_length=160)
 
 
 class ProviderListOut(BaseModel):
@@ -602,6 +712,56 @@ def review_benefit(
     return _benefit_review_out(row)
 
 
+@router.get("/benefit-reports", response_model=list[BenefitIssueReportOut])
+def admin_benefit_reports(
+    status: str = Query(default="open"),
+    limit: int = Query(default=100, ge=1, le=500),
+    db: Session = Depends(get_session),
+    principal: AdminPrincipal = Depends(require_admin_role(*READ_ROLES)),
+) -> list[BenefitIssueReportOut]:
+    rows = db.exec(
+        select(BenefitIssueReport)
+        .where(BenefitIssueReport.status == status)
+        .order_by(BenefitIssueReport.created_at.desc())
+        .limit(limit)
+    ).all()
+    return [_benefit_issue_report_out(db, row, principal) for row in rows]
+
+
+@router.post(
+    "/benefit-reports/{report_id}",
+    response_model=BenefitIssueReportOut,
+)
+def update_benefit_report(
+    report_id: str,
+    payload: BenefitIssueReportUpdate,
+    db: Session = Depends(get_session),
+    principal: AdminPrincipal = Depends(require_admin_role("operator", "admin")),
+) -> BenefitIssueReportOut:
+    row = db.get(BenefitIssueReport, report_id)
+    if row is None:
+        raise HTTPException(status_code=404, detail="Issue report not found")
+    before = {"status": row.status, "resolved": row.resolved_at is not None}
+    row.status = payload.status
+    row.resolved_at = datetime.now(UTC) if payload.status in {"resolved", "dismissed"} else None
+    row.resolved_by = principal.actor_id if row.resolved_at else None
+    db.add(row)
+    db.add(
+        make_audit_event(
+            principal=principal,
+            action="benefit_issue_report.update",
+            target_type="benefit_issue_report",
+            target_id=row.id,
+            reason=payload.reason,
+            safe_before=before,
+            safe_after={"status": row.status, "resolved": row.resolved_at is not None},
+        )
+    )
+    db.commit()
+    db.refresh(row)
+    return _benefit_issue_report_out(db, row, principal)
+
+
 @router.get("/imports", response_model=list[ImportRunOut])
 def admin_imports(
     limit: int = Query(default=50, ge=1, le=100),
@@ -612,6 +772,113 @@ def admin_imports(
         select(DataImportRun).order_by(DataImportRun.started_at.desc()).limit(limit)
     ).all()
     return [ImportRunOut.model_validate(row.model_dump()) for row in rows]
+
+
+@router.get("/evaluations", response_model=list[EvaluationRunOut])
+def admin_evaluations(
+    limit: int = Query(default=20, ge=1, le=100),
+    db: Session = Depends(get_session),
+    _principal: AdminPrincipal = Depends(require_admin_role(*READ_ROLES)),
+) -> list[EvaluationRunOut]:
+    rows = db.exec(
+        select(EvaluationRun).order_by(EvaluationRun.started_at.desc()).limit(limit)
+    ).all()
+    return [EvaluationRunOut.model_validate(row.model_dump()) for row in rows]
+
+
+@router.get("/freshness", response_model=FreshnessOut)
+def admin_freshness(
+    stale_days: int = Query(default=90, ge=1, le=730),
+    db: Session = Depends(get_session),
+    _principal: AdminPrincipal = Depends(require_admin_role(*READ_ROLES)),
+) -> FreshnessOut:
+    now = datetime.now(UTC)
+    cutoff = date.today() - timedelta(days=stale_days)
+    rows = db.exec(select(Benefit)).all()
+    imports = db.exec(select(DataImportRun)).all()
+    grouped: dict[str, list[Benefit]] = {}
+    for row in rows:
+        metadata = row.job_metadata or {}
+        source_kind = str(metadata.get("source_kind") or "")
+        if row.domain.value == "job":
+            dataset = {
+                "upsc_recruitment": "upsc_recruitment",
+                "kpsc_recruitment_notification": "state_government_jobs",
+                "ncs_government_jobs_api": "ncs_government_jobs",
+            }.get(source_kind, "government_jobs_other")
+        else:
+            dataset = "myscheme"
+        grouped.setdefault(dataset, []).append(row)
+
+    source_reports: list[FreshnessSourceOut] = []
+    for dataset, dataset_rows in sorted(grouped.items()):
+        verified_dates = [row.last_verified_date for row in dataset_rows if row.last_verified_date]
+        stale_rows = sum(
+            row.last_verified_date is None or row.last_verified_date < cutoff
+            for row in dataset_rows
+        )
+        expired_rows = sum(
+            row.valid_until is not None and row.valid_until < date.today()
+            for row in dataset_rows
+        )
+        latest_import = max(
+            (
+                run.completed_at
+                for run in imports
+                if run.completed_at and dataset.casefold() in run.source_name.casefold()
+            ),
+            default=None,
+        )
+        missing_source = sum(
+            not (row.source_document_url or row.source_url) for row in dataset_rows
+        )
+        if not dataset_rows or stale_rows or missing_source:
+            status = "warning" if dataset_rows else "critical"
+        else:
+            status = "healthy"
+        source_reports.append(
+            FreshnessSourceOut(
+                dataset=dataset,
+                total_rows=len(dataset_rows),
+                active_rows=sum(row.is_active for row in dataset_rows),
+                human_verified_rows=sum(
+                    _wire(row.verification_status) == "human_verified" for row in dataset_rows
+                ),
+                machine_structured_rows=sum(
+                    _wire(row.verification_status) == "machine_structured"
+                    for row in dataset_rows
+                ),
+                stale_rows=stale_rows,
+                expired_rows=expired_rows,
+                missing_source_rows=missing_source,
+                oldest_verified_date=min(verified_dates, default=None),
+                latest_verified_date=max(verified_dates, default=None),
+                latest_import_at=latest_import,
+                status=status,
+            )
+        )
+
+    freshness_values = [
+        value
+        for report in source_reports
+        for value in (
+            report.latest_import_at,
+            datetime.combine(
+                report.latest_verified_date,
+                datetime.min.time(),
+                tzinfo=UTC,
+            )
+            if report.latest_verified_date
+            else None,
+        )
+        if value
+    ]
+    return FreshnessOut(
+        generated_at=now,
+        stale_after_days=stale_days,
+        data_fresh_at=max(freshness_values, default=None),
+        sources=source_reports,
+    )
 
 
 @router.get("/providers", response_model=ProviderListOut)
@@ -794,6 +1061,139 @@ def rollback_provider_policy(
     return _provider_policy_out(row)
 
 
+@router.get("/feature-flags", response_model=FeatureFlagListOut)
+def admin_feature_flags(
+    db: Session = Depends(get_session),
+    _principal: AdminPrincipal = Depends(require_admin_role(*READ_ROLES)),
+) -> FeatureFlagListOut:
+    flags = db.exec(select(FeatureFlag).order_by(FeatureFlag.key)).all()
+    revisions = db.exec(
+        select(FeatureFlagRevision)
+        .order_by(FeatureFlagRevision.created_at.desc())
+        .limit(100)
+    ).all()
+    return FeatureFlagListOut(
+        generated_at=datetime.now(UTC),
+        flags=[_feature_flag_out(row) for row in flags],
+        revisions=[FeatureFlagRevisionOut.model_validate(row.model_dump()) for row in revisions],
+    )
+
+
+@router.put("/feature-flags/{key}", response_model=FeatureFlagOut)
+def update_feature_flag(
+    key: str,
+    payload: FeatureFlagUpdateRequest,
+    db: Session = Depends(get_session),
+    principal: AdminPrincipal = Depends(require_admin_role("admin")),
+) -> FeatureFlagOut:
+    _validate_feature_flag_key(key)
+    row = db.exec(select(FeatureFlag).where(FeatureFlag.key == key)).first()
+    if row is None:
+        raise HTTPException(status_code=404, detail="Feature flag not found")
+    before = _feature_flag_snapshot(row)
+    now = datetime.now(UTC)
+    row.enabled = payload.enabled
+    row.rollout_percentage = payload.rollout_percentage
+    row.target_languages = sorted(
+        {value.strip().lower() for value in payload.target_languages if value.strip()}
+    )
+    row.target_states = sorted(
+        {value.strip().upper() for value in payload.target_states if value.strip()}
+    )
+    row.revision += 1
+    row.updated_by = principal.actor_id
+    row.updated_at = now
+    after = _feature_flag_snapshot(row)
+    db.add(row)
+    db.flush()
+    db.add(
+        FeatureFlagRevision(
+            id=f"flagrev_{row.id.replace(':', '_')}_{row.revision}",
+            flag_id=row.id,
+            revision=row.revision,
+            action="update",
+            actor_id=principal.actor_id,
+            actor_role=principal.role,
+            reason=payload.reason,
+            before=before,
+            after=after,
+        )
+    )
+    db.add(
+        make_audit_event(
+            principal=principal,
+            action="feature_flag.update",
+            target_type="feature_flag",
+            target_id=row.id,
+            reason=payload.reason,
+            safe_before=before,
+            safe_after=after,
+        )
+    )
+    db.commit()
+    db.refresh(row)
+    return _feature_flag_out(row)
+
+
+@router.post("/feature-flags/{key}/rollback", response_model=FeatureFlagOut)
+def rollback_feature_flag(
+    key: str,
+    payload: FeatureFlagRollbackRequest,
+    db: Session = Depends(get_session),
+    principal: AdminPrincipal = Depends(require_admin_role("admin")),
+) -> FeatureFlagOut:
+    _validate_feature_flag_key(key)
+    row = db.exec(select(FeatureFlag).where(FeatureFlag.key == key)).first()
+    if row is None:
+        raise HTTPException(status_code=404, detail="Feature flag not found")
+    revision_query = select(FeatureFlagRevision).where(FeatureFlagRevision.flag_id == row.id)
+    if payload.revision_id:
+        revision_query = revision_query.where(FeatureFlagRevision.id == payload.revision_id)
+    target_revision = db.exec(
+        revision_query.order_by(FeatureFlagRevision.created_at.desc()).limit(1)
+    ).first()
+    if target_revision is None:
+        raise HTTPException(
+            status_code=404,
+            detail="No feature-flag revision is available to roll back",
+        )
+    before = _feature_flag_snapshot(row)
+    _apply_feature_flag_snapshot(row, target_revision.before)
+    row.revision += 1
+    row.updated_by = principal.actor_id
+    row.updated_at = datetime.now(UTC)
+    after = _feature_flag_snapshot(row)
+    db.add(row)
+    db.flush()
+    db.add(
+        FeatureFlagRevision(
+            id=f"flagrev_{row.id.replace(':', '_')}_{row.revision}",
+            flag_id=row.id,
+            revision=row.revision,
+            action="rollback",
+            actor_id=principal.actor_id,
+            actor_role=principal.role,
+            reason=payload.reason,
+            before=before,
+            after=after,
+        )
+    )
+    db.add(
+        make_audit_event(
+            principal=principal,
+            action="feature_flag.rollback",
+            target_type="feature_flag",
+            target_id=row.id,
+            reason=payload.reason,
+            safe_before=before,
+            safe_after=after,
+        )
+    )
+    db.commit()
+    db.refresh(row)
+    return _feature_flag_out(row)
+
+
 @router.get("/languages", response_model=list[LanguageReadinessOut])
 def admin_languages(
     db: Session = Depends(get_session),
@@ -860,6 +1260,68 @@ def admin_audit_events(
     return [AuditEventOut.model_validate(row.model_dump()) for row in rows]
 
 
+@router.get("/audit-events/export")
+def export_admin_audit_events(
+    format: Literal["csv", "json"] = Query(default="csv"),
+    limit: int = Query(default=1_000, ge=1, le=5_000),
+    action: str | None = None,
+    db: Session = Depends(get_session),
+    _principal: AdminPrincipal = Depends(require_admin_role(*READ_ROLES)),
+) -> Response:
+    filters = [AuditEvent.action == action] if action else []
+    rows = db.exec(
+        select(AuditEvent).where(*filters).order_by(AuditEvent.created_at.desc()).limit(limit)
+    ).all()
+    payload = [
+        AuditEventOut.model_validate(row.model_dump()).model_dump(mode="json")
+        for row in rows
+    ]
+    if format == "json":
+        return Response(
+            content=json.dumps(payload, ensure_ascii=False),
+            media_type="application/json",
+            headers={
+                "Content-Disposition": 'attachment; filename="sahaayak-audit.json"',
+                "Cache-Control": "no-store",
+            },
+        )
+
+    output = io.StringIO()
+    writer = csv.DictWriter(
+        output,
+        fieldnames=(
+            "id",
+            "actor_id",
+            "actor_role",
+            "action",
+            "target_type",
+            "target_id",
+            "reason",
+            "safe_before",
+            "safe_after",
+            "request_id",
+            "created_at",
+        ),
+    )
+    writer.writeheader()
+    for row in payload:
+        writer.writerow(
+            {
+                **row,
+                "safe_before": json.dumps(row["safe_before"], ensure_ascii=False, sort_keys=True),
+                "safe_after": json.dumps(row["safe_after"], ensure_ascii=False, sort_keys=True),
+            }
+        )
+    return Response(
+        content=output.getvalue(),
+        media_type="text/csv",
+        headers={
+            "Content-Disposition": 'attachment; filename="sahaayak-audit.csv"',
+            "Cache-Control": "no-store",
+        },
+    )
+
+
 @router.get("/system", response_model=SystemOut)
 def admin_system(
     db: Session = Depends(get_session),
@@ -909,6 +1371,43 @@ def admin_system(
     )
 
 
+def _feature_flag_snapshot(row: FeatureFlag) -> dict[str, Any]:
+    return {
+        "enabled": row.enabled,
+        "rollout_percentage": row.rollout_percentage,
+        "target_languages": list(row.target_languages),
+        "target_states": list(row.target_states),
+    }
+
+
+def _feature_flag_out(row: FeatureFlag) -> FeatureFlagOut:
+    return FeatureFlagOut(
+        id=row.id,
+        key=row.key,
+        description=row.description,
+        enabled=row.enabled,
+        rollout_percentage=row.rollout_percentage,
+        target_languages=list(row.target_languages),
+        target_states=list(row.target_states),
+        config=dict(row.config),
+        revision=row.revision,
+        updated_by=row.updated_by,
+        updated_at=row.updated_at,
+    )
+
+
+def _apply_feature_flag_snapshot(row: FeatureFlag, snapshot: dict[str, Any]) -> None:
+    row.enabled = bool(snapshot.get("enabled", False))
+    row.rollout_percentage = max(0, min(100, int(snapshot.get("rollout_percentage", 0))))
+    row.target_languages = [str(value) for value in snapshot.get("target_languages", [])]
+    row.target_states = [str(value) for value in snapshot.get("target_states", [])]
+
+
+def _validate_feature_flag_key(key: str) -> None:
+    if not re.fullmatch(r"[a-z][a-z0-9_]{1,63}", key):
+        raise HTTPException(status_code=400, detail="Feature flag key is not valid")
+
+
 def _wire(value: object) -> str:
     if isinstance(value, Enum):
         return str(value.value)
@@ -956,6 +1455,32 @@ def _benefit_review_out(row: Benefit) -> BenefitReviewOut:
         valid_from=row.valid_from,
         valid_until=row.valid_until,
         job_metadata=dict(row.job_metadata or {}),
+    )
+
+
+def _benefit_issue_report_out(
+    db: Session, row: BenefitIssueReport, principal: AdminPrincipal
+) -> BenefitIssueReportOut:
+    benefit = db.get(Benefit, row.benefit_id)
+    return BenefitIssueReportOut(
+        id=row.id,
+        benefit_id=row.benefit_id,
+        benefit_name=benefit.name if benefit else row.benefit_id,
+        category=row.category,
+        description=(
+            row.description
+            if principal.role in {"operator", "reviewer", "admin"}
+            else ""
+        ),
+        locale=row.locale,
+        status=row.status,
+        source_title=benefit.source_title if benefit else "",
+        source_document_url=(
+            (benefit.source_document_url or benefit.source_url) if benefit else ""
+        ),
+        created_at=row.created_at,
+        resolved_at=row.resolved_at,
+        resolved_by=row.resolved_by,
     )
 
 

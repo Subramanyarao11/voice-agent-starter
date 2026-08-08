@@ -1,4 +1,4 @@
-import { Bookmark, BookmarkCheck, CheckCircle2, CircleAlert, CircleX } from "lucide-react";
+import { Bookmark, BookmarkCheck, CheckCircle2, CircleAlert, CircleX, Columns3 } from "lucide-react";
 import { Link } from "@tanstack/react-router";
 
 import type { MatchSummary, TurnResponse } from "@/lib/api";
@@ -11,9 +11,11 @@ type MatchesPanelProps = {
   turn: TurnResponse | null;
   savedBenefitIds?: ReadonlySet<string>;
   onToggleSaved?: (benefitId: string, saved: boolean) => void;
+  comparedBenefitIds?: ReadonlySet<string>;
+  onToggleCompare?: (benefitId: string, compared: boolean) => void;
 };
 
-export function MatchesPanel({ turn, savedBenefitIds = new Set(), onToggleSaved }: MatchesPanelProps) {
+export function MatchesPanel({ turn, savedBenefitIds = new Set(), onToggleSaved, comparedBenefitIds = new Set(), onToggleCompare }: MatchesPanelProps) {
   const matches = turn?.matches ?? [];
   if (matches.length === 0) return null;
 
@@ -37,6 +39,8 @@ export function MatchesPanel({ turn, savedBenefitIds = new Set(), onToggleSaved 
               match={match}
               saved={savedBenefitIds.has(match.benefit_id)}
               onToggleSaved={onToggleSaved}
+              compared={comparedBenefitIds.has(match.benefit_id)}
+              onToggleCompare={onToggleCompare}
             />
           </li>
         ))}
@@ -49,10 +53,14 @@ function MatchCard({
   match,
   saved,
   onToggleSaved,
+  compared,
+  onToggleCompare,
 }: {
   match: MatchSummary;
   saved: boolean;
   onToggleSaved?: (benefitId: string, saved: boolean) => void;
+  compared: boolean;
+  onToggleCompare?: (benefitId: string, compared: boolean) => void;
 }) {
   const verdict = match.verdict.toLowerCase();
   const isEligible = verdict.includes("eligible") && !verdict.includes("not");
@@ -81,6 +89,19 @@ function MatchCard({
                 onClick={() => onToggleSaved(match.benefit_id, saved)}
               >
                 {saved ? <BookmarkCheck className="size-4" aria-hidden="true" /> : <Bookmark className="size-4" aria-hidden="true" />}
+              </Button>
+            )}
+            {onToggleCompare && (
+              <Button
+                type="button"
+                size="icon"
+                variant="ghost"
+                className="size-8 text-paper/50 hover:text-blue"
+                aria-pressed={compared}
+                aria-label={`${compared ? "Remove" : "Add"} ${match.benefit_name} ${compared ? "from" : "to"} comparison`}
+                onClick={() => onToggleCompare(match.benefit_id, compared)}
+              >
+                <Columns3 className="size-4" aria-hidden="true" />
               </Button>
             )}
             <Badge variant={isEligible ? "success" : isNotEligible ? "warning" : "secondary"} className="gap-1.5">

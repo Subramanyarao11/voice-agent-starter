@@ -2,6 +2,7 @@
 
 from sahaayak_api.routers import (
     admin,
+    benefit_feedback,
     browser_sessions,
     catalog,
     escalations,
@@ -11,10 +12,12 @@ from sahaayak_api.routers import (
     sessions,
     telephony,
     turns,
+    voice_stream,
 )
 
 __all__ = [
     "admin",
+    "benefit_feedback",
     "browser_sessions",
     "catalog",
     "escalations",
@@ -24,4 +27,5 @@ __all__ = [
     "sessions",
     "telephony",
     "turns",
+    "voice_stream",
 ]

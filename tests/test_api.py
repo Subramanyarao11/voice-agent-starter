@@ -60,6 +60,45 @@ def test_job_detail_exposes_posting_metadata(client):
     assert body["job_metadata"]["source_kind"] == "illustrative_demo"
 
 
+def test_guest_can_report_incorrect_benefit_information_and_admin_can_close_it(
+    client, guest_session
+):
+    from sahaayak_common import BenefitIssueReport, session_scope
+
+    session = guest_session()
+    response = client.post(
+        "/api/benefits/demo-csss-cus/reports",
+        json={
+            "category": "eligibility",
+            "description": "The official source appears to show a different income limit.",
+        },
+        headers=session["headers"],
+    )
+    assert response.status_code == 201
+    report_id = response.json()["id"]
+
+    try:
+        reports = client.get("/api/admin/benefit-reports?status=open").json()
+        report = next(item for item in reports if item["id"] == report_id)
+        assert report["benefit_name"].startswith("Central Sector Scheme of Scholarship")
+        assert report["description"].startswith("The official source")
+
+        updated = client.post(
+            f"/api/admin/benefit-reports/{report_id}",
+            json={
+                "status": "resolved",
+                "reason": "Checked the linked official source",
+            },
+        )
+        assert updated.status_code == 200
+        assert updated.json()["status"] == "resolved"
+    finally:
+        with session_scope() as db:
+            row = db.get(BenefitIssueReport, report_id)
+            if row is not None:
+                db.delete(row)
+
+
 def test_a_text_turn_returns_a_question(client, guest_session):
     session = guest_session()
     response = client.post(
@@ -251,6 +290,65 @@ def test_escalations_are_recorded_as_tickets(client, guest_session):
     ticket_id = tickets[0]["id"]
     resolved = client.post(f"/api/escalations/{ticket_id}/resolve").json()
     assert resolved["status"] == "resolved"
+
+
+def test_operator_can_claim_route_note_and_resolve_escalation(client, guest_session):
+    session = guest_session()
+    client.post(
+        "/api/turns",
+        json={
+            "text": "I want to talk to a person",
+            "language_code": "en",
+        },
+        headers=session["headers"],
+    )
+    tickets = client.get(
+        "/api/escalations?status=open&limit=100",
+        headers={"X-Admin-Token": "test-admin-token"},
+    ).json()
+    ticket = next(item for item in tickets if item["session_id"] == session["session_id"])
+
+    claim = client.post(
+        f"/api/escalations/{ticket['id']}/claim",
+        headers={"X-Admin-Token": "test-admin-token"},
+    )
+    assert claim.status_code == 200
+    assert claim.json()["status"] == "claimed"
+    assert claim.json()["assigned_to"] == "local-admin"
+    assert claim.json()["sla_due_at"]
+
+    note = client.post(
+        f"/api/escalations/{ticket['id']}/notes",
+        json={"text": "Confirm the caller's district before referral."},
+        headers={"X-Admin-Token": "test-admin-token"},
+    )
+    assert note.status_code == 200
+    assert note.json()["operator_notes"][0]["text"].startswith("Confirm")
+
+    routed = client.post(
+        f"/api/escalations/{ticket['id']}/route",
+        json={
+            "department": "Karnataka district welfare desk",
+            "routing_location": "Mysuru",
+        },
+        headers={"X-Admin-Token": "test-admin-token"},
+    )
+    assert routed.status_code == 200
+    assert routed.json()["department"] == "Karnataka district welfare desk"
+    assert routed.json()["routing_source"] == "operator_override"
+
+    resolved = client.post(
+        f"/api/escalations/{ticket['id']}/resolve",
+        json={
+            "resolution_code": "referred",
+            "note": "Referred to the district welfare desk.",
+        },
+        headers={"X-Admin-Token": "test-admin-token"},
+    )
+    assert resolved.status_code == 200
+    assert resolved.json()["status"] == "resolved"
+    assert resolved.json()["resolution_code"] == "referred"
+    assert resolved.json()["resolved_by"] == "local-admin"
 
 
 def test_voice_turn_reports_unavailable_rather_than_erroring(client, guest_session):

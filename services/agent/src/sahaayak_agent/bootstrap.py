@@ -9,7 +9,13 @@ and inventing them would undercut the whole point of using real myScheme data.
 from __future__ import annotations
 
 from sahaayak_agent.languages import DEFAULT_CATALOG, DEFAULT_STATES, PLANNED_PROFILES
-from sahaayak_common import Language, State, get_logger, session_scope
+from sahaayak_common import (
+    Language,
+    State,
+    ensure_default_feature_flags,
+    get_logger,
+    session_scope,
+)
 
 log = get_logger(__name__)
 
@@ -70,6 +76,8 @@ def ensure_reference_data() -> None:
                     is_active=active,
                 )
             )
+
+    ensure_default_feature_flags()
 
     log.info(
         "reference_data_ready",

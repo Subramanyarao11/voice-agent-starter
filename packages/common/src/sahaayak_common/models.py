@@ -205,6 +205,33 @@ class SavedBenefit(SQLModel, table=True):
     created_at: datetime = Field(default_factory=_utcnow, index=True)
 
 
+class BenefitIssueReport(SQLModel, table=True):
+    """A citizen report that a public benefit result needs correction.
+
+    Reports keep the server-owned session reference for abuse control and
+    follow-up, but never copy the caller profile or transcript into the issue
+    queue. The benefit itself and the public source remain the review context.
+    """
+
+    __tablename__ = "benefit_issue_report"
+    __table_args__ = (
+        Index("ix_benefit_issue_report_status_created", "status", "created_at"),
+        Index("ix_benefit_issue_report_benefit_created", "benefit_id", "created_at"),
+    )
+
+    id: str = Field(primary_key=True)
+    benefit_id: str = Field(foreign_key="benefit.id", index=True)
+    session_id: str | None = Field(default=None, foreign_key="user_session.id", index=True)
+    category: str = Field(index=True)  # source | eligibility | deadline | application | other
+    description: str = ""
+    locale: str = ""
+    status: str = Field(default="open", index=True)  # open | acknowledged | resolved | dismissed
+    safe_context: dict = Field(default_factory=dict, sa_column=json_dict())
+    created_at: datetime = Field(default_factory=_utcnow, index=True)
+    resolved_at: datetime | None = None
+    resolved_by: str | None = None
+
+
 class ContactPoint(SQLModel, table=True):
     """A destination a caller has asked us to reach them at.
 
@@ -502,8 +529,22 @@ class EscalationTicket(SQLModel, table=True):
     caller_context: dict = Field(default_factory=dict, sa_column=json_dict())
     transcript_excerpt: str = ""
     status: str = Field(default="open", index=True)  # open | claimed | resolved
+    assigned_to: str | None = Field(default=None, index=True)
+    claimed_at: datetime | None = None
+    sla_due_at: datetime | None = Field(default=None, index=True)
+    # This is a routing target, not a claim that an official department
+    # directory has been integrated. `routing_source` makes that distinction
+    # visible to operators until an authoritative directory is configured.
+    department: str = "National welfare and citizen-support desk"
+    routing_location: str = ""
+    routing_source: str = "state_domain_fallback"
+    operator_notes: list[dict] = Field(default_factory=list, sa_column=json_list())
     created_at: datetime = Field(default_factory=_utcnow)
+    updated_at: datetime = Field(default_factory=_utcnow)
     resolved_at: datetime | None = None
+    resolved_by: str | None = None
+    resolution_code: str | None = None
+    resolution_note: str = ""
 
 
 class DataImportRun(SQLModel, table=True):
@@ -528,6 +569,24 @@ class DataImportRun(SQLModel, table=True):
     failed_count: int = 0
     review_sample_size: int = 0
     manifest_json: dict = Field(default_factory=dict, sa_column=json_dict())
+
+
+class EvaluationRun(SQLModel, table=True):
+    """Immutable summary of a deterministic or provider-backed eval run."""
+
+    __tablename__ = "evaluation_run"
+
+    id: str = Field(primary_key=True)
+    suite_name: str = Field(index=True)
+    suite_version: str = ""
+    passed: bool = False
+    case_count: int = 0
+    passed_count: int = 0
+    failed_count: int = 0
+    language_counts: dict = Field(default_factory=dict, sa_column=json_dict())
+    report_json: dict = Field(default_factory=dict, sa_column=json_dict())
+    started_at: datetime = Field(default_factory=_utcnow, index=True)
+    completed_at: datetime | None = None
 
 
 class TelemetryEvent(SQLModel, table=True):
@@ -611,6 +670,42 @@ class ProviderPolicyRevision(SQLModel, table=True):
     policy_id: str = Field(index=True, foreign_key="provider_policy.id")
     revision: int = Field(index=True)
     action: str = Field(index=True)  # update | rollback | expire
+    actor_id: str = Field(index=True)
+    actor_role: str = ""
+    reason: str = ""
+    before: dict = Field(default_factory=dict, sa_column=json_dict())
+    after: dict = Field(default_factory=dict, sa_column=json_dict())
+    created_at: datetime = Field(default_factory=_utcnow, index=True)
+
+
+class FeatureFlag(SQLModel, table=True):
+    """A bounded rollout switch controlled by the workforce console."""
+
+    __tablename__ = "feature_flag"
+
+    id: str = Field(primary_key=True)
+    key: str = Field(index=True, unique=True)
+    description: str = ""
+    enabled: bool = False
+    rollout_percentage: int = 0
+    target_languages: list[str] = Field(default_factory=list, sa_column=json_list())
+    target_states: list[str] = Field(default_factory=list, sa_column=json_list())
+    config: dict = Field(default_factory=dict, sa_column=json_dict())
+    revision: int = 0
+    updated_by: str = "system"
+    updated_at: datetime = Field(default_factory=_utcnow)
+    created_at: datetime = Field(default_factory=_utcnow)
+
+
+class FeatureFlagRevision(SQLModel, table=True):
+    """Append-only before/after snapshots supporting flag rollback."""
+
+    __tablename__ = "feature_flag_revision"
+
+    id: str = Field(primary_key=True)
+    flag_id: str = Field(index=True, foreign_key="feature_flag.id")
+    revision: int = Field(index=True)
+    action: str = Field(index=True)  # update | rollback
     actor_id: str = Field(index=True)
     actor_role: str = ""
     reason: str = ""

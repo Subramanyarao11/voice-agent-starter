@@ -1,6 +1,6 @@
 import { useEffect, useState, type FormEvent, type ReactNode } from "react";
 
-import { Activity, ArrowLeft, Database, FileCheck2, Gauge, Languages, ListChecks, LogOut, Server, ShieldCheck, Users } from "lucide-react";
+import { Activity, ArrowLeft, BarChart3, Database, FileCheck2, Flag, Gauge, Languages, ListChecks, LogOut, MessageSquare, Server, ShieldCheck, Users } from "lucide-react";
 import { Link } from "@tanstack/react-router";
 
 import { Button } from "@/components/ui/button";
@@ -15,7 +15,7 @@ import {
   isAdminOidcConfigured,
 } from "@/features/admin/oidc";
 
-export type AdminView = "overview" | "conversations" | "telemetry" | "escalations" | "benefits" | "providers" | "languages" | "audit" | "system";
+export type AdminView = "overview" | "conversations" | "telemetry" | "escalations" | "benefits" | "providers" | "messaging" | "quality" | "flags" | "languages" | "audit" | "system";
 
 const NAV_ITEMS: Array<{ view: AdminView; label: string; href: string; icon: typeof Gauge }> = [
   {view: "overview", label: "Overview", href: "/admin/overview", icon: Gauge},
@@ -24,6 +24,9 @@ const NAV_ITEMS: Array<{ view: AdminView; label: string; href: string; icon: typ
   {view: "escalations", label: "Escalations", href: "/admin/escalations", icon: ListChecks},
   {view: "benefits", label: "Benefits & review", href: "/admin/benefits", icon: FileCheck2},
   {view: "providers", label: "Providers", href: "/admin/providers", icon: Server},
+  {view: "messaging", label: "Messaging", href: "/admin/messaging", icon: MessageSquare},
+  {view: "quality", label: "Data & evals", href: "/admin/quality", icon: BarChart3},
+  {view: "flags", label: "Feature flags", href: "/admin/flags", icon: Flag},
   {view: "languages", label: "Languages", href: "/admin/languages", icon: Languages},
   {view: "audit", label: "Audit log", href: "/admin/audit-log", icon: ShieldCheck},
   {view: "system", label: "System", href: "/admin/system", icon: Database},

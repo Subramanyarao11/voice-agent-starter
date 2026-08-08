@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import {
+  cancelReminder,
   createReminder,
   getReminders,
   getSavedBenefits,
@@ -41,14 +42,28 @@ export function useRemindersQuery(sessionId: string, accessToken: string) {
     queryKey: ["reminders", sessionId],
     queryFn: () => getReminders(sessionId, accessToken),
     enabled: Boolean(sessionId && accessToken),
+    refetchInterval: (query) =>
+      query.state.data?.some(
+        (reminder) => reminder.status === "scheduled" && reminder.channel !== "in_app",
+      )
+        ? 15_000
+        : false,
   });
 }
 
 export function useCreateReminderMutation(sessionId: string, accessToken: string) {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (payload: { benefit_id: string; due_at: string; note?: string }) =>
+    mutationFn: (payload: { benefit_id: string; due_at: string; note?: string; channel?: string }) =>
       createReminder(sessionId, payload, accessToken),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["reminders", sessionId] }),
+  });
+}
+
+export function useCancelReminderMutation(sessionId: string, accessToken: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (reminderId: string) => cancelReminder(sessionId, reminderId, accessToken),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["reminders", sessionId] }),
   });
 }

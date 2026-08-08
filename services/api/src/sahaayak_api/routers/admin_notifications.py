@@ -37,7 +37,7 @@ from sahaayak_contracts import DeliveryStatus, NotificationChannel
 
 router = APIRouter(prefix="/api/admin", tags=["admin"])
 
-READ_ROLES = ("admin", "operator", "reviewer")
+READ_ROLES = ("observer", "operator", "reviewer", "admin")
 
 # Deliveries accepted but never reported on. A number that only climbs means
 # the callbacks have stopped arriving, which looks identical to success from
@@ -101,6 +101,8 @@ class NotificationOverviewOut(BaseModel):
     budget_monthly_spent_minor_units: int
     budget_monthly_limit_minor_units: int | None
     cost_currency: str
+    cost_by_language: dict[str, int]
+    cost_by_provider: dict[str, int]
     controls_note: str
 
 
@@ -120,6 +122,15 @@ def admin_notifications(
     templates = db.exec(select(NotificationTemplate)).all()
     contacts = db.exec(select(ContactPoint)).all()
     budget = evaluate_budget(db, now=now)
+    cost_by_language: dict[str, int] = {}
+    cost_by_provider: dict[str, int] = {}
+    for delivery in deliveries:
+        cost = delivery.cost_minor_units or 0
+        language = delivery.locale or "unknown"
+        cost_by_language[language] = cost_by_language.get(language, 0) + cost
+        cost_by_provider[delivery.provider or "unknown"] = (
+            cost_by_provider.get(delivery.provider or "unknown", 0) + cost
+        )
 
     channels = [
         _channel_card(
@@ -147,6 +158,8 @@ def admin_notifications(
         budget_monthly_spent_minor_units=budget.monthly_spent_minor_units,
         budget_monthly_limit_minor_units=budget.monthly_budget_minor_units,
         cost_currency=budget.currency,
+        cost_by_language=cost_by_language,
+        cost_by_provider=cost_by_provider,
         controls_note=(
             "Disable a channel through its provider policy; reminders are then "
             "suppressed with a reason rather than lost, and in-app delivery "

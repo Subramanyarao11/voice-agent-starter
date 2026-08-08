@@ -184,6 +184,10 @@ async def enforce_rate_limit(
             settings.rate_limit_contact_verify_per_session,
             settings.rate_limit_contact_verify_per_ip,
         ),
+        "feedback": (
+            settings.rate_limit_feedback_per_session,
+            settings.rate_limit_feedback_per_ip,
+        ),
     }
     limits = config.get(bucket)
     if limits is None:

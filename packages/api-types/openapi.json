@@ -635,6 +635,58 @@
         }
       }
     },
+    "/api/benefits/{benefit_id}/reports": {
+      "post": {
+        "tags": [
+          "benefit feedback"
+        ],
+        "summary": "Report Benefit Issue",
+        "operationId": "report_benefit_issue_api_benefits__benefit_id__reports_post",
+        "parameters": [
+          {
+            "name": "benefit_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Benefit Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BenefitIssueReportRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/sahaayak_api__routers__benefit_feedback__BenefitIssueReportOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/sessions/{session_id}/contact-points": {
       "get": {
         "tags": [
@@ -1253,6 +1305,13 @@
             "in": "query",
             "required": false,
             "schema": {
+              "enum": [
+                "open",
+                "claimed",
+                "resolved",
+                "active",
+                "all"
+              ],
               "type": "string",
               "default": "open",
               "title": "Status"
@@ -1267,6 +1326,32 @@
               "default": 50,
               "title": "Limit"
             }
+          },
+          {
+            "name": "department",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Department"
+            }
+          },
+          {
+            "name": "overdue_only",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "default": false,
+              "title": "Overdue Only"
+            }
           }
         ],
         "responses": {
@@ -1280,6 +1365,152 @@
                     "$ref": "#/components/schemas/TicketOut"
                   },
                   "title": "Response List Tickets Api Escalations Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/escalations/{ticket_id}/claim": {
+      "post": {
+        "tags": [
+          "escalations"
+        ],
+        "summary": "Claim Ticket",
+        "operationId": "claim_ticket_api_escalations__ticket_id__claim_post",
+        "parameters": [
+          {
+            "name": "ticket_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Ticket Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TicketOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/escalations/{ticket_id}/notes": {
+      "post": {
+        "tags": [
+          "escalations"
+        ],
+        "summary": "Add Ticket Note",
+        "operationId": "add_ticket_note_api_escalations__ticket_id__notes_post",
+        "parameters": [
+          {
+            "name": "ticket_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Ticket Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AddNoteRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TicketOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/escalations/{ticket_id}/route": {
+      "post": {
+        "tags": [
+          "escalations"
+        ],
+        "summary": "Route Ticket",
+        "operationId": "route_ticket_api_escalations__ticket_id__route_post",
+        "parameters": [
+          {
+            "name": "ticket_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Ticket Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RouteRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TicketOut"
                 }
               }
             }
@@ -1315,6 +1546,23 @@
             }
           }
         ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "anyOf": [
+                  {
+                    "$ref": "#/components/schemas/ResolveRequest"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Payload"
+              }
+            }
+          }
+        },
         "responses": {
           "200": {
             "description": "Successful Response",
@@ -1720,6 +1968,117 @@
         }
       }
     },
+    "/api/admin/benefit-reports": {
+      "get": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "Admin Benefit Reports",
+        "operationId": "admin_benefit_reports_api_admin_benefit_reports_get",
+        "parameters": [
+          {
+            "name": "status",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "open",
+              "title": "Status"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 500,
+              "minimum": 1,
+              "default": 100,
+              "title": "Limit"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/sahaayak_api__routers__admin__BenefitIssueReportOut"
+                  },
+                  "title": "Response Admin Benefit Reports Api Admin Benefit Reports Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/admin/benefit-reports/{report_id}": {
+      "post": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "Update Benefit Report",
+        "operationId": "update_benefit_report_api_admin_benefit_reports__report_id__post",
+        "parameters": [
+          {
+            "name": "report_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Report Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BenefitIssueReportUpdate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/sahaayak_api__routers__admin__BenefitIssueReportOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/admin/imports": {
       "get": {
         "tags": [
@@ -1752,6 +2111,100 @@
                     "$ref": "#/components/schemas/ImportRunOut"
                   },
                   "title": "Response Admin Imports Api Admin Imports Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/admin/evaluations": {
+      "get": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "Admin Evaluations",
+        "operationId": "admin_evaluations_api_admin_evaluations_get",
+        "parameters": [
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 100,
+              "minimum": 1,
+              "default": 20,
+              "title": "Limit"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/EvaluationRunOut"
+                  },
+                  "title": "Response Admin Evaluations Api Admin Evaluations Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/admin/freshness": {
+      "get": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "Admin Freshness",
+        "operationId": "admin_freshness_api_admin_freshness_get",
+        "parameters": [
+          {
+            "name": "stale_days",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 730,
+              "minimum": 1,
+              "default": 90,
+              "title": "Stale Days"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FreshnessOut"
                 }
               }
             }
@@ -1933,6 +2386,131 @@
         }
       }
     },
+    "/api/admin/feature-flags": {
+      "get": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "Admin Feature Flags",
+        "operationId": "admin_feature_flags_api_admin_feature_flags_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FeatureFlagListOut"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/admin/feature-flags/{key}": {
+      "put": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "Update Feature Flag",
+        "operationId": "update_feature_flag_api_admin_feature_flags__key__put",
+        "parameters": [
+          {
+            "name": "key",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Key"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FeatureFlagUpdateRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FeatureFlagOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/admin/feature-flags/{key}/rollback": {
+      "post": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "Rollback Feature Flag",
+        "operationId": "rollback_feature_flag_api_admin_feature_flags__key__rollback_post",
+        "parameters": [
+          {
+            "name": "key",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Key"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FeatureFlagRollbackRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FeatureFlagOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/admin/languages": {
       "get": {
         "tags": [
@@ -2023,6 +2601,79 @@
         }
       }
     },
+    "/api/admin/audit-events/export": {
+      "get": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "Export Admin Audit Events",
+        "operationId": "export_admin_audit_events_api_admin_audit_events_export_get",
+        "parameters": [
+          {
+            "name": "format",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "enum": [
+                "csv",
+                "json"
+              ],
+              "type": "string",
+              "default": "csv",
+              "title": "Format"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 5000,
+              "minimum": 1,
+              "default": 1000,
+              "title": "Limit"
+            }
+          },
+          {
+            "name": "action",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Action"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/admin/system": {
       "get": {
         "tags": [
@@ -2090,6 +2741,21 @@
   },
   "components": {
     "schemas": {
+      "AddNoteRequest": {
+        "properties": {
+          "text": {
+            "type": "string",
+            "maxLength": 2000,
+            "minLength": 1,
+            "title": "Text"
+          }
+        },
+        "type": "object",
+        "required": [
+          "text"
+        ],
+        "title": "AddNoteRequest"
+      },
       "AdminMeOut": {
         "properties": {
           "actor_id": {
@@ -2416,6 +3082,58 @@
         ],
         "title": "BenefitDetailOut",
         "description": "Public benefit details with enough provenance to make trust inspectable."
+      },
+      "BenefitIssueReportRequest": {
+        "properties": {
+          "category": {
+            "type": "string",
+            "enum": [
+              "source",
+              "eligibility",
+              "deadline",
+              "application",
+              "other"
+            ],
+            "title": "Category"
+          },
+          "description": {
+            "type": "string",
+            "maxLength": 1000,
+            "minLength": 5,
+            "title": "Description"
+          }
+        },
+        "type": "object",
+        "required": [
+          "category",
+          "description"
+        ],
+        "title": "BenefitIssueReportRequest"
+      },
+      "BenefitIssueReportUpdate": {
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "acknowledged",
+              "resolved",
+              "dismissed"
+            ],
+            "title": "Status"
+          },
+          "reason": {
+            "type": "string",
+            "maxLength": 500,
+            "minLength": 3,
+            "title": "Reason"
+          }
+        },
+        "type": "object",
+        "required": [
+          "status",
+          "reason"
+        ],
+        "title": "BenefitIssueReportUpdate"
       },
       "BenefitReviewOut": {
         "properties": {
@@ -3212,6 +3930,444 @@
         ],
         "title": "EscalationReason"
       },
+      "EvaluationRunOut": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "suite_name": {
+            "type": "string",
+            "title": "Suite Name"
+          },
+          "suite_version": {
+            "type": "string",
+            "title": "Suite Version"
+          },
+          "passed": {
+            "type": "boolean",
+            "title": "Passed"
+          },
+          "case_count": {
+            "type": "integer",
+            "title": "Case Count"
+          },
+          "passed_count": {
+            "type": "integer",
+            "title": "Passed Count"
+          },
+          "failed_count": {
+            "type": "integer",
+            "title": "Failed Count"
+          },
+          "language_counts": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Language Counts"
+          },
+          "report_json": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Report Json"
+          },
+          "started_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Started At"
+          },
+          "completed_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Completed At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "suite_name",
+          "suite_version",
+          "passed",
+          "case_count",
+          "passed_count",
+          "failed_count",
+          "language_counts",
+          "report_json",
+          "started_at",
+          "completed_at"
+        ],
+        "title": "EvaluationRunOut"
+      },
+      "FeatureFlagListOut": {
+        "properties": {
+          "generated_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Generated At"
+          },
+          "flags": {
+            "items": {
+              "$ref": "#/components/schemas/FeatureFlagOut"
+            },
+            "type": "array",
+            "title": "Flags"
+          },
+          "revisions": {
+            "items": {
+              "$ref": "#/components/schemas/FeatureFlagRevisionOut"
+            },
+            "type": "array",
+            "title": "Revisions"
+          }
+        },
+        "type": "object",
+        "required": [
+          "generated_at",
+          "flags",
+          "revisions"
+        ],
+        "title": "FeatureFlagListOut"
+      },
+      "FeatureFlagOut": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "key": {
+            "type": "string",
+            "title": "Key"
+          },
+          "description": {
+            "type": "string",
+            "title": "Description"
+          },
+          "enabled": {
+            "type": "boolean",
+            "title": "Enabled"
+          },
+          "rollout_percentage": {
+            "type": "integer",
+            "title": "Rollout Percentage"
+          },
+          "target_languages": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Target Languages"
+          },
+          "target_states": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Target States"
+          },
+          "config": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Config"
+          },
+          "revision": {
+            "type": "integer",
+            "title": "Revision"
+          },
+          "updated_by": {
+            "type": "string",
+            "title": "Updated By"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Updated At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "key",
+          "description",
+          "enabled",
+          "rollout_percentage",
+          "target_languages",
+          "target_states",
+          "config",
+          "revision",
+          "updated_by",
+          "updated_at"
+        ],
+        "title": "FeatureFlagOut"
+      },
+      "FeatureFlagRevisionOut": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "flag_id": {
+            "type": "string",
+            "title": "Flag Id"
+          },
+          "revision": {
+            "type": "integer",
+            "title": "Revision"
+          },
+          "action": {
+            "type": "string",
+            "title": "Action"
+          },
+          "actor_id": {
+            "type": "string",
+            "title": "Actor Id"
+          },
+          "actor_role": {
+            "type": "string",
+            "title": "Actor Role"
+          },
+          "reason": {
+            "type": "string",
+            "title": "Reason"
+          },
+          "before": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Before"
+          },
+          "after": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "After"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "flag_id",
+          "revision",
+          "action",
+          "actor_id",
+          "actor_role",
+          "reason",
+          "before",
+          "after",
+          "created_at"
+        ],
+        "title": "FeatureFlagRevisionOut"
+      },
+      "FeatureFlagRollbackRequest": {
+        "properties": {
+          "reason": {
+            "type": "string",
+            "maxLength": 500,
+            "minLength": 3,
+            "title": "Reason"
+          },
+          "revision_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 160
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Revision Id"
+          }
+        },
+        "type": "object",
+        "required": [
+          "reason"
+        ],
+        "title": "FeatureFlagRollbackRequest"
+      },
+      "FeatureFlagUpdateRequest": {
+        "properties": {
+          "enabled": {
+            "type": "boolean",
+            "title": "Enabled",
+            "default": false
+          },
+          "rollout_percentage": {
+            "type": "integer",
+            "maximum": 100.0,
+            "minimum": 0.0,
+            "title": "Rollout Percentage",
+            "default": 0
+          },
+          "target_languages": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "maxItems": 20,
+            "title": "Target Languages"
+          },
+          "target_states": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "maxItems": 20,
+            "title": "Target States"
+          },
+          "reason": {
+            "type": "string",
+            "maxLength": 500,
+            "minLength": 3,
+            "title": "Reason"
+          }
+        },
+        "type": "object",
+        "required": [
+          "reason"
+        ],
+        "title": "FeatureFlagUpdateRequest"
+      },
+      "FreshnessOut": {
+        "properties": {
+          "generated_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Generated At"
+          },
+          "stale_after_days": {
+            "type": "integer",
+            "title": "Stale After Days"
+          },
+          "data_fresh_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Data Fresh At"
+          },
+          "sources": {
+            "items": {
+              "$ref": "#/components/schemas/FreshnessSourceOut"
+            },
+            "type": "array",
+            "title": "Sources"
+          }
+        },
+        "type": "object",
+        "required": [
+          "generated_at",
+          "stale_after_days",
+          "data_fresh_at",
+          "sources"
+        ],
+        "title": "FreshnessOut"
+      },
+      "FreshnessSourceOut": {
+        "properties": {
+          "dataset": {
+            "type": "string",
+            "title": "Dataset"
+          },
+          "total_rows": {
+            "type": "integer",
+            "title": "Total Rows"
+          },
+          "active_rows": {
+            "type": "integer",
+            "title": "Active Rows"
+          },
+          "human_verified_rows": {
+            "type": "integer",
+            "title": "Human Verified Rows"
+          },
+          "machine_structured_rows": {
+            "type": "integer",
+            "title": "Machine Structured Rows"
+          },
+          "stale_rows": {
+            "type": "integer",
+            "title": "Stale Rows"
+          },
+          "expired_rows": {
+            "type": "integer",
+            "title": "Expired Rows"
+          },
+          "missing_source_rows": {
+            "type": "integer",
+            "title": "Missing Source Rows"
+          },
+          "oldest_verified_date": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Oldest Verified Date"
+          },
+          "latest_verified_date": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Latest Verified Date"
+          },
+          "latest_import_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Latest Import At"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status"
+          }
+        },
+        "type": "object",
+        "required": [
+          "dataset",
+          "total_rows",
+          "active_rows",
+          "human_verified_rows",
+          "machine_structured_rows",
+          "stale_rows",
+          "expired_rows",
+          "missing_source_rows",
+          "oldest_verified_date",
+          "latest_verified_date",
+          "latest_import_at",
+          "status"
+        ],
+        "title": "FreshnessSourceOut"
+      },
       "HTTPValidationError": {
         "properties": {
           "detail": {
@@ -3695,6 +4851,20 @@
             "type": "string",
             "title": "Cost Currency"
           },
+          "cost_by_language": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "type": "object",
+            "title": "Cost By Language"
+          },
+          "cost_by_provider": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "type": "object",
+            "title": "Cost By Provider"
+          },
           "controls_note": {
             "type": "string",
             "title": "Controls Note"
@@ -3711,6 +4881,8 @@
           "budget_monthly_spent_minor_units",
           "budget_monthly_limit_minor_units",
           "cost_currency",
+          "cost_by_language",
+          "cost_by_provider",
           "controls_note"
         ],
         "title": "NotificationOverviewOut"
@@ -4509,6 +5681,30 @@
         ],
         "title": "ReminderOut"
       },
+      "ResolveRequest": {
+        "properties": {
+          "resolution_code": {
+            "type": "string",
+            "enum": [
+              "answered",
+              "referred",
+              "no_action",
+              "duplicate",
+              "unreachable"
+            ],
+            "title": "Resolution Code",
+            "default": "answered"
+          },
+          "note": {
+            "type": "string",
+            "maxLength": 2000,
+            "title": "Note",
+            "default": ""
+          }
+        },
+        "type": "object",
+        "title": "ResolveRequest"
+      },
       "RetrievedSource": {
         "properties": {
           "source_id": {
@@ -4601,6 +5797,27 @@
           "data_fresh_at"
         ],
         "title": "ReviewQueueOut"
+      },
+      "RouteRequest": {
+        "properties": {
+          "department": {
+            "type": "string",
+            "maxLength": 160,
+            "minLength": 2,
+            "title": "Department"
+          },
+          "routing_location": {
+            "type": "string",
+            "maxLength": 120,
+            "title": "Routing Location",
+            "default": ""
+          }
+        },
+        "type": "object",
+        "required": [
+          "department"
+        ],
+        "title": "RouteRequest"
       },
       "SaveBenefitRequest": {
         "properties": {
@@ -5012,6 +6229,40 @@
         ],
         "title": "TelemetryEventOut"
       },
+      "TicketNoteOut": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "actor_id": {
+            "type": "string",
+            "title": "Actor Id"
+          },
+          "actor_role": {
+            "type": "string",
+            "title": "Actor Role"
+          },
+          "text": {
+            "type": "string",
+            "title": "Text"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "actor_id",
+          "actor_role",
+          "text",
+          "created_at"
+        ],
+        "title": "TicketNoteOut"
+      },
       "TicketOut": {
         "properties": {
           "id": {
@@ -5039,10 +6290,81 @@
             "type": "string",
             "title": "Status"
           },
+          "assigned_to": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Assigned To"
+          },
+          "claimed_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Claimed At"
+          },
+          "sla_due_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sla Due At"
+          },
+          "sla_breached": {
+            "type": "boolean",
+            "title": "Sla Breached",
+            "default": false
+          },
+          "department": {
+            "type": "string",
+            "title": "Department"
+          },
+          "routing_location": {
+            "type": "string",
+            "title": "Routing Location"
+          },
+          "routing_source": {
+            "type": "string",
+            "title": "Routing Source"
+          },
+          "operator_notes": {
+            "items": {
+              "$ref": "#/components/schemas/TicketNoteOut"
+            },
+            "type": "array",
+            "title": "Operator Notes"
+          },
           "created_at": {
             "type": "string",
             "format": "date-time",
             "title": "Created At"
+          },
+          "updated_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Updated At"
           },
           "resolved_at": {
             "anyOf": [
@@ -5055,6 +6377,33 @@
               }
             ],
             "title": "Resolved At"
+          },
+          "resolved_by": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Resolved By"
+          },
+          "resolution_code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Resolution Code"
+          },
+          "resolution_note": {
+            "type": "string",
+            "title": "Resolution Note",
+            "default": ""
           }
         },
         "type": "object",
@@ -5064,6 +6413,9 @@
           "reason",
           "transcript_excerpt",
           "status",
+          "department",
+          "routing_location",
+          "routing_source",
           "created_at"
         ],
         "title": "TicketOut"
@@ -5435,6 +6787,124 @@
         "type": "object",
         "title": "WebhookAck",
         "description": "Deliberately uninformative.\n\nThe response tells an unauthenticated caller nothing about whether a\nmessage ID exists or what state it is in, which would otherwise make this\nendpoint an oracle for probing delivery records."
+      },
+      "sahaayak_api__routers__admin__BenefitIssueReportOut": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "benefit_id": {
+            "type": "string",
+            "title": "Benefit Id"
+          },
+          "benefit_name": {
+            "type": "string",
+            "title": "Benefit Name"
+          },
+          "category": {
+            "type": "string",
+            "title": "Category"
+          },
+          "description": {
+            "type": "string",
+            "title": "Description"
+          },
+          "locale": {
+            "type": "string",
+            "title": "Locale"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "source_title": {
+            "type": "string",
+            "title": "Source Title"
+          },
+          "source_document_url": {
+            "type": "string",
+            "title": "Source Document Url"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "resolved_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Resolved At"
+          },
+          "resolved_by": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Resolved By"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "benefit_id",
+          "benefit_name",
+          "category",
+          "description",
+          "locale",
+          "status",
+          "source_title",
+          "source_document_url",
+          "created_at",
+          "resolved_at",
+          "resolved_by"
+        ],
+        "title": "BenefitIssueReportOut"
+      },
+      "sahaayak_api__routers__benefit_feedback__BenefitIssueReportOut": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "benefit_id": {
+            "type": "string",
+            "title": "Benefit Id"
+          },
+          "category": {
+            "type": "string",
+            "title": "Category"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "benefit_id",
+          "category",
+          "status",
+          "created_at"
+        ],
+        "title": "BenefitIssueReportOut"
       }
     }
   }

@@ -20,6 +20,19 @@ at product, frontend, backend/AI, data, infrastructure, security, and QA levels.
 > unavailable while this roadmap was prepared, so verify the final submission
 > rules and deadline in the contest portal before recording or submitting.
 
+> **Implementation update (2026-08-08):** The working tree now includes the
+> real source-text ingestion path for UPSC, Karnataka KPSC, and an authorized
+> NCS API adapter; persistent OpenAI-hosted RAG dataset selection; incorrect
+> information reporting; benefit comparison; operator claims/notes/SLA/routing;
+> browser streaming voice with VAD/interruption and clip fallback; consent-
+> gated Infobip reminder delivery; and an expanded admin control center with
+> messaging cost, data freshness, persisted evaluations, feature-flag rollout,
+> audit export, and provider/flag rollback. Docker migration head is
+> `20260808_0013`. The remaining gates are external: human publication review,
+> authorized NCS credentials, real Infobip sender approvals/keys, live voice
+> evidence, managed IdP production registration, telemetry collector/Langfuse
+> verification, and full browser/accessibility QA.
+
 ---
 
 ## 1. Executive recommendation
@@ -48,11 +61,11 @@ Build the next layer in this order:
    predictable navigation, WCAG 2.2 AA behavior, and a reviewed localization
    pipeline that can expand from Kannada/Hindi to ten Indian languages.
 
-Do not spend the core window on telephony, streaming voice, the complete admin
-suite, or activating all ten Indian languages until the submission slice of
-those seven outcomes is complete. The design tokens, navigation shell, locale
-architecture, and secure admin boundary should still be established early so
-later features do not require another structural rewrite.
+The remaining work is now evidence and deployment hardening: human publication
+review, real provider smoke tests, production identity/telemetry configuration,
+and browser/accessibility QA. The streaming voice and operational admin
+foundations are already implemented, so later work should focus on release
+gates rather than recreating those boundaries.
 
 ### 1.1 Approved scope expansion beyond the initial spec
 
@@ -93,11 +106,11 @@ product target is now broader and more explicit:
 | Agent | Language-agnostic LangGraph flow, rule-first understanding, optional LLM understanding, deterministic matching, adaptive follow-up questions, and escalation | `services/agent` |
 | Language | English, Hindi, and Kannada prompt catalogs are active; Marathi, Tamil, and Telugu reference rows are inactive | prompt modules + local DB |
 | State | Karnataka and Delhi are active; Maharashtra, Tamil Nadu, and Telangana are inactive | local DB |
-| Data | Eight hand-entered illustrative benefits remain active; an official UPSC importer now produces inactive, review-gated job rows | local DB + `scripts/ingest_upsc_jobs.py` |
-| Voice code | OpenAI Whisper transcription, Sarvam Bulbul synthesis, WAV chunk merge, and Redis/in-memory TTS caching exist | `services/agent/.../voice` |
+| Data | The source-backed myScheme pipeline remains the eligibility corpus; official UPSC and KPSC adapters produce inactive review-gated job rows, and an authorized NCS API adapter is ready | local DB + `scripts/ingest_*_jobs.py` |
+| Voice code | OpenAI Whisper transcription, Sarvam Bulbul synthesis, sentence-level streaming audio, browser VAD/interruption, WAV clip fallback, and Redis/in-memory TTS caching exist | `services/agent/.../voice`, `apps/web/src/hooks/use-streaming-voice.ts` |
 | Persistence | SQLite fallback and Postgres-compatible SQLModel tables for benefits, sessions, transcripts, and escalation tickets | `packages/common` |
 | Types | OpenAPI and generated TypeScript declarations are committed and consumed by the web app | `packages/api-types` |
-| Verification | Ruff passes, 443 Python tests pass, the web production build passes, the migration round-trip passes, and the UPSC importer has parser tests | `uv run python -m pytest -q` + web build |
+| Verification | Ruff passes, 454 Python tests pass, the web production build passes, Docker migration head is `20260808_0013`, and the source adapters/admin controls have offline tests | `make check` + Docker smoke |
 
 ### 2.2 What is still demonstration-only or unverified
 
@@ -110,8 +123,9 @@ product target is now broader and more explicit:
   deployment smoke and screenshot/evidence artifact.
 - A dedicated `/benefits/$benefitId` detail route now exposes application steps,
   documents, caveats, source links, verification status, freshness, job metadata,
-  and the latest match explanation. Report-incorrect-information and comparison
-  flows are still pending.
+  and the latest match explanation. Incorrect-information reporting and
+  comparison flows are implemented; human review remains required before
+  machine-structured rows can be published.
 - Browser history is not rehydrated from the durable transcript after reload.
 - Browser session, turn, RAG, transcript, and reset ownership now use a
   server-issued bearer token; telephony identity and operator escalation
@@ -133,8 +147,9 @@ product target is now broader and more explicit:
   deliberate font loading for all target Indic scripts.
 - Citizen account linking remains out of scope for the guest-first beta. The
   admin shell, RBAC boundary, OIDC/MFA claim validation, immutable audit log,
-  and operational control center are implemented; managed IdP provisioning and
-  browser redirect UX remain deployment-specific.
+  messaging cost view, freshness/evaluation view, feature-flag rollout and
+  rollback, audit export, and provider rollback are implemented; managed IdP
+  provisioning and browser redirect UX remain deployment-specific.
 - Provider routing policies now have admin-only, audited, expiring overrides
   and rollback. Native-speaker quality gates and a separately tested OpenAI
   audio fallback remain required before advertising voice fallback coverage.

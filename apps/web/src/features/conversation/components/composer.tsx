@@ -10,6 +10,7 @@ type ComposerProps = {
   selectedLanguageName?: string;
   isSending: boolean;
   disabled: boolean;
+  voiceDisabled: boolean;
   recording: boolean;
   voiceInputAvailable: boolean;
   textToSpeechAvailable: boolean;
@@ -25,6 +26,7 @@ export function Composer({
   selectedLanguageName,
   isSending,
   disabled,
+  voiceDisabled,
   recording,
   voiceInputAvailable,
   textToSpeechAvailable,
@@ -69,7 +71,7 @@ export function Composer({
           size="sm"
           className={recording ? "border-orange/50 bg-orange/10 text-orange" : "border-paper/15 text-paper/65"}
           onClick={recording ? onStopRecording : onStartRecording}
-          disabled={disabled || !voiceInputAvailable}
+          disabled={voiceDisabled || !voiceInputAvailable}
           aria-label={voiceInputAvailable ? (recording ? "Stop recording" : "Record a voice message") : "Speech-to-text is not configured"}
           aria-pressed={recording}
           title={voiceInputAvailable ? (recording ? "Stop recording" : "Record a voice message") : "Speech-to-text is not configured"}

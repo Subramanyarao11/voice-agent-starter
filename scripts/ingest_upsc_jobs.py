@@ -36,6 +36,7 @@ from sahaayak_common import REPO_ROOT, slugify
 INDEX_URL = "https://www.upsc.gov.in/recruitment/recruitment-advertisement"
 ALLOWED_HOSTS = frozenset({"upsc.gov.in", "www.upsc.gov.in"})
 DEFAULT_OUTPUT = REPO_ROOT / "data" / "structured" / "jobs.jsonl"
+DEFAULT_SOURCE_OUTPUT = REPO_ROOT / "data" / "structured" / "job_sources.jsonl"
 PDF_CACHE = REPO_ROOT / "data" / "jobs" / "upsc"
 MAX_PDF_BYTES = 25 * 1024 * 1024
 
@@ -317,7 +318,25 @@ def _extract_text(pdf_bytes: bytes) -> str:
         return "\n".join(page.extract_text() or "" for page in pdf.pages)
 
 
-def run(*, index_url: str, output: Path, limit: int, dry_run: bool, timeout: float) -> int:
+def _write_jsonl(path: Path, rows: list[dict]) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    temporary = path.with_suffix(path.suffix + ".tmp")
+    temporary.write_text(
+        "".join(json.dumps(row, ensure_ascii=False) + "\n" for row in rows),
+        encoding="utf-8",
+    )
+    temporary.replace(path)
+
+
+def run(
+    *,
+    index_url: str,
+    output: Path,
+    source_output: Path,
+    limit: int,
+    dry_run: bool,
+    timeout: float,
+) -> int:
     if not _is_official_url(index_url):
         raise SystemExit("The job importer only accepts an HTTPS UPSC index URL.")
     headers = {"User-Agent": "SahaayakJobImporter/0.1 (official-source review queue)"}
@@ -329,20 +348,36 @@ def run(*, index_url: str, output: Path, limit: int, dry_run: bool, timeout: flo
             raise SystemExit("No official UPSC PDF advertisements were found.")
 
         rows: list[dict] = []
+        sources: list[dict] = []
         for listing_title, pdf_url in links:
             try:
                 pdf_bytes = _fetch(client, pdf_url)
                 PDF_CACHE.mkdir(parents=True, exist_ok=True)
-                (PDF_CACHE / Path(urlparse(pdf_url).path).name).write_bytes(pdf_bytes)
+                filename = Path(urlparse(pdf_url).path).name or "advertisement.pdf"
+                (PDF_CACHE / filename).write_bytes(pdf_bytes)
+                extracted_text = _extract_text(pdf_bytes)
+                content_hash = hashlib.sha256(pdf_bytes).hexdigest()
                 parsed = parse_advertisement(
-                    _extract_text(pdf_bytes),
+                    extracted_text,
                     source_url=pdf_url,
                     listing_title=listing_title,
-                    source_content_hash=hashlib.sha256(pdf_bytes).hexdigest(),
+                    source_content_hash=content_hash,
                 )
             except Exception as exc:
                 raise SystemExit(f"Could not import {pdf_url}: {exc}") from exc
             rows.extend(parsed)
+            sources.append(
+                {
+                    "source_id": slugify(f"upsc-{listing_title}-{filename}"),
+                    "filename": filename,
+                    "raw_text": extracted_text,
+                    "source_hash": content_hash,
+                    "source_url": pdf_url,
+                    "source_title": listing_title,
+                    "dataset": "upsc_recruitment",
+                    "verification": "raw_machine_extracted",
+                }
+            )
             print(f"{listing_title}: extracted {len(parsed)} posting(s)")
 
     print(f"Total machine-structured job postings: {len(rows)}")
@@ -355,14 +390,10 @@ def run(*, index_url: str, output: Path, limit: int, dry_run: bool, timeout: flo
             )
         return len(rows)
 
-    output.parent.mkdir(parents=True, exist_ok=True)
-    temporary = output.with_suffix(output.suffix + ".tmp")
-    temporary.write_text(
-        "".join(json.dumps(row, ensure_ascii=False) + "\n" for row in rows),
-        encoding="utf-8",
-    )
-    temporary.replace(output)
+    _write_jsonl(output, rows)
+    _write_jsonl(source_output, sources)
     print(f"Wrote inactive review queue to {output}")
+    print(f"Wrote source text for RAG ingestion to {source_output}")
     print(f"Next: uv run python scripts/04_seed_db.py --file {output}")
     return len(rows)
 
@@ -371,6 +402,7 @@ def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--index-url", default=INDEX_URL)
     parser.add_argument("--output", type=Path, default=DEFAULT_OUTPUT)
+    parser.add_argument("--source-output", type=Path, default=DEFAULT_SOURCE_OUTPUT)
     parser.add_argument("--limit", type=int, default=3)
     parser.add_argument("--timeout", type=float, default=30.0)
     parser.add_argument("--dry-run", action="store_true")
@@ -378,6 +410,7 @@ def main() -> None:
     run(
         index_url=args.index_url,
         output=args.output,
+        source_output=args.source_output,
         limit=max(1, min(args.limit, 20)),
         dry_run=args.dry_run,
         timeout=max(1.0, min(args.timeout, 120.0)),
