@@ -17,7 +17,7 @@ from dataclasses import asdict, dataclass
 
 from sahaayak_agent.bootstrap import ensure_reference_data
 from sahaayak_agent.languages import ALL_PROFILES
-from sahaayak_agent.prompts import missing_keys, supported_languages
+from sahaayak_agent.prompts import bundle_review_status, missing_keys, supported_languages
 from sahaayak_common import Language, LanguageReadinessReview, init_db, session_scope
 
 REVIEW_FIELDS = (
@@ -35,6 +35,7 @@ REVIEW_FIELDS = (
 class ReleaseCheck:
     code: str
     prompt_bundle: bool
+    prompt_bundle_status: str
     missing_prompt_keys: list[str]
     review_complete: bool
     review_statuses: dict[str, str]
@@ -86,6 +87,7 @@ def check_language(code: str) -> ReleaseCheck:
     return ReleaseCheck(
         code=normalized,
         prompt_bundle=prompt_bundle,
+        prompt_bundle_status=bundle_review_status(normalized),
         missing_prompt_keys=missing,
         review_complete=review_complete,
         review_statuses=statuses,
@@ -108,11 +110,11 @@ def main() -> None:
 
     init_db()
     ensure_reference_data()
-    codes = args.codes or [
-        profile.code
-        for profile in ALL_PROFILES
-        if profile.code not in {"en", "hi", "kn"}
-    ]
+    codes = (
+        [profile.code for profile in ALL_PROFILES]
+        if args.all
+        else (args.codes or [])
+    )
     results = [check_language(code) for code in codes]
     if args.as_json:
         print(json.dumps([asdict(result) for result in results], ensure_ascii=False, indent=2))

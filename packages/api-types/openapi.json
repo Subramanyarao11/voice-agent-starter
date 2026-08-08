@@ -6419,6 +6419,10 @@
             "type": "boolean",
             "title": "Prompt Ready"
           },
+          "prompt_bundle_status": {
+            "type": "string",
+            "title": "Prompt Bundle Status"
+          },
           "interface_status": {
             "type": "string",
             "title": "Interface Status"
@@ -6530,6 +6534,7 @@
           "native_name",
           "active",
           "prompt_ready",
+          "prompt_bundle_status",
           "interface_status",
           "interface_review_status",
           "data_status",

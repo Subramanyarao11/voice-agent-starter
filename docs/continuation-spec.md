@@ -16,9 +16,11 @@
 > **2026-08-09 status note:** The working tree now includes benefit governance,
 > application tasks, criterion evidence, runtime rollout enforcement,
 > deployment/provider operations, streaming transcript review, source-attested
-> department routing, and an audited eight-locale release gate. The expansion
-> languages remain intentionally inactive until native-speaker evidence and
-> complete prompt bundles are supplied.
+> department routing, and an audited language release gate. Prompt bundles and
+> provider smoke checks now cover all ten Indian-language locales plus English;
+> the eight new bundles remain machine-assisted drafts and the expansion
+> languages remain intentionally inactive until native-speaker evidence,
+> localized content, and admin approval are supplied.
 
 ---
 

@@ -5,6 +5,8 @@ composer. A translation is a new dictionary with the same keys — never a new
 code path.
 """
 
+REVIEW_STATUS = "reference"
+
 PHRASES: dict[str, str] = {
     # --- Conversation frame ---
     "greeting": (

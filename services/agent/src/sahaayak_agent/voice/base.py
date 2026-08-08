@@ -1,9 +1,10 @@
 """Provider interfaces for speech in and speech out.
 
 Kept as two separate interfaces because the choice is genuinely per-direction
-and per-language. OpenAI's transcription handles Indic speech well, while its
-voices are English-centric, so vernacular output goes to Sarvam. A language
-added later can mix providers differently without the agent noticing.
+and per-language. OpenAI's transcription handles the launch locales, while
+Sarvam Saaras provides explicit Indian-language coverage for expansion locales
+and Sarvam Bulbul handles vernacular output. A language added later can mix
+providers differently without the agent noticing.
 """
 
 from abc import ABC, abstractmethod

@@ -15,6 +15,12 @@ from sahaayak_contracts import LanguageProfile, TranscriptionResult
 
 log = get_logger(__name__)
 
+# The transcription endpoint rejects an explicit language hint for several
+# Indian locales even though the model can still detect their speech. Keep
+# explicit hints for the locales accepted by the endpoint and let it detect
+# the remaining supported catalog languages instead of failing the request.
+OPENAI_EXPLICIT_LANGUAGE_HINTS = frozenset({"en", "hi", "kn", "ta", "mr"})
+
 
 class OpenAIWhisperSTT(STTProvider):
     name = "openai_whisper"
@@ -34,10 +40,9 @@ class OpenAIWhisperSTT(STTProvider):
     async def transcribe(
         self, audio: bytes, *, profile: LanguageProfile, filename: str = "audio.wav"
     ) -> TranscriptionResult:
-        # Passing the language explicitly rather than letting the model detect
-        # it: the caller already chose one, and autodetection on a short noisy
-        # utterance is a common source of a call falling into the wrong
-        # language and never recovering.
+        # Prefer an explicit hint when the endpoint accepts it. For catalog
+        # locales that the endpoint rejects as a parameter, omit the hint and
+        # let the model detect the already-selected Indian language.
         try:
             reservation: BudgetReservation = self._budget.reserve_fixed(
                 model=self._model,
@@ -59,11 +64,19 @@ class OpenAIWhisperSTT(STTProvider):
             },
         ) as span:
             try:
-                response = await self._client.audio.transcriptions.create(
-                    model=self._model,
-                    file=(filename, audio),
-                    language=profile.resolved_stt_locale(),
-                )
+                request = {
+                    "model": self._model,
+                    "file": (filename, audio),
+                }
+                if profile.resolved_stt_locale() in OPENAI_EXPLICIT_LANGUAGE_HINTS:
+                    request["language"] = profile.resolved_stt_locale()
+                else:
+                    log.info(
+                        "transcription_language_autodetect",
+                        language=profile.code,
+                        provider=self.name,
+                    )
+                response = await self._client.audio.transcriptions.create(**request)
             except Exception as exc:
                 self._budget.record_failure(reservation, exc)
                 if span is not None:

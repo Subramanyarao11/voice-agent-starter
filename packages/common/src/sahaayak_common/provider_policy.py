@@ -14,7 +14,7 @@ DEFAULT_PROVIDER_POLICIES: dict[tuple[str, str], dict[str, Any]] = {
     ("stt", "*"): {
         "enabled": True,
         "primary_provider": "openai_whisper",
-        "fallback_provider": "none",
+        "fallback_provider": "sarvam_saaras",
         "circuit_state": "closed",
     },
     ("tts", "*"): {

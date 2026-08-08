@@ -12,6 +12,7 @@ import hashlib
 
 from sahaayak_agent.languages import get_profile
 from sahaayak_agent.voice.base import STTProvider, TTSProvider, VoiceUnavailable
+from sahaayak_agent.voice.openai_stt import OPENAI_EXPLICIT_LANGUAGE_HINTS
 from sahaayak_common import (
     get_cache,
     get_effective_provider_policy,
@@ -54,6 +55,7 @@ class VoiceService:
         self, stt: STTProvider | None = None, tts: TTSProvider | None = None
     ) -> None:
         self._stt = stt
+        self._sarvam_stt: STTProvider | None = None
         self._tts = tts
         self._realtime_stt = None
         self._stt_ready = stt is not None
@@ -75,9 +77,16 @@ class VoiceService:
             self._tts = SarvamBulbulTTS()
         return self._tts
 
+    def _get_sarvam_stt(self) -> STTProvider:
+        if self._sarvam_stt is None:
+            from sahaayak_agent.voice.sarvam_stt import SarvamSaarasSTT
+
+            self._sarvam_stt = SarvamSaarasSTT()
+        return self._sarvam_stt
+
     @property
     def stt_available(self) -> bool:
-        return self._stt_ready or settings.llm_enabled
+        return self._stt_ready or settings.llm_enabled or settings.tts_enabled
 
     @property
     def tts_available(self) -> bool:
@@ -109,9 +118,27 @@ class VoiceService:
         policy = get_effective_provider_policy("stt", profile.code)
         if not policy["enabled"] or policy["circuit_state"] == "open":
             raise VoiceUnavailable("speech-to-text is temporarily paused by operations")
-        if policy["primary_provider"] != "openai_whisper":
-            raise VoiceUnavailable("the selected speech-to-text provider is not available")
-        return await self._get_stt().transcribe(audio, profile=profile, filename=filename)
+        provider_name = policy["primary_provider"]
+        if (
+            provider_name == "openai_whisper"
+            and profile.code not in OPENAI_EXPLICIT_LANGUAGE_HINTS
+            and policy["fallback_provider"] == "sarvam_saaras"
+            and settings.sarvam_api_key
+        ):
+            provider_name = "sarvam_saaras"
+            log.info(
+                "stt_fallback_selected_for_language",
+                language=profile.code,
+                primary_provider=policy["primary_provider"],
+                fallback_provider=provider_name,
+            )
+        if provider_name == "openai_whisper":
+            return await self._get_stt().transcribe(audio, profile=profile, filename=filename)
+        if provider_name == "sarvam_saaras":
+            return await self._get_sarvam_stt().transcribe(
+                audio, profile=profile, filename=filename
+            )
+        raise VoiceUnavailable("the selected speech-to-text provider is not available")
 
     async def start_realtime_transcription(
         self,

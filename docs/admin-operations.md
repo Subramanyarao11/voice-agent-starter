@@ -214,17 +214,23 @@ layer for paid or sensitive integrations.
 ## Expansion-language release gate
 
 The eight expansion profiles are registered so product, data, and admin views
-can plan them, but they are not advertised as active by default. Add the
-reviewed prompt module for the locale, then run:
+can plan them, and their prompt modules are installed as machine-assisted
+drafts. They are not advertised as active by default. Run the automated checks,
+attach the evidence artifact, then have a native reviewer replace the draft
+status with an approved review packet:
 
 ```bash
 uv run python scripts/17_validate_language_release.py --code ta
+uv run python scripts/18_validate_language_ui.py
+uv run python scripts/19_language_voice_smoke.py --languages ta
 ```
 
 In **Admin → Languages**, a reviewer records the seven gate decisions and
 evidence URL. The API rejects prompt approval when the bundle is absent,
 requires an explicit attestation, and permits activation only to an admin once
 all gates are approved. `ten_language_rollout` remains an independent,
-reversible cohort flag. Validate all expansion locales with
-`make language-release-check`; it is read-only and exits non-zero until the
-external native-speaker and voice/accessibility evidence exists.
+reversible cohort flag. Validate all locales with `make language-release-check`;
+it is read-only and exits non-zero until the external native-speaker and
+voice/accessibility evidence exists. The voice smoke report is provider
+evidence only; it does not attest to wording, government terminology, or human
+microphone quality.

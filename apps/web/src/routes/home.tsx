@@ -142,6 +142,11 @@ export function HomePage() {
   }, [activeStates, setStateCode, stateCode]);
 
   useEffect(() => {
+    // Keep screen-reader pronunciation aligned with the selected locale.
+    document.documentElement.lang = languageCode === "en" ? "en-IN" : `${languageCode}-IN`;
+  }, [languageCode]);
+
+  useEffect(() => {
     const queryError = catalogQuery.error ?? healthQuery.error ?? sessionError;
     if (queryError && !feedback) {
       setFeedback({ kind: "error", text: toUserMessage(queryError) });

@@ -2,8 +2,9 @@
 
 Adding a language is adding a module here with the same keys as `en`. Missing
 keys fall back to English and log a warning rather than raising, so a partly
-translated language degrades to bilingual output instead of a failed call —
-during a build week, half-translated beats broken.
+translated language degrades to bilingual output instead of a failed call.
+The release validator and Admin → Languages gate remain responsible for
+preventing an incomplete or machine-assisted bundle from being activated.
 """
 
 from importlib import import_module
@@ -18,6 +19,11 @@ CATALOGS: dict[str, dict[str, str]] = {
     "en": en.PHRASES,
     "hi": hi.PHRASES,
     "kn": kn.PHRASES,
+}
+BUNDLE_REVIEW_STATUS: dict[str, str] = {
+    "en": getattr(en, "REVIEW_STATUS", "unspecified"),
+    "hi": getattr(hi, "REVIEW_STATUS", "unspecified"),
+    "kn": getattr(kn, "REVIEW_STATUS", "unspecified"),
 }
 
 # Expansion bundles are deliberately discovered by locale code. A reviewed
@@ -37,6 +43,9 @@ for _profile in ALL_PROFILES:
         for key, value in _phrases.items()
     ):
         CATALOGS[_profile.code] = _phrases
+        BUNDLE_REVIEW_STATUS[_profile.code] = getattr(
+            _module, "REVIEW_STATUS", "unspecified"
+        )
 
 FALLBACK_LANGUAGE = "en"
 
@@ -95,6 +104,11 @@ def supported_languages() -> list[str]:
     return sorted(CATALOGS)
 
 
+def bundle_review_status(language_code: str) -> str:
+    """Return the provenance label for the installed prompt bundle."""
+    return BUNDLE_REVIEW_STATUS.get(language_code, "missing")
+
+
 def missing_keys(language_code: str) -> list[str]:
     """Keys a language still needs. Used by the translation-coverage test."""
     return sorted(set(CATALOGS[FALLBACK_LANGUAGE]) - set(CATALOGS.get(language_code, {})))
@@ -102,7 +116,9 @@ def missing_keys(language_code: str) -> list[str]:
 
 __all__ = [
     "CATALOGS",
+    "BUNDLE_REVIEW_STATUS",
     "PromptCatalog",
+    "bundle_review_status",
     "get_catalog",
     "missing_keys",
     "supported_languages",

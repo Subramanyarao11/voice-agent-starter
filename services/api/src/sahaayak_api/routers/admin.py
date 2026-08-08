@@ -23,7 +23,7 @@ from pydantic import BaseModel, Field
 from sqlalchemy import func, text
 from sqlmodel import Session, select
 
-from sahaayak_agent.prompts import supported_languages
+from sahaayak_agent.prompts import bundle_review_status, supported_languages
 from sahaayak_api.admin_auth import AdminPrincipal, require_admin_role
 from sahaayak_api.benefit_freshness import scan_source_freshness
 from sahaayak_api.routers.health import HealthReport, health
@@ -485,6 +485,7 @@ class LanguageReadinessOut(BaseModel):
     native_name: str
     active: bool
     prompt_ready: bool
+    prompt_bundle_status: str
     interface_status: str
     interface_review_status: str
     data_status: str
@@ -1685,7 +1686,7 @@ def admin_languages(
         )
         active_count = len(benefit_rows)
         prompt_ready = language.code in supported_languages()
-        voice_ready = settings.llm_enabled and settings.tts_enabled
+        voice_ready = (settings.llm_enabled or settings.tts_enabled) and settings.tts_enabled
         review_ready = _language_review_ready(review)
         result.append(
             LanguageReadinessOut(
@@ -1694,6 +1695,7 @@ def admin_languages(
                 native_name=language.native_name,
                 active=language.is_active,
                 prompt_ready=prompt_ready,
+                prompt_bundle_status=bundle_review_status(language.code),
                 interface_status="catalogued" if language.is_active else "inactive",
                 interface_review_status=review.interface_status,
                 data_status="localized"
@@ -2055,6 +2057,20 @@ def admin_provider_failure_simulations(
             ),
         },
         {
+            "scenario": "stt_language_fallback_failure",
+            "provider": "sarvam_saaras",
+            "policy_provider": "stt",
+            "flag_key": "provider_stt",
+            "configured": settings.tts_enabled,
+            "user_facing_fallback": (
+                "Keep text input and uploaded-audio retry available; do not submit an empty turn."
+            ),
+            "operator_action": (
+                "Check Sarvam Saaras credentials/credits, locale mapping, and the STT "
+                "policy circuit."
+            ),
+        },
+        {
             "scenario": "tts_failure",
             "provider": "sarvam_bulbul",
             "policy_provider": "tts",
@@ -2358,6 +2374,7 @@ def _provider_statuses(
     report: HealthReport, turn_events: list[TelemetryEvent]
 ) -> list[ProviderStatusOut]:
     openai_events = [event for event in turn_events if event.provider == "openai_whisper"]
+    sarvam_stt_events = [event for event in turn_events if event.provider == "sarvam_saaras"]
     tts_events = [
         event for event in turn_events if event.safe_metadata.get("tts_provider") == "sarvam_bulbul"
     ]
@@ -2396,6 +2413,18 @@ def _provider_statuses(
             note=(
                 "Sarvam credit reconciliation is not available from the current "
                 "provider contract; request and cache telemetry is shown."
+            ),
+        ),
+        ProviderStatusOut(
+            name="sarvam_saaras",
+            configured=settings.tts_enabled,
+            health="configured" if settings.tts_enabled else "not configured",
+            requests=len(sarvam_stt_events),
+            failures=sum(event.outcome == "error" for event in sarvam_stt_events),
+            controls_available=True,
+            note=(
+                "Used as the explicit Indian-language STT fallback where the OpenAI "
+                "transcription endpoint rejects a locale hint."
             ),
         ),
         ProviderStatusOut(

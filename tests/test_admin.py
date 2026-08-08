@@ -187,7 +187,7 @@ def test_admin_language_release_gate_requires_bundle_and_attestation(client):
     assert saved.status_code == 200
     assert saved.json()["rollout_status"] == "not ready"
 
-    prompt_without_bundle = client.put(
+    prompt_with_installed_bundle = client.put(
         "/api/admin/languages/ta/review",
         json={
             **base_payload,
@@ -195,7 +195,31 @@ def test_admin_language_release_gate_requires_bundle_and_attestation(client):
             "attestation": True,
         },
     )
-    assert prompt_without_bundle.status_code == 409
+    assert prompt_with_installed_bundle.status_code == 200
+    assert prompt_with_installed_bundle.json()["prompt_status"] == "approved"
+
+    # Keep the shared test database at the safe pending baseline for the other
+    # admin and rollout tests.
+    from sahaayak_common import LanguageReadinessReview, session_scope
+
+    with session_scope() as db:
+        review = db.get(LanguageReadinessReview, "ta")
+        assert review is not None
+        for field in (
+            "native_speaker_status",
+            "interface_status",
+            "prompt_status",
+            "content_status",
+            "understanding_status",
+            "voice_status",
+            "accessibility_status",
+        ):
+            setattr(review, field, "pending")
+        review.evidence_url = ""
+        review.review_notes = ""
+        review.reviewed_by = None
+        review.reviewed_at = None
+        db.add(review)
 
 
 async def test_managed_oidc_token_requires_mfa_and_maps_role(monkeypatch):

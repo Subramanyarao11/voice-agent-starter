@@ -7,6 +7,8 @@ forms over formal administrative vocabulary.
 Pending native-speaker review before the demo — see docs/spec-v2.md, day 7.
 """
 
+REVIEW_STATUS = "review_required"
+
 PHRASES: dict[str, str] = {
     "greeting": (
         "ನಮಸ್ಕಾರ. ನಾನು ಸಹಾಯಕ. ಸರ್ಕಾರಿ ಯೋಜನೆಗಳು, ವಿದ್ಯಾರ್ಥಿವೇತನ ಮತ್ತು ಉದ್ಯೋಗಗಳ ಬಗ್ಗೆ "

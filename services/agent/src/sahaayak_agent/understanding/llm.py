@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import json
 
+from sahaayak_agent.languages import ALL_PROFILES
 from sahaayak_agent.tracing import start_span
 from sahaayak_common import (
     BudgetReservation,
@@ -36,11 +37,16 @@ _ALLOWED_SLOT_VALUES = {
     SlotName.ENROLLMENT_MODE: ["regular", "distance", "correspondence", "not_studying"],
 }
 
+_SUPPORTED_LANGUAGE_NAMES = ", ".join(
+    f"{profile.name} ({profile.code})" for profile in ALL_PROFILES
+)
+
 SYSTEM_PROMPT = f"""You extract structured information from a single utterance \
 spoken by a caller to an Indian government-benefits helpline.
 
-The caller may speak Kannada, Hindi, or English, and very often mixes them in \
-one sentence. Understand all of them.
+The caller may speak any of these supported languages, and may mix them in one \
+sentence: {_SUPPORTED_LANGUAGE_NAMES}. Understand the selected language and \
+common English or Hindi code-switching without changing the caller's meaning.
 
 Return strictly valid JSON:
 {{

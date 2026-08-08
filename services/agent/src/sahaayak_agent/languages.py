@@ -1,10 +1,10 @@
 """The language rollout catalog.
 
-Kannada, Hindi, and English are currently served. Eight additional Indian
-language profiles are registered as inactive rollout targets so the admin
-console, data pipeline, and frontend can plan a ten-language local-language
-expansion without claiming that translated prompts, benefits, or voices are
-ready before they have evidence.
+English, Kannada, and Hindi are the launch profiles. Eight additional Indian
+language profiles are registered as inactive rollout targets, making eleven
+profiles in the complete catalog. Registration is deliberately separate from
+activation: prompts, localized content, provider evidence, and native review
+must be recorded before an expansion locale is served.
 """
 
 from sahaayak_contracts import LanguageCatalog, LanguageProfile
@@ -35,8 +35,8 @@ DEFAULT_CATALOG = LanguageCatalog(
     ]
 )
 
-# Ready for data and prompts; not served until both exist. Together with the
-# three active profiles this is the ten-language Indian-language rollout set.
+# Ready for data and prompts; not served until evidence and review gates pass.
+# Together with the three launch profiles this is the eleven-profile catalog.
 PLANNED_PROFILES = [
     LanguageProfile(code="ta", name="Tamil", native_name="தமிழ்", tts_voice_id="anushka"),
     LanguageProfile(code="te", name="Telugu", native_name="తెలుగు", tts_voice_id="anushka"),
@@ -45,7 +45,14 @@ PLANNED_PROFILES = [
     LanguageProfile(code="gu", name="Gujarati", native_name="ગુજરાતી", tts_voice_id="anushka"),
     LanguageProfile(code="ml", name="Malayalam", native_name="മലയാളം", tts_voice_id="anushka"),
     LanguageProfile(code="pa", name="Punjabi", native_name="ਪੰਜਾਬੀ", tts_voice_id="anushka"),
-    LanguageProfile(code="or", name="Odia", native_name="ଓଡ଼ିଆ", tts_voice_id="anushka"),
+    LanguageProfile(
+        code="or",
+        name="Odia",
+        native_name="ଓଡ଼ିଆ",
+        sarvam_stt_locale="od-IN",
+        tts_locale="od-IN",
+        tts_voice_id="anushka",
+    ),
 ]
 
 ALL_PROFILES = [*DEFAULT_CATALOG.profiles, *PLANNED_PROFILES]

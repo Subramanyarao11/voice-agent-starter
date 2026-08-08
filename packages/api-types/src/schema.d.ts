@@ -2472,6 +2472,8 @@ export interface components {
             active: boolean;
             /** Prompt Ready */
             prompt_ready: boolean;
+            /** Prompt Bundle Status */
+            prompt_bundle_status: string;
             /** Interface Status */
             interface_status: string;
             /** Interface Review Status */

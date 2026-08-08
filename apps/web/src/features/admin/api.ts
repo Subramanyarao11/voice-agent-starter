@@ -308,6 +308,7 @@ const languageReadinessSchema = z.object({
   native_name: z.string(),
   active: z.boolean(),
   prompt_ready: z.boolean(),
+  prompt_bundle_status: z.string(),
   interface_status: z.string(),
   interface_review_status: z.string(),
   data_status: z.string(),

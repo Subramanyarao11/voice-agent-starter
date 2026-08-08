@@ -7,6 +7,8 @@ over formal administrative vocabulary.
 Pending native-speaker review before the demo — see docs/spec-v2.md, day 7.
 """
 
+REVIEW_STATUS = "review_required"
+
 PHRASES: dict[str, str] = {
     "greeting": (
         "नमस्ते। मैं सहायक हूँ। मैं आपको सरकारी योजनाओं, छात्रवृत्ति और नौकरियों "

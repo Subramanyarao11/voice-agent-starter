@@ -127,13 +127,13 @@ product target is now broader and more explicit:
 | Frontend architecture | Tailwind v4, shadcn-style primitives, TanStack Router/Query, Zustand, Zod, Motion, and `react-media-recorder` are integrated | `apps/web/package.json` |
 | API | Catalog, coverage, text turn, voice turn, sessions, transcripts, reset, and escalation endpoints exist | `services/api/.../routers` |
 | Agent | Language-agnostic LangGraph flow, rule-first understanding, optional LLM understanding, deterministic matching, adaptive follow-up questions, and escalation | `services/agent` |
-| Language | English, Hindi, and Kannada prompt catalogs are active; Tamil, Telugu, Marathi, Bengali, Gujarati, Malayalam, Punjabi, and Odia are registered but release-gated and inactive | prompt modules + language readiness review |
+| Language | All ten Indian-language prompt bundles plus English are installed; English, Hindi, and Kannada are active, while the eight expansion locales remain machine-assisted, review-gated, and inactive | prompt modules + language readiness review + voice smoke evidence |
 | State | Karnataka and Delhi are active; Maharashtra, Tamil Nadu, and Telangana are inactive | local DB |
 | Data | The source-backed myScheme pipeline remains the eligibility corpus; official UPSC and KPSC adapters produce inactive review-gated job rows, and an authorized NCS API adapter is ready | local DB + `scripts/ingest_*_jobs.py` |
 | Voice code | OpenAI Whisper batch fallback, opt-in OpenAI Realtime PCM transcription, Sarvam Bulbul synthesis, sentence-level audio chunks, browser VAD/interruption, transcript review/editing, WAV clip fallback, and Redis/in-memory TTS caching exist | `services/agent/.../voice`, `services/api/.../routers/voice_stream.py`, `apps/web/src/hooks/use-streaming-voice.ts` |
 | Persistence | SQLite fallback and Postgres-compatible SQLModel tables for benefits, sessions, transcripts, and escalation tickets | `packages/common` |
 | Types | OpenAPI and generated TypeScript declarations are committed and consumed by the web app | `packages/api-types` |
-| Verification | Ruff passes, 465 Python tests pass, the web production build passes, Docker migration head is `20260809_0018`, and the governance/voice/directory/language controls have offline tests | `make check` + Docker smoke |
+| Verification | Ruff passes, 513 Python tests pass, the web production build passes, Docker migration head is `20260809_0018`, and the governance/voice/directory/language controls have offline tests | `make check` + Docker smoke |
 
 ### 2.2 What is still demonstration-only or unverified
 
@@ -189,8 +189,12 @@ product target is now broader and more explicit:
 - Expansion-language readiness now has seven review dimensions, evidence URL,
   attestation, reviewer/timestamp, audited activation, and a bundle/review
   validator at `scripts/17_validate_language_release.py`. The prompt loader
-  discovers future locale modules by code, but missing modules cannot be
-  approved or activated.
+  now has complete bundles for all ten Indian-language locales plus English;
+  the eight new bundles are explicitly machine-assisted drafts until a native
+  reviewer approves them. `scripts/18_validate_language_ui.py` covers
+  script/font/accessibility/mobile signals, while
+  `scripts/19_language_voice_smoke.py` records a Sarvam-TTS-to-STT round trip
+  without activating a locale.
 
 ### 2.3 Product definition of done
 
@@ -1105,7 +1109,7 @@ stable locale identifiers:
 | Wave 3 | Gujarati | `gu-IN` |
 | Wave 3 | Malayalam | `ml-IN` |
 | Wave 3 | Punjabi | `pa-IN` |
-| Wave 3 | Odia | `or-IN` |
+| Wave 3 | Odia | `od-IN` for Sarvam; `or` for the application/Whisper code |
 | Fallback | English | `en-IN` |
 
 - Standardize the web app on `i18next` + `react-i18next` with ICU support for

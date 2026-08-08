@@ -1,7 +1,8 @@
 .DEFAULT_GOAL := help
 .PHONY: help setup up down infra api web lint fmt test check types seed validate-data migrate \
 pipeline extract prefilter structure spotcheck jobs jobs-state jobs-ncs evaluate retention rate-limit-smoke \
-notifications notifications-dry-run freshness-scan language-release-check logs-api ps clean
+notifications notifications-dry-run freshness-scan language-release-check language-ui-check \
+language-voice-smoke logs-api ps clean
 
 help: ## Show every available target
 	@grep -hE '^[a-zA-Z_-]+:.*?## ' $(MAKEFILE_LIST) \
@@ -72,6 +73,12 @@ freshness-scan: ## Scan active sources and persist deduplicated freshness alerts
 
 language-release-check: ## Validate a locale's prompt bundle and review evidence
 	uv run python scripts/17_validate_language_release.py --all
+
+language-ui-check: ## Validate script, font, accessibility, and mobile readiness signals
+	uv run python scripts/18_validate_language_ui.py
+
+language-voice-smoke: ## Run the budget-capped multilingual Sarvam/OpenAI voice round trip
+	uv run python scripts/19_language_voice_smoke.py
 
 migrate: ## Apply all Alembic migrations to the configured database
 	uv run python -m alembic upgrade head

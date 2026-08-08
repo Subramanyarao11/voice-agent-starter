@@ -50,7 +50,7 @@ async def lifespan(app: FastAPI):
         "api_started",
         environment=settings.env,
         database="sqlite" if settings.using_sqlite else "postgres",
-        speech_to_text=settings.llm_enabled,
+        speech_to_text=settings.llm_enabled or settings.tts_enabled,
         text_to_speech=settings.tts_enabled,
     )
     yield

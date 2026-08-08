@@ -59,7 +59,7 @@ async def health() -> HealthReport:
         environment=settings.env,
         database=database,
         cache=cache,
-        speech_to_text=settings.llm_enabled,
+        speech_to_text=settings.llm_enabled or settings.tts_enabled,
         text_to_speech=settings.tts_enabled,
         reasoning_model=settings.llm_enabled,
         tracing=settings.tracing_enabled or settings.otel_enabled,

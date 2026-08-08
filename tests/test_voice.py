@@ -99,6 +99,14 @@ def test_language_profiles_carry_each_provider_locale_format():
     profile = get_profile("kn")
     assert profile.resolved_stt_locale() == "kn"
     assert profile.resolved_tts_locale() == "kn-IN"
+    assert profile.resolved_sarvam_stt_locale() == "kn-IN"
+
+
+def test_odia_uses_sarvams_bcp47_code():
+    profile = get_profile("or")
+    assert profile.resolved_stt_locale() == "or"
+    assert profile.resolved_sarvam_stt_locale() == "od-IN"
+    assert profile.resolved_tts_locale() == "od-IN"
 
 
 def test_an_unknown_language_falls_back_rather_than_failing():

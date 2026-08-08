@@ -16,6 +16,7 @@ class LanguageProfile(BaseModel):
 
     stt_provider: str = "openai_whisper"
     stt_locale: str = ""  # defaults to `code`
+    sarvam_stt_locale: str = ""  # defaults to f"{code}-IN"
 
     tts_provider: str = "sarvam_bulbul"
     tts_locale: str = ""  # defaults to f"{code}-IN"
@@ -26,6 +27,9 @@ class LanguageProfile(BaseModel):
 
     def resolved_tts_locale(self) -> str:
         return self.tts_locale or f"{self.code}-IN"
+
+    def resolved_sarvam_stt_locale(self) -> str:
+        return self.sarvam_stt_locale or f"{self.code}-IN"
 
 
 class TranscriptionResult(BaseModel):
