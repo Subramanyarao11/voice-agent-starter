@@ -1,33 +1,24 @@
-import { useCallback, useEffect, useMemo, useState, type FormEvent } from "react";
+import { lazy, Suspense, useCallback, useEffect, useMemo, useState, type FormEvent } from "react";
 
-import { motion } from "motion/react";
+import { m } from "motion/react";
 
 import { PublicFooter, Topbar } from "@/components/app/topbar";
 import { Card, CardContent } from "@/components/ui/card";
-import { ComparisonPanel } from "@/features/benefits/components/comparison-panel";
-import { useCompareStore } from "@/features/benefits/compare-store";
 import { CatalogControls } from "@/features/catalog/components/catalog-controls";
 import { ConversationPanel } from "@/features/conversation/components/conversation-panel";
-import { MatchesPanel } from "@/features/conversation/components/matches-panel";
-import { SourcesPanel } from "@/features/conversation/components/sources-panel";
-import { TurnInspector } from "@/features/conversation/components/turn-inspector";
 import { useResetSessionMutation, useTextTurnMutation, useVoiceTurnMutation } from "@/features/conversation/queries";
 import { useConversationStore } from "@/features/conversation/store";
 import { useCreateBrowserSessionMutation } from "@/features/session/queries";
 import { useGuestSessionStore } from "@/features/session/store";
 import { useCatalogQuery, useHealthQuery } from "@/features/catalog/queries";
-import {
-  useRemoveSavedBenefitMutation,
-  useSaveBenefitMutation,
-  useSavedBenefitsQuery,
-} from "@/features/saved/queries";
-import { ContactSettingsPanel } from "@/features/contacts/components/contact-settings-panel";
-import { SavedBenefitsPanel } from "@/features/saved/components/saved-benefits-panel";
 import { useStreamingVoice } from "@/hooks/use-streaming-voice";
 import { useVoiceRecorder } from "@/hooks/use-voice-recorder";
 import { useUi } from "@/features/i18n/ui-provider";
 import { audioDataUrl, cn } from "@/lib/utils";
 import { ApiError, toUserMessage } from "@/lib/api";
+import { motionTokens } from "@/lib/motion";
+
+const HomeResults = lazy(() => import("@/features/home/components/home-results"));
 
 export function HomePage() {
   const { t } = useUi();
@@ -56,11 +47,6 @@ export function HomePage() {
   const setDraft = useConversationStore((state) => state.setDraft);
   const appendTurn = useConversationStore((state) => state.appendTurn);
   const clearConversation = useConversationStore((state) => state.clearConversation);
-  const savedBenefitsQuery = useSavedBenefitsQuery(sessionId, accessToken);
-  const saveBenefitMutation = useSaveBenefitMutation(sessionId, accessToken);
-  const removeSavedBenefitMutation = useRemoveSavedBenefitMutation(sessionId, accessToken);
-  const comparedBenefitIds = useCompareStore((state) => state.benefitIds);
-  const toggleCompare = useCompareStore((state) => state.toggle);
 
   const [feedback, setFeedback] = useState<{ kind: "error" | "notice"; text: string } | null>(null);
 
@@ -96,10 +82,6 @@ export function HomePage() {
   const disabled = catalogLoading || isSending || sessionPending || !accessToken || !languageCode || !stateCode;
   const voiceDisabled = catalogLoading || baseSending || sessionPending || !accessToken || !languageCode || !stateCode;
   const audioSource = audioDataUrl(lastTurn?.audio_base64, lastTurn?.audio_mime_type);
-  const savedBenefitIds = useMemo(
-    () => new Set(savedBenefitsQuery.data?.map((benefit) => benefit.benefit_id) ?? []),
-    [savedBenefitsQuery.data],
-  );
 
   const handleVoiceComplete = useCallback(
     async (audio: Blob) => {
@@ -208,17 +190,15 @@ export function HomePage() {
     }
   }, [accessToken, clearConversation, clearSession, isSending, resetMutation, sessionId, t]);
 
-  const handleToggleSaved = useCallback(
-    (benefitId: string, saved: boolean) => {
-      const mutation = saved ? removeSavedBenefitMutation : saveBenefitMutation;
-      mutation.mutate(benefitId, {
-        onError: (error) => setFeedback({ kind: "error", text: toUserMessage(error) }),
-      });
-    },
-    [removeSavedBenefitMutation, saveBenefitMutation],
-  );
-
   const connected = healthQuery.data?.status === "ok" && Boolean(accessToken);
+
+  const [showDeferredResults, setShowDeferredResults] = useState(Boolean(lastTurn));
+
+  useEffect(() => {
+    if (lastTurn || showDeferredResults) return;
+    const timer = window.setTimeout(() => setShowDeferredResults(true), 1200);
+    return () => window.clearTimeout(timer);
+  }, [lastTurn, showDeferredResults]);
 
   return (
     <div className="min-h-svh bg-background text-foreground">
@@ -231,11 +211,11 @@ export function HomePage() {
 
       <main id="main-content" tabIndex={-1} className="outline-none" aria-labelledby="page-title">
         <section className="mx-auto grid max-w-[1200px] gap-8 px-4 py-10 sm:px-6 sm:py-14 lg:grid-cols-[minmax(260px,.72fr)_minmax(520px,1.28fr)] lg:px-8 lg:py-16">
-          <motion.header
+          <m.header
             className="self-start lg:sticky lg:top-8"
             initial={{ opacity: 0, y: 12 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.35, ease: "easeOut" }}
+            transition={{ duration: motionTokens.slow, ease: motionTokens.ease }}
           >
             <p className="text-sm font-semibold text-primary">{t("heroKicker")}</p>
             <h1 id="page-title" className="mt-4 max-w-xl text-3xl font-bold leading-tight tracking-tight text-foreground sm:text-4xl">
@@ -254,16 +234,16 @@ export function HomePage() {
                 </p>
               </CardContent>
             </Card>
-          </motion.header>
+          </m.header>
 
-          <motion.section
+          <m.section
             id="conversation"
             aria-labelledby="conversation-title"
             tabIndex={-1}
             className="scroll-mt-8 space-y-4 outline-none"
             initial={{ opacity: 0, y: 16 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.35, delay: 0.05, ease: "easeOut" }}
+            transition={{ duration: motionTokens.slow, delay: 0.05, ease: motionTokens.ease }}
           >
             <CatalogControls
               languages={activeLanguages}
@@ -313,37 +293,30 @@ export function HomePage() {
               )}
               {!feedback && catalogLoading && <p className="text-muted-foreground">{t("loadingCatalog")}</p>}
             </div>
-          </motion.section>
+          </m.section>
         </section>
 
-        <section id="results" className="mx-auto max-w-[1200px] space-y-8 px-4 pb-14 sm:px-6 lg:px-8">
-          <TurnInspector turn={lastTurn} />
-          <SourcesPanel turn={lastTurn} />
-          <MatchesPanel
-            turn={lastTurn}
-            savedBenefitIds={savedBenefitIds}
-            onToggleSaved={handleToggleSaved}
-            comparedBenefitIds={new Set(comparedBenefitIds)}
-            onToggleCompare={(benefitId, compared) => {
-              if (compared || comparedBenefitIds.length < 3) toggleCompare(benefitId);
-            }}
-          />
-          <ComparisonPanel />
-          <section id="saved-work" className="scroll-mt-8">
-            <SavedBenefitsPanel
-              sessionId={sessionId}
-              accessToken={accessToken}
-              savedBenefits={savedBenefitsQuery.data ?? []}
-            />
-          </section>
-          {accessToken ? (
-            <ContactSettingsPanel
-              sessionId={sessionId}
-              accessToken={accessToken}
-              languageCode={languageCode}
-            />
-          ) : null}
-        </section>
+        {showDeferredResults ? (
+          <Suspense
+            fallback={
+              <section id="results" className="mx-auto min-h-24 max-w-[1200px] px-4 pb-14 sm:px-6 lg:px-8" aria-busy="true">
+                <p className="text-sm text-muted-foreground" role="status">Loading your saved work…</p>
+              </section>
+            }
+          >
+            {sessionId && accessToken ? (
+              <HomeResults
+                lastTurn={lastTurn}
+                sessionId={sessionId}
+                accessToken={accessToken}
+                languageCode={languageCode}
+                onError={(text) => setFeedback({ kind: "error", text })}
+              />
+            ) : null}
+          </Suspense>
+        ) : (
+          <section id="results" className="mx-auto min-h-24 max-w-[1200px] px-4 pb-14 sm:px-6 lg:px-8" aria-busy="true" />
+        )}
       </main>
 
       <PublicFooter />

@@ -10,7 +10,8 @@
   "scripts": {
     "dev": "npm run dev --workspace @sahaayak/web",
     "build": "npm run build --workspaces --if-present",
-    "typecheck": "npm run typecheck --workspaces --if-present"
+    "typecheck": "npm run typecheck --workspaces --if-present",
+    "perf:web": "npm run build --workspace @sahaayak/web && npm run perf:check --workspace @sahaayak/web"
   },
   "engines": {
     "node": ">=20"

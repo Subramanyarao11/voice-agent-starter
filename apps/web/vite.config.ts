@@ -21,4 +21,7 @@ export default defineConfig({
       "/health": "http://localhost:8000",
     },
   },
+  build: {
+    chunkSizeWarningLimit: 700,
+  },
 });

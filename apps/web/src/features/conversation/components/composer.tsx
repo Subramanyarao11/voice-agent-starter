@@ -89,7 +89,7 @@ export function Composer({
           disabled={disabled || recording || !draft.trim()}
           aria-label={t("sendMessage")}
         >
-          {isSending ? <LoaderCircle className="size-3.5 animate-spin" /> : <span>{t("sendMessage")}</span>}
+          {isSending ? <LoaderCircle className="size-3.5 motion-safe:animate-spin motion-reduce:animate-none" /> : <span>{t("sendMessage")}</span>}
           <ArrowUpRight className="size-4" />
         </Button>
       </div>

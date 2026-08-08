@@ -1,9 +1,13 @@
-import { createRootRoute, createRoute, createRouter, Outlet } from "@tanstack/react-router";
+import { createRootRoute, createRoute, createRouter, lazyRouteComponent, Outlet } from "@tanstack/react-router";
 
 import { HomePage } from "@/routes/home";
-import { AdminRoutePage } from "@/routes/admin";
 import { AdminCallbackPage } from "@/routes/admin-callback";
-import { BenefitDetailRoutePage } from "@/routes/benefit-detail";
+
+const AdminRoutePage = lazyRouteComponent(() => import("@/routes/admin"), "AdminRoutePage");
+const BenefitDetailRoutePage = lazyRouteComponent(
+  () => import("@/routes/benefit-detail"),
+  "BenefitDetailRoutePage",
+);
 
 function RootLayout() {
   return <Outlet />;

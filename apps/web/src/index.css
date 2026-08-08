@@ -45,6 +45,12 @@
 :root {
   --font-locale: "Noto Sans Variable";
 
+  /* Public-service motion: short, purposeful, and safe to disable. */
+  --motion-duration-fast: 120ms;
+  --motion-duration-standard: 180ms;
+  --motion-duration-slow: 240ms;
+  --motion-ease-standard: cubic-bezier(0.2, 0, 0, 1);
+
   /* DBIM Blue primary group and functional colours. */
   --brand-900: #162f6a;
   --brand-700: #214aab;

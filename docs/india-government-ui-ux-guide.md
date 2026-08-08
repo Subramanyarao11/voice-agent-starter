@@ -730,6 +730,33 @@ Follow DBIM and GIGW form guidance:
 - `prefers-reduced-motion` removes non-essential animation. Recording,
   processing, and result state must remain clear without motion.
 
+### 12.10 Sahaayak motion and performance policy
+
+The animation rules above are implemented as a product-wide policy rather than
+as isolated component preferences:
+
+- `MotionConfig reducedMotion="user"` and `prefers-reduced-motion` remove
+  non-essential transforms and transitions for users who request less motion.
+- Motion is limited to opacity, small positional changes, and state continuity;
+  public content does not use parallax, auto-advancing carousels, decorative
+  infinite loops, or hover lift effects.
+- Standard timing tokens are 120ms (fast), 180ms (standard), and 240ms (slow)
+  with a single ease curve. Loading animation is supplementary; its text status
+  remains available to assistive technology.
+- Loading indicators use static dots plus a labelled status region; they are
+  never used to communicate a state that is not also expressed as text.
+- Route-level code splitting keeps admin and benefit-detail code out of the
+  landing route. The initial JavaScript, largest chunk, and stylesheet are
+  checked against a repeatable build budget.
+- Regional font files outside the default English/Hindi/Kannada path load on
+  locale selection, so language coverage does not make every first visit pay
+  the download cost.
+
+This matches the Government of India's moving-content and flashing checks in
+GIGW 3.0, the UX4G guidance to respect `prefers-reduced-motion`, and WCAG's
+Pause, Stop, Hide requirement. Loading indicators must remain labelled with a
+status role; motion is never the only signal.
+
 ## 13. Voice, audio, and AI-specific UX
 
 This section adapts GIGW's media, keyboard, status, time-limit, and error rules
@@ -1208,7 +1235,10 @@ Before accepting a screen or component, confirm:
 - [UX4G spacing and layout](https://www.ux4g.gov.in/foundations/spacing)
 - [UX4G iconography](https://www.ux4g.gov.in/foundations/iconography)
 - [UX4G accessibility](https://www.ux4g.gov.in/foundations/accessibility)
+- [UX4G spinners](https://doc.ux4g.gov.in/components/spinners.php)
+- [UX4G navbar motion and reduced-motion behaviour](https://doc.ux4g.gov.in/components/navbar.php)
 - [UX4G content design system](https://www.ux4g.gov.in/foundations/content-system)
+- [WCAG 2.2 Pause, Stop, Hide](https://www.w3.org/WAI/WCAG22/Understanding/pause-stop-hide)
 - [UX4G disclaimer and implementation responsibility](https://www.ux4g.gov.in/disclaimer)
 - [Rights of Persons with Disabilities Act and Rules](https://depwd.gov.in/en/document-category/acts/)
 - [BIS accessibility standards programme, including IS 17802 Parts 1 and 2](https://www.services.bis.gov.in/php/BIS_2.0/bisconnect/pow_new/Pow/download_pow_pdf_dept_commtt/66/424/)

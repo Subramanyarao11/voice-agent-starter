@@ -106,7 +106,7 @@ export function ConversationPanel({
           onClick={onReset}
           disabled={isResetting || isSending}
         >
-          <RotateCcw className={`size-3.5 ${isResetting ? "animate-spin" : ""}`} />
+          <RotateCcw className={`size-3.5 ${isResetting ? "motion-safe:animate-spin motion-reduce:animate-none" : ""}`} />
           <span className="hidden sm:inline">{isResetting ? t("clearing") : t("resetSession")}</span>
         </Button>
       </div>

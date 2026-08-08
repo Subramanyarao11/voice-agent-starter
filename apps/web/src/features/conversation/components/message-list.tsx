@@ -1,9 +1,10 @@
-import { AnimatePresence, motion } from "motion/react";
+import { AnimatePresence, m } from "motion/react";
 import { MessageCircle } from "lucide-react";
 
 import type { ConversationMessage } from "@/features/conversation/store";
 import { Button } from "@/components/ui/button";
 import { useUi } from "@/features/i18n/ui-provider";
+import { motionTokens } from "@/lib/motion";
 
 type MessageListProps = {
   messages: ConversationMessage[];
@@ -23,11 +24,11 @@ export function MessageList({ messages, isSending, onSuggestion }: MessageListPr
       aria-label={t("conversationMessages")}
     >
       {messages.length === 0 ? (
-        <motion.div
+        <m.div
           className="flex min-h-60 flex-col items-center justify-center text-center"
           initial={{ opacity: 0, y: 8 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.35 }}
+          transition={{ duration: motionTokens.slow, ease: motionTokens.ease }}
         >
           <span className="mb-4 grid size-12 place-items-center rounded-lg border border-primary/30 bg-secondary text-primary" aria-hidden="true">
             <MessageCircle className="size-6" />
@@ -47,17 +48,17 @@ export function MessageList({ messages, isSending, onSuggestion }: MessageListPr
               </Button>
             ))}
           </div>
-        </motion.div>
+        </m.div>
       ) : (
         <AnimatePresence initial={false} mode="popLayout">
           {messages.map((message) => (
-            <motion.div
+            <m.div
               key={message.id}
               layout
               initial={{ opacity: 0, y: 12, scale: 0.98 }}
               animate={{ opacity: 1, y: 0, scale: 1 }}
               exit={{ opacity: 0, scale: 0.98 }}
-              transition={{ duration: 0.25 }}
+              transition={{ duration: motionTokens.standard, ease: motionTokens.ease }}
               className={`flex gap-3 ${message.role === "caller" ? "justify-end" : "justify-start"}`}
               aria-label={message.role === "caller" ? t("yourMessage") : t("sahaayakMessage")}
             >
@@ -75,31 +76,25 @@ export function MessageList({ messages, isSending, onSuggestion }: MessageListPr
                   {message.text}
                 </p>
               </div>
-            </motion.div>
+            </m.div>
           ))}
         </AnimatePresence>
       )}
 
       {isSending && (
-        <motion.div
+        <m.div
           className="flex gap-3"
           initial={{ opacity: 0, y: 8 }}
           animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: motionTokens.standard, ease: motionTokens.ease }}
         >
           <div role="status" aria-label={t("preparingResponse")}>
             <span className="mb-1 block text-sm font-semibold text-muted-foreground">sahaayak</span>
             <div className="flex items-center gap-1 rounded-lg rounded-bl-sm border border-border bg-muted/60 px-4 py-4" aria-hidden="true">
-              {[0, 1, 2].map((index) => (
-                <motion.i
-                  key={index}
-                  className="size-1.5 rounded-full bg-primary"
-                  animate={{ opacity: [0.35, 1, 0.35], y: [0, -3, 0] }}
-                  transition={{ duration: 0.8, repeat: Infinity, delay: index * 0.12 }}
-                />
-              ))}
+              {[0, 1, 2].map((index) => <i key={index} className="size-1.5 rounded-full bg-primary" />)}
             </div>
           </div>
-        </motion.div>
+        </m.div>
       )}
     </div>
   );

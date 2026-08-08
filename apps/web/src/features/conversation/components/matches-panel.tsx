@@ -75,7 +75,7 @@ function MatchCard({
 
   return (
     <Card
-      className="h-full border-paper/10 bg-paper/[0.04] text-paper transition-transform hover:-translate-y-1 hover:border-acid/30"
+      className="h-full border-paper/10 bg-paper/[0.04] text-paper transition-colors hover:border-acid/30"
       aria-labelledby={`match-${match.benefit_id}`}
     >
       <CardContent className="p-5">

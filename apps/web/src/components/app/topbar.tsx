@@ -43,7 +43,7 @@ export function Topbar({ sessionId, connected, currentLanguage, activeSection = 
 
       <div className="mx-auto flex max-w-[1200px] flex-wrap items-center justify-between gap-4 px-4 py-4 sm:px-6 lg:px-8">
         <Link to="/" className="group flex min-h-11 items-center gap-3" aria-label="Sahaayak home">
-          <span className="grid size-11 place-items-center rounded-lg bg-primary text-lg font-bold text-primary-foreground transition-transform group-hover:-translate-y-0.5">
+          <span className="grid size-11 place-items-center rounded-lg bg-primary text-lg font-bold text-primary-foreground">
             S
           </span>
           <span className="grid gap-0.5">
