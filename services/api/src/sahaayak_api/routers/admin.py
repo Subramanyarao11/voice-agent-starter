@@ -37,6 +37,7 @@ from sahaayak_common import (
     BenefitVersion,
     ConversationTurnLog,
     DataImportRun,
+    DepartmentDirectoryEntry,
     DeploymentRevision,
     EscalationTicket,
     EvaluationRun,
@@ -544,6 +545,13 @@ class AuditEventOut(BaseModel):
     created_at: datetime
 
 
+class ReleaseGateOut(BaseModel):
+    key: str
+    status: Literal["ready", "not_configured", "external_review"]
+    detail: str
+    next_action: str
+
+
 class SystemOut(BaseModel):
     environment: str
     process_started_at: datetime
@@ -554,6 +562,8 @@ class SystemOut(BaseModel):
     database_mode: str
     configuration: dict[str, bool]
     deployment_notes: list[str]
+    release_ready: bool
+    release_gates: list[ReleaseGateOut]
 
 
 class DeploymentOut(BaseModel):
@@ -1921,6 +1931,321 @@ def export_admin_audit_events(
     )
 
 
+def _release_gate(
+    key: str,
+    status: Literal["ready", "not_configured", "external_review"],
+    detail: str,
+    next_action: str,
+) -> ReleaseGateOut:
+    return ReleaseGateOut(key=key, status=status, detail=detail, next_action=next_action)
+
+
+def _release_gates(db: Session) -> list[ReleaseGateOut]:
+    """Summarise deployment gates without performing external side effects.
+
+    A configured provider is not treated as verified: sender approvals,
+    browser behaviour, human language review, and remote trace receipt still
+    require an explicit deployment or reviewer action. This projection is
+    deliberately safe to show in the admin console and contains no secrets.
+    """
+    gates: list[ReleaseGateOut] = []
+    oidc_material_ready = bool(
+        settings.admin_oidc_issuer_url.strip()
+        and settings.admin_oidc_audience.strip()
+        and (
+            settings.admin_oidc_jwks_url.strip()
+            or settings.admin_oidc_discovery_url.strip()
+        )
+    )
+    if not settings.admin_oidc_enabled:
+        gates.append(
+            _release_gate(
+                "production_oidc",
+                "not_configured",
+                "OIDC is disabled for this deployment.",
+                (
+                    "Enable OIDC with the production issuer, audience, JWKS/discovery URL, "
+                    "and MFA policy."
+                ),
+            )
+        )
+    elif not oidc_material_ready:
+        gates.append(
+            _release_gate(
+                "production_oidc",
+                "not_configured",
+                "OIDC is enabled but issuer, audience, or discovery/JWKS material is incomplete.",
+                (
+                    "Complete the IdP registration and verify the browser redirect, PKCE "
+                    "callback, logout URL, roles, and MFA."
+                ),
+            )
+        )
+    else:
+        gates.append(
+            _release_gate(
+                "production_oidc",
+                "external_review",
+                (
+                    "OIDC settings are present; this service does not perform a remote "
+                    "login or MFA check here."
+                ),
+                "Run the deployment-specific Keycloak/OIDC login, logout, role, and OTP test.",
+            )
+        )
+
+    if not settings.infobip_configured:
+        gates.append(
+            _release_gate(
+                "infobip",
+                "not_configured",
+                "Infobip base URL and API credentials are not configured.",
+                (
+                    "Set credentials, sender identities, approved templates, webhook "
+                    "secret, and consent policy before enabling a channel."
+                ),
+            )
+        )
+    elif not settings.contact_encryption_configured:
+        gates.append(
+            _release_gate(
+                "infobip",
+                "not_configured",
+                "Infobip credentials exist but contact-destination encryption is not configured.",
+                "Set the contact encryption key before testing external reminders.",
+            )
+        )
+    else:
+        gates.append(
+            _release_gate(
+                "infobip",
+                "external_review",
+                (
+                    "Infobip credentials and encrypted contact storage are configured; "
+                    "provider approvals are not inferred."
+                ),
+                (
+                    "Verify sender approval, templates, consent/opt-out, webhook delivery "
+                    "status, and one bounded live test per channel."
+                ),
+            )
+        )
+
+    if not (settings.ncs_enabled and settings.ncs_api_url.strip() and settings.ncs_api_key.strip()):
+        gates.append(
+            _release_gate(
+                "ncs_api",
+                "not_configured",
+                "Authorized NCS API access is not configured.",
+                (
+                    "Obtain the approved NCS endpoint/key and run the adapter dry run; "
+                    "do not scrape the public browser UI."
+                ),
+            )
+        )
+    else:
+        gates.append(
+            _release_gate(
+                "ncs_api",
+                "external_review",
+                (
+                    "NCS endpoint and key are present; no network request was made by "
+                    "this readiness check."
+                ),
+                (
+                    "Run a bounded authorized NCS fetch, inspect inactive job rows, then "
+                    "human-review and publish them."
+                ),
+            )
+        )
+
+    gates.append(
+        _release_gate(
+            "langfuse",
+            "external_review" if settings.tracing_enabled else "not_configured",
+            "Langfuse credentials are present; remote trace receipt is not verified here."
+            if settings.tracing_enabled
+            else "Langfuse credentials are not configured.",
+            "Confirm a redacted trace arrives in the configured Langfuse project."
+            if settings.tracing_enabled
+            else (
+                "Set LANGFUSE_PUBLIC_KEY, LANGFUSE_SECRET_KEY, and LANGFUSE_HOST "
+                "for the deployment."
+            ),
+        )
+    )
+    gates.append(
+        _release_gate(
+            "opentelemetry",
+            "external_review" if settings.otel_enabled else "not_configured",
+            (
+                "OTLP export is configured; exporter connectivity and backend receipt "
+                "are not verified here."
+            )
+            if settings.otel_enabled
+            else "OTLP export is not configured.",
+            (
+                "Confirm traces/metrics arrive at the deployment's OTLP collector "
+                "without sensitive attributes."
+            )
+            if settings.otel_enabled
+            else "Set an OTLP endpoint or enable the console exporter for a local smoke test.",
+        )
+    )
+
+    active_languages = db.exec(select(Language).where(Language.is_active.is_(True))).all()
+    review_fields = (
+        "native_speaker_status",
+        "interface_status",
+        "prompt_status",
+        "content_status",
+        "understanding_status",
+        "voice_status",
+        "accessibility_status",
+    )
+    incomplete_languages: list[str] = []
+    incomplete_voice: list[str] = []
+    for language in active_languages:
+        review = db.get(LanguageReadinessReview, language.code)
+        if review is None or any(
+            getattr(review, field, "pending") != "approved" for field in review_fields
+        ):
+            incomplete_languages.append(language.code)
+        if review is None or review.voice_status != "approved":
+            incomplete_voice.append(language.code)
+    if incomplete_languages:
+        gates.append(
+            _release_gate(
+                "language_review",
+                "external_review",
+                f"Language evidence is incomplete for: {', '.join(incomplete_languages)}.",
+                (
+                    "Attach native terminology, UI, prompt/content, voice, accessibility, "
+                    "and human QA evidence in Admin → Languages."
+                ),
+            )
+        )
+    else:
+        gates.append(
+            _release_gate(
+                "language_review",
+                "ready",
+                "All active locales have approved release evidence.",
+                (
+                    "Keep expansion locales behind their staged rollout flag until "
+                    "separately approved."
+                ),
+            )
+        )
+
+    if incomplete_voice:
+        gates.append(
+            _release_gate(
+                "voice_qa",
+                "external_review",
+                (
+                    "Language voice review is incomplete for: "
+                    f"{', '.join(incomplete_voice)}. Automated provider evidence does "
+                    "not replace human microphone/browser QA."
+                ),
+                (
+                    "Run real microphone/browser conversations and attach the evidence "
+                    "before language activation."
+                ),
+            )
+        )
+    else:
+        gates.append(
+            _release_gate(
+                "voice_qa",
+                "ready",
+                "Automated and recorded language voice review gates are approved.",
+                (
+                    "Continue monitoring latency, pronunciation, interruption handling, "
+                    "and fallback quality in production."
+                ),
+            )
+        )
+
+    now = datetime.now(UTC)
+    directory_rows = db.exec(select(DepartmentDirectoryEntry)).all()
+    authoritative = [
+        row
+        for row in directory_rows
+        if row.approval_status == "approved"
+        and row.is_active
+        and row.source_last_verified is not None
+        and (
+            (
+                row.source_last_verified.replace(tzinfo=UTC)
+                if row.source_last_verified.tzinfo is None
+                else row.source_last_verified
+            )
+            >= now - timedelta(days=max(1, settings.department_directory_stale_days))
+        )
+    ]
+    if authoritative:
+        gates.append(
+            _release_gate(
+                "department_directory",
+                "ready",
+                (
+                    f"{len(authoritative)} approved, active, recently verified directory "
+                    "record(s) can route handoffs."
+                ),
+                (
+                    "Continue periodic source verification and deactivate records when "
+                    "their official source becomes stale."
+                ),
+            )
+        )
+    elif directory_rows:
+        gates.append(
+            _release_gate(
+                "department_directory",
+                "external_review",
+                "Directory rows exist, but none are currently authoritative for runtime routing.",
+                "Approve only recently verified official records in Admin → Directory.",
+            )
+        )
+    else:
+        gates.append(
+            _release_gate(
+                "department_directory",
+                "not_configured",
+                "No department-directory records are loaded.",
+                (
+                    "Import an official directory export, then approve records after "
+                    "source verification."
+                ),
+            )
+        )
+
+    production_posture = settings.env != "development" and settings.web_base_url.startswith("https://")
+    gates.append(
+        _release_gate(
+            "production_posture",
+            "external_review" if production_posture else "not_configured",
+            (
+                "Production hostname and HTTPS posture are configured; deployment "
+                "verification is still required."
+            )
+            if production_posture
+            else "This deployment still uses development posture or a non-HTTPS web base URL.",
+            (
+                "Verify HTTPS, exact redirect/logout URLs, backups, alerts, retention, "
+                "and multi-instance rate limits."
+            )
+            if production_posture
+            else (
+                "Set the production environment and HTTPS web base URL before treating "
+                "this as a release candidate."
+            ),
+        )
+    )
+    return gates
+
+
 @router.get("/system", response_model=SystemOut)
 def admin_system(
     db: Session = Depends(get_session),
@@ -1943,6 +2268,7 @@ def admin_system(
             migration_revision = migration_revision[0]
         except (IndexError, KeyError, TypeError):
             migration_revision = str(migration_revision)
+    release_gates = _release_gates(db)
     return SystemOut(
         environment=settings.env,
         process_started_at=PROCESS_STARTED_AT,
@@ -1973,6 +2299,8 @@ def admin_system(
             "and an append-only rollback revision.",
             "Raw transcripts and sensitive profile values are not included in admin aggregates.",
         ],
+        release_ready=all(gate.status == "ready" for gate in release_gates),
+        release_gates=release_gates,
     )
 
 

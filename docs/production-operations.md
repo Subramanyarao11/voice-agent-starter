@@ -46,6 +46,14 @@ Required production variables include `POSTGRES_PASSWORD`,
 or provider secrets that the deployment intends to activate. Use a secret
 manager rather than committing `.env`.
 
+Before a release, open **Admin → System** and inspect **Release readiness
+gates**. This is a local, secret-free preflight: `not_configured` means code
+cannot safely attempt the integration, while `external_review` means the
+settings exist but a deployment-owned check is still required. The latter
+includes OIDC redirect/MFA login, Infobip sender/template/webhook delivery,
+NCS authorization, Langfuse/OTel trace receipt, real microphone QA, and
+authoritative directory approval.
+
 Run the scheduled `freshness-worker` alongside the API and notification worker.
 Set `FRESHNESS_STALE_DAYS` and `FRESHNESS_SCAN_INTERVAL_SECONDS` explicitly in
 the deployment environment. It writes only redacted source-freshness alerts;

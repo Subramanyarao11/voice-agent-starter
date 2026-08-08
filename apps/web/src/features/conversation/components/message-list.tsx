@@ -2,6 +2,7 @@ import { AnimatePresence, motion } from "motion/react";
 
 import type { ConversationMessage } from "@/features/conversation/store";
 import { Button } from "@/components/ui/button";
+import { useUi } from "@/features/i18n/ui-provider";
 
 type MessageListProps = {
   messages: ConversationMessage[];
@@ -9,16 +10,16 @@ type MessageListProps = {
   onSuggestion: (suggestion: string) => void;
 };
 
-const SUGGESTIONS = ["I need a scholarship", "Tell me about government schemes"];
-
 export function MessageList({ messages, isSending, onSuggestion }: MessageListProps) {
+  const { t } = useUi();
+  const suggestions = [t("scholarshipSuggestion"), t("schemeSuggestion")];
   return (
     <div
       className="min-h-72 space-y-5 px-5 py-6 sm:min-h-80 sm:px-8"
       role="log"
       aria-live="polite"
       aria-relevant="additions"
-      aria-label="Conversation messages"
+      aria-label={t("conversationMessages")}
     >
       {messages.length === 0 ? (
         <motion.div
@@ -30,9 +31,9 @@ export function MessageList({ messages, isSending, onSuggestion }: MessageListPr
           <span className="mb-4 grid size-12 place-items-center rounded-full border border-acid/30 bg-acid/10 text-xl text-acid">
             ✦
           </span>
-          <p className="text-sm text-paper/55">Start with something simple, like:</p>
+          <p className="text-sm text-paper/55">{t("startWith")}</p>
           <div className="mt-4 flex flex-wrap justify-center gap-2">
-            {SUGGESTIONS.map((suggestion) => (
+            {suggestions.map((suggestion) => (
               <Button
                 key={suggestion}
                 type="button"
@@ -57,11 +58,11 @@ export function MessageList({ messages, isSending, onSuggestion }: MessageListPr
               exit={{ opacity: 0, scale: 0.98 }}
               transition={{ duration: 0.25 }}
               className={`flex gap-3 ${message.role === "caller" ? "justify-end" : "justify-start"}`}
-              aria-label={message.role === "caller" ? "Your message" : "Sahaayak message"}
+              aria-label={message.role === "caller" ? t("yourMessage") : t("sahaayakMessage")}
             >
               <div className={`max-w-[88%] sm:max-w-[75%] ${message.role === "caller" ? "text-right" : "text-left"}`}>
                 <span className="mb-1 block font-mono text-[0.58rem] uppercase tracking-[0.18em] text-paper/35">
-                  {message.role === "caller" ? "you" : "sahaayak"}
+                  {message.role === "caller" ? t("guest") : "sahaayak"}
                 </span>
                 <p
                   className={`rounded-2xl px-4 py-3 text-sm leading-6 ${
@@ -84,7 +85,7 @@ export function MessageList({ messages, isSending, onSuggestion }: MessageListPr
           initial={{ opacity: 0, y: 8 }}
           animate={{ opacity: 1, y: 0 }}
         >
-          <div role="status" aria-label="Sahaayak is preparing a response">
+          <div role="status" aria-label={t("preparingResponse")}>
             <span className="mb-1 block font-mono text-[0.58rem] uppercase tracking-[0.18em] text-paper/35">sahaayak</span>
             <div className="flex items-center gap-1 rounded-2xl rounded-bl-sm border border-paper/10 bg-paper/[0.06] px-4 py-4" aria-hidden="true">
               {[0, 1, 2].map((index) => (

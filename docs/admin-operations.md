@@ -68,7 +68,18 @@ transaction as the state change.
 - Audit log: workforce actions and safe before/after state, with a CSV export
   of the same redacted projection.
 - System: migration, commit, environment, redacted configuration posture, and
-  recorded deployment/version comparison.
+  recorded deployment/version comparison. It also shows the safe release-gate
+  projection: `ready`, `not_configured`, or `external_review` for OIDC,
+  Infobip, NCS, Langfuse/OTel, language/voice evidence, directory records, and
+  production posture. A configured secret is never treated as provider or
+  human-QA verification.
+
+The public citizen shell uses a typed local UI-copy catalog at
+`apps/web/src/lib/i18n.ts`. It has a complete fallback key surface for all
+eleven planned locales and marks every non-English bundle as
+`review_required`. Native reviewers can update the bundle without changing
+component or routing code; the admin language gate remains the authority for
+activation.
 
 ## Managed workforce authentication
 

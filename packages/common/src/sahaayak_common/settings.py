@@ -72,6 +72,13 @@ class Settings(BaseSettings):
     openai_rag_max_source_bytes: int = 900_000_000
     sarvam_api_key: str = ""
 
+    # Authorized National Career Service access is optional and deliberately
+    # kept separate from the public website adapter. The admin readiness view
+    # reports presence only; it never exposes the endpoint or key.
+    ncs_enabled: bool = False
+    ncs_api_url: str = ""
+    ncs_api_key: str = ""
+
     # --- Tracing ---
     langfuse_public_key: str = ""
     langfuse_secret_key: str = ""

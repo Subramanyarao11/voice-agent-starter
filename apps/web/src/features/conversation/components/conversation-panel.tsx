@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Composer } from "@/features/conversation/components/composer";
 import { MessageList } from "@/features/conversation/components/message-list";
 import { TranscriptEditor } from "@/features/conversation/components/transcript-editor";
+import { useUi } from "@/features/i18n/ui-provider";
 
 type ConversationPanelProps = {
   messages: ConversationMessage[];
@@ -35,6 +36,7 @@ type ConversationPanelProps = {
 };
 
 function AudioReply({ source }: { source: string | null }) {
+  const { t } = useUi();
   const { audioRef, autoplayBlocked } = useAudioReply(source);
 
   if (!source) return null;
@@ -42,21 +44,21 @@ function AudioReply({ source }: { source: string | null }) {
   return (
     <section
       className="flex flex-wrap items-center gap-3 border-t border-paper/10 px-5 py-3 sm:px-8"
-      aria-label="Audio answer"
+      aria-label={t("audioAnswer")}
     >
-      <span className="font-mono text-[0.6rem] uppercase tracking-[0.18em] text-paper/40">Last answer</span>
+      <span className="font-mono text-[0.6rem] uppercase tracking-[0.18em] text-paper/40">{t("latestAnswer")}</span>
       <audio
         ref={audioRef}
         controls
         src={source}
         className="h-8 min-w-56 flex-1 accent-acid"
-        aria-label="Play the latest Sahaayak answer"
+        aria-label={t("playLatestAnswer")}
       >
-        Your browser cannot play this answer.
+        {t("browserCannotPlay")}
       </audio>
       {autoplayBlocked && (
         <span className="text-[0.68rem] text-paper/40" role="status">
-          Press play to hear it.
+          {t("pressPlay")}
         </span>
       )}
     </section>
@@ -87,13 +89,14 @@ export function ConversationPanel({
   onStopRecording,
   onReset,
 }: ConversationPanelProps) {
+  const { t } = useUi();
   return (
     <div className="overflow-hidden rounded-3xl border border-paper/15 bg-ink-soft/90 shadow-2xl shadow-black/20 backdrop-blur-sm">
       <div className="flex items-start justify-between gap-4 px-5 pb-3 pt-6 sm:px-8">
         <div>
-          <span className="font-mono text-[0.62rem] uppercase tracking-[0.2em] text-acid/80">Your conversation</span>
+          <span className="font-mono text-[0.62rem] uppercase tracking-[0.2em] text-acid/80">{t("yourConversation")}</span>
           <h2 id="conversation-title" className="mt-2 text-xl font-extrabold tracking-tight text-paper sm:text-2xl">
-            Tell me what you’re looking for.
+            {t("conversationTitle")}
           </h2>
         </div>
         <Button
@@ -104,7 +107,7 @@ export function ConversationPanel({
           disabled={isResetting || isSending}
         >
           <RotateCcw className={`size-3.5 ${isResetting ? "animate-spin" : ""}`} />
-          <span className="hidden sm:inline">{isResetting ? "Clearing…" : "Reset session"}</span>
+          <span className="hidden sm:inline">{isResetting ? t("clearing") : t("resetSession")}</span>
         </Button>
       </div>
 

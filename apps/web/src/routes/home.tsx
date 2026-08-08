@@ -24,10 +24,12 @@ import { ContactSettingsPanel } from "@/features/contacts/components/contact-set
 import { SavedBenefitsPanel } from "@/features/saved/components/saved-benefits-panel";
 import { useStreamingVoice } from "@/hooks/use-streaming-voice";
 import { useVoiceRecorder } from "@/hooks/use-voice-recorder";
+import { useUi } from "@/features/i18n/ui-provider";
 import { audioDataUrl, cn } from "@/lib/utils";
 import { ApiError, toUserMessage } from "@/lib/api";
 
 export function HomePage() {
+  const { t } = useUi();
   const catalogQuery = useCatalogQuery();
   const healthQuery = useHealthQuery();
   const textMutation = useTextTurnMutation();
@@ -142,11 +144,6 @@ export function HomePage() {
   }, [activeStates, setStateCode, stateCode]);
 
   useEffect(() => {
-    // Keep screen-reader pronunciation aligned with the selected locale.
-    document.documentElement.lang = languageCode === "en" ? "en-IN" : `${languageCode}-IN`;
-  }, [languageCode]);
-
-  useEffect(() => {
     const queryError = catalogQuery.error ?? healthQuery.error ?? sessionError;
     if (queryError && !feedback) {
       setFeedback({ kind: "error", text: toUserMessage(queryError) });
@@ -204,11 +201,11 @@ export function HomePage() {
       await resetMutation.mutateAsync({ sessionId, accessToken });
       clearConversation();
       clearSession();
-      setFeedback({ kind: "notice", text: "Session cleared. Your next turn starts a fresh conversation." });
+      setFeedback({ kind: "notice", text: t("sessionCleared") });
     } catch (error) {
       setFeedback({ kind: "error", text: toUserMessage(error) });
     }
-  }, [accessToken, clearConversation, clearSession, isSending, resetMutation, sessionId]);
+  }, [accessToken, clearConversation, clearSession, isSending, resetMutation, sessionId, t]);
 
   const handleToggleSaved = useCallback(
     (benefitId: string, saved: boolean) => {
@@ -240,7 +237,7 @@ export function HomePage() {
         }}
         className="sr-only fixed left-4 top-4 z-50 rounded-lg bg-acid px-4 py-2 font-semibold text-ink focus:not-sr-only focus:outline-none focus:ring-2 focus:ring-paper"
       >
-        Skip to conversation
+        {t("skipToConversation")}
       </a>
 
       <Topbar sessionId={sessionId} connected={connected} />
@@ -252,28 +249,26 @@ export function HomePage() {
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.55, ease: "easeOut" }}
         >
-          <p className="font-mono text-[0.62rem] uppercase tracking-[0.24em] text-acid">A calmer way to find out</p>
+          <p className="font-mono text-[0.62rem] uppercase tracking-[0.24em] text-acid">{t("heroKicker")}</p>
           <h1 id="page-title" className="mt-5 max-w-xl text-5xl font-extrabold leading-[0.98] tracking-[-0.055em] text-paper sm:text-7xl">
-            Find the help
-            <br />
-            meant for <em className="font-serif font-normal text-acid">you.</em>
+            {t("heroTitle")}
           </h1>
           <p className="mt-7 max-w-md text-base leading-7 text-paper/60 sm:text-lg">
-            Speak or type what you need. Sahaayak asks only the questions that change your answer, then explains what it found.
+            {t("heroDescription")}
           </p>
 
           <div className="mt-10 flex items-center gap-4">
             <span className="grid size-11 place-items-center rounded-xl border border-acid/30 bg-acid/10 text-xl text-acid">↗</span>
             <span className="grid gap-1">
               <strong className="font-mono text-2xl font-medium text-paper">{catalogQuery.data?.coverage.total ?? "—"}</strong>
-              <span className="text-xs text-paper/45">benefits loaded for this demo</span>
+              <span className="text-xs text-paper/45">{t("benefitsLoaded")}</span>
             </span>
           </div>
 
           <div className="mt-12 flex flex-wrap gap-x-6 gap-y-3 font-mono text-[0.65rem] uppercase tracking-[0.14em] text-paper/40">
-            <span><b className="mr-2 text-acid">01</b>schemes</span>
-            <span><b className="mr-2 text-acid">02</b>scholarships</span>
-            <span><b className="mr-2 text-acid">03</b>job discovery</span>
+            <span><b className="mr-2 text-acid">01</b>{t("schemes")}</span>
+            <span><b className="mr-2 text-acid">02</b>{t("scholarships")}</span>
+            <span><b className="mr-2 text-acid">03</b>{t("jobDiscovery")}</span>
           </div>
         </motion.div>
 
@@ -332,7 +327,7 @@ export function HomePage() {
                 {feedback.text}
               </p>
             )}
-            {!feedback && catalogLoading && <p className="text-paper/40">Loading language and state catalog…</p>}
+            {!feedback && catalogLoading && <p className="text-paper/40">{t("loadingCatalog")}</p>}
           </div>
         </motion.section>
       </section>
@@ -365,8 +360,8 @@ export function HomePage() {
       </div>
 
       <footer className="relative mx-auto flex max-w-[1440px] flex-wrap justify-between gap-3 border-t border-paper/10 py-6 text-[0.68rem] uppercase tracking-[0.12em] text-paper/35">
-        <span>Built for a real conversation, not a nationwide coverage claim.</span>
-        <span>Kannada · Hindi · English</span>
+        <span>{t("builtForConversation")}</span>
+        <span>{t("coreLanguages")}</span>
       </footer>
     </main>
   );

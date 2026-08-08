@@ -470,6 +470,13 @@ const featureFlagListSchema = z.object({
   ),
 });
 
+const releaseGateSchema = z.object({
+  key: z.string(),
+  status: z.enum(["ready", "not_configured", "external_review"]),
+  detail: z.string(),
+  next_action: z.string(),
+});
+
 const systemSchema = z.object({
   environment: z.string(),
   process_started_at: z.string(),
@@ -480,6 +487,8 @@ const systemSchema = z.object({
   database_mode: z.string(),
   configuration: z.record(z.string(), z.boolean()),
   deployment_notes: z.array(z.string()),
+  release_ready: z.boolean(),
+  release_gates: z.array(releaseGateSchema),
 });
 
 const deploymentSchema = z.object({

@@ -68,6 +68,14 @@ at product, frontend, backend/AI, data, infrastructure, security, and QA levels.
 > remains explicitly unreconciled until the provider exposes a usable usage
 > contract.
 
+> **Implementation update (2026-08-09, release plumbing):** The public web shell
+> now uses a typed, local UI-copy catalog with review metadata and an English
+> fallback for all eleven planned locales. Admin → System now exposes a
+> secret-free release-readiness projection for OIDC, Infobip, NCS, Langfuse,
+> OpenTelemetry, language/voice evidence, department-directory approval, and
+> production HTTPS posture. These checks report external verification as
+> pending instead of treating configuration as proof.
+
 ---
 
 ## 1. Executive recommendation

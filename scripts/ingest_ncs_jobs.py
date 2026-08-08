@@ -28,7 +28,7 @@ from urllib.parse import urlparse
 
 import httpx
 
-from sahaayak_common import REPO_ROOT, slugify
+from sahaayak_common import REPO_ROOT, settings, slugify
 
 DEFAULT_OUTPUT = REPO_ROOT / "data" / "structured" / "ncs_jobs.jsonl"
 DEFAULT_SOURCE_OUTPUT = REPO_ROOT / "data" / "structured" / "ncs_job_sources.jsonl"
@@ -360,8 +360,8 @@ def run(
 
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--api-url", default=os.getenv("NCS_API_URL", ""))
-    parser.add_argument("--api-key", default=os.getenv("NCS_API_KEY", ""))
+    parser.add_argument("--api-url", default=os.getenv("NCS_API_URL") or settings.ncs_api_url)
+    parser.add_argument("--api-key", default=os.getenv("NCS_API_KEY") or settings.ncs_api_key)
     parser.add_argument(
         "--input",
         type=Path,

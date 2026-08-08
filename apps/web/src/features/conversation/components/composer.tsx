@@ -4,6 +4,7 @@ import { ArrowUpRight, LoaderCircle, Mic, Square, Volume2 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
+import { useUi } from "@/features/i18n/ui-provider";
 
 type ComposerProps = {
   draft: string;
@@ -36,6 +37,7 @@ export function Composer({
   onStartRecording,
   onStopRecording,
 }: ComposerProps) {
+  const { t } = useUi();
   function handleKeyDown(event: KeyboardEvent<HTMLTextAreaElement>) {
     if (event.key === "Enter" && !event.shiftKey) {
       event.preventDefault();
@@ -47,17 +49,17 @@ export function Composer({
     <form
       className="border-t border-paper/10 px-5 pb-3 pt-4 sm:px-8"
       onSubmit={(event) => onSubmit(event)}
-      aria-label="Send a message"
+      aria-label={t("sendMessage")}
     >
       <label htmlFor="message-input" className="sr-only">
-        Message for Sahaayak
+        {t("messageForSahaayak")}
       </label>
       <Textarea
         id="message-input"
         value={draft}
         onChange={(event) => onDraftChange(event.target.value)}
         onKeyDown={handleKeyDown}
-        placeholder={selectedLanguageName ? `Type in ${selectedLanguageName}, English, or a mix…` : "Type what you need…"}
+        placeholder={selectedLanguageName ? t("typeInLanguage", {language: selectedLanguageName}) : t("typeWhatYouNeed")}
         rows={2}
         disabled={disabled || recording}
         aria-describedby="composer-help"
@@ -72,12 +74,12 @@ export function Composer({
           className={recording ? "border-orange/50 bg-orange/10 text-orange" : "border-paper/15 text-paper/65"}
           onClick={recording ? onStopRecording : onStartRecording}
           disabled={voiceDisabled || !voiceInputAvailable}
-          aria-label={voiceInputAvailable ? (recording ? "Stop recording" : "Record a voice message") : "Speech-to-text is not configured"}
+          aria-label={voiceInputAvailable ? (recording ? t("stopRecording") : t("recordVoice")) : t("speechToTextUnavailable")}
           aria-pressed={recording}
-          title={voiceInputAvailable ? (recording ? "Stop recording" : "Record a voice message") : "Speech-to-text is not configured"}
+          title={voiceInputAvailable ? (recording ? t("stopRecording") : t("recordVoice")) : t("speechToTextUnavailable")}
         >
           {recording ? <Square className="size-3.5 fill-current" /> : <Mic className="size-3.5" />}
-          <span>{recording ? "Stop" : "Speak"}</span>
+          <span>{recording ? t("stop") : t("speak")}</span>
         </Button>
 
         <Button
@@ -85,9 +87,9 @@ export function Composer({
           size="sm"
           className="bg-acid px-4 text-ink hover:bg-acid/90"
           disabled={disabled || recording || !draft.trim()}
-          aria-label="Send message"
+          aria-label={t("sendMessage")}
         >
-          {isSending ? <LoaderCircle className="size-3.5 animate-spin" /> : <span>Send</span>}
+          {isSending ? <LoaderCircle className="size-3.5 animate-spin" /> : <span>{t("sendMessage")}</span>}
           <ArrowUpRight className="size-4" />
         </Button>
       </div>
@@ -99,13 +101,13 @@ export function Composer({
         aria-live={recorderError ? "assertive" : "polite"}
       >
         {recording ? (
-          <>Listening… press Stop when you’re done.</>
+          <>{t("listening")}</>
         ) : recorderError ? (
           <span className="text-orange">{recorderError}</span>
         ) : textToSpeechAvailable ? (
-          <><Volume2 className="size-3" aria-hidden="true" /> Voice replies are available for this session. Enter sends; Shift+Enter adds a line.</>
+          <><Volume2 className="size-3" aria-hidden="true" /> {t("voiceReplies")} {t("keyboardHint")}</>
         ) : (
-          <>Text replies are ready. Voice output is off until the API has TTS keys. Enter sends; Shift+Enter adds a line.</>
+          <>{t("textReplies")} {t("keyboardHint")}</>
         )}
       </p>
     </form>

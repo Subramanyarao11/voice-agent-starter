@@ -532,6 +532,33 @@ function SystemPage({ token }: { token: string }) {
           </CardContent>
         </Card>
       </div>
+      <Card className="border-paper/10 bg-paper/[0.04] text-paper">
+        <CardHeader>
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <CardTitle className="text-paper">Release readiness gates</CardTitle>
+            <Badge variant={query.data.release_ready ? "success" : "warning"}>
+              {query.data.release_ready ? "ready" : "external checks pending"}
+            </Badge>
+          </div>
+          <p className="text-sm leading-6 text-paper/50">
+            Configuration is checked locally. Provider approvals, human QA, and remote receipt checks stay explicitly pending until an operator records them.
+          </p>
+        </CardHeader>
+        <CardContent className="grid gap-3 md:grid-cols-2">
+          {query.data.release_gates.map((gate) => (
+            <article key={gate.key} className="rounded-xl border border-paper/10 bg-ink/20 p-4">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <h3 className="font-semibold">{gate.key.replaceAll("_", " ")}</h3>
+                <Badge variant={gate.status === "ready" ? "success" : gate.status === "external_review" ? "secondary" : "warning"}>
+                  {gate.status.replaceAll("_", " ")}
+                </Badge>
+              </div>
+              <p className="mt-2 text-sm leading-6 text-paper/60">{gate.detail}</p>
+              <p className="mt-2 text-xs leading-5 text-acid/80">Next: {gate.next_action}</p>
+            </article>
+          ))}
+        </CardContent>
+      </Card>
       <DeploymentComparisonCard data={comparison.data} />
       <Card className="border-paper/10 bg-paper/[0.04] text-paper">
         <CardHeader><CardTitle className="text-paper">Operator notes</CardTitle></CardHeader>

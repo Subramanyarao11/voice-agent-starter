@@ -2,6 +2,7 @@ import { Link } from "@tanstack/react-router";
 import { Radio } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
+import { useUi } from "@/features/i18n/ui-provider";
 
 type TopbarProps = {
   sessionId: string;
@@ -9,6 +10,7 @@ type TopbarProps = {
 };
 
 export function Topbar({ sessionId, connected }: TopbarProps) {
+  const { t } = useUi();
   return (
     <header className="mx-auto flex max-w-[1440px] items-center justify-between gap-4" aria-label="Sahaayak status">
       <Link to="/" className="group flex items-center gap-3" aria-label="Sahaayak home">
@@ -17,7 +19,7 @@ export function Topbar({ sessionId, connected }: TopbarProps) {
         </span>
         <span className="grid leading-none">
           <strong className="text-sm font-extrabold tracking-tight text-paper">Sahaayak</strong>
-          <small className="mt-1 text-[0.6rem] uppercase tracking-[0.18em] text-blue/70">help, in your language</small>
+        <small className="mt-1 text-[0.6rem] uppercase tracking-[0.18em] text-blue/70">{t("brandTagline")}</small>
         </span>
       </Link>
 
@@ -27,14 +29,14 @@ export function Topbar({ sessionId, connected }: TopbarProps) {
             className={`size-2 rounded-full ${connected ? "bg-acid shadow-[0_0_12px_var(--acid)]" : "bg-orange"}`}
             aria-hidden="true"
           />
-          <span className="hidden sm:inline">{connected ? "API connected" : "Connecting to API"}</span>
+          <span className="hidden sm:inline">{connected ? t("apiConnected") : t("apiConnecting")}</span>
         </span>
         <Badge
           variant="outline"
           className="border-paper/15 bg-paper/5 font-mono text-[0.65rem] text-paper/70"
-          aria-label="Anonymous browser session"
+          aria-label={t("anonymousSession")}
         >
-          <Radio className="size-3" aria-hidden="true" /> guest · {sessionId ? sessionId.slice(-8) : "starting"}
+          <Radio className="size-3" aria-hidden="true" /> {t("guest")} · {sessionId ? sessionId.slice(-8) : t("starting")}
         </Badge>
       </div>
     </header>

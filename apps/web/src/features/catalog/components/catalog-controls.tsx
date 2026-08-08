@@ -1,5 +1,6 @@
 import type { Language, State } from "@/lib/api";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { useUi } from "@/features/i18n/ui-provider";
 
 type CatalogControlsProps = {
   languages: Language[];
@@ -24,14 +25,15 @@ export function CatalogControls({
   onLanguageChange,
   onStateChange,
 }: CatalogControlsProps) {
+  const { t } = useUi();
   return (
     <fieldset className="grid gap-3 rounded-2xl border border-paper/10 bg-paper/[0.04] p-3 sm:grid-cols-[1fr_1fr_auto] sm:items-end">
-      <legend className="sr-only">Conversation preferences</legend>
+      <legend className="sr-only">{t("conversationPreferences")}</legend>
       <label className="grid gap-1.5">
-        <span className="px-1 font-mono text-[0.6rem] uppercase tracking-[0.18em] text-paper/45">Language</span>
+        <span className="px-1 font-mono text-[0.6rem] uppercase tracking-[0.18em] text-paper/45">{t("language")}</span>
         <Select value={languageCode} onValueChange={onLanguageChange} disabled={disabled}>
-          <SelectTrigger aria-label="Choose language">
-            <SelectValue placeholder="Choose language" />
+          <SelectTrigger aria-label={t("chooseLanguage")}>
+            <SelectValue placeholder={t("chooseLanguage")} />
           </SelectTrigger>
           <SelectContent>
             {languages.map((language) => (
@@ -44,10 +46,10 @@ export function CatalogControls({
       </label>
 
       <label className="grid gap-1.5">
-        <span className="px-1 font-mono text-[0.6rem] uppercase tracking-[0.18em] text-paper/45">State</span>
+        <span className="px-1 font-mono text-[0.6rem] uppercase tracking-[0.18em] text-paper/45">{t("state")}</span>
         <Select value={stateCode} onValueChange={onStateChange} disabled={disabled}>
-          <SelectTrigger aria-label="Choose state">
-            <SelectValue placeholder="Choose state" />
+          <SelectTrigger aria-label={t("chooseState")}>
+            <SelectValue placeholder={t("chooseState")} />
           </SelectTrigger>
           <SelectContent>
             {states.map((state) => (
@@ -63,11 +65,11 @@ export function CatalogControls({
         className="flex h-10 items-center gap-2 rounded-lg border border-acid/20 bg-acid/10 px-3 text-xs text-acid sm:min-w-32"
         role="status"
         aria-live="polite"
-        aria-label={`${stateCoverage} benefits available in ${stateName ?? stateCode}`}
+        aria-label={t("benefitsAvailableIn", {count: stateCoverage, state: stateName ?? stateCode})}
       >
         <span className="size-2 rounded-full bg-acid" aria-hidden="true" />
         <span>
-          <strong className="font-mono text-sm">{stateCoverage}</strong> in {stateName ?? stateCode}
+          <strong className="font-mono text-sm">{stateCoverage}</strong> {t("benefitsInState", {state: stateName ?? stateCode})}
         </span>
       </div>
     </fieldset>

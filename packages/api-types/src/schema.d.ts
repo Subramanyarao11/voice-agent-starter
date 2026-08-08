@@ -2961,6 +2961,20 @@ export interface components {
              */
             created_at: string;
         };
+        /** ReleaseGateOut */
+        ReleaseGateOut: {
+            /** Key */
+            key: string;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "ready" | "not_configured" | "external_review";
+            /** Detail */
+            detail: string;
+            /** Next Action */
+            next_action: string;
+        };
         /** ReminderCreate */
         ReminderCreate: {
             /** Benefit Id */
@@ -3196,6 +3210,10 @@ export interface components {
             };
             /** Deployment Notes */
             deployment_notes: string[];
+            /** Release Ready */
+            release_ready: boolean;
+            /** Release Gates */
+            release_gates: components["schemas"]["ReleaseGateOut"][];
         };
         /** TelemetryEventOut */
         TelemetryEventOut: {

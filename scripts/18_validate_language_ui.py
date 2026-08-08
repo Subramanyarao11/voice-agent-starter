@@ -21,6 +21,8 @@ from sahaayak_agent.prompts import get_catalog
 ROOT = Path(__file__).resolve().parents[1]
 CSS_PATH = ROOT / "apps/web/src/index.css"
 HOME_PATH = ROOT / "apps/web/src/routes/home.tsx"
+UI_I18N_PATH = ROOT / "apps/web/src/lib/i18n.ts"
+UI_PROVIDER_PATH = ROOT / "apps/web/src/features/i18n/ui-provider.tsx"
 
 SCRIPT_RANGES = {
     "hi": (0x0900, 0x097F),
@@ -56,6 +58,8 @@ def main() -> None:
 
     css = CSS_PATH.read_text(encoding="utf-8")
     home = HOME_PATH.read_text(encoding="utf-8")
+    ui_i18n = UI_I18N_PATH.read_text(encoding="utf-8")
+    ui_provider = UI_PROVIDER_PATH.read_text(encoding="utf-8")
     checks: list[dict[str, object]] = []
 
     def check(name: str, passed: bool, detail: str) -> None:
@@ -75,8 +79,8 @@ def main() -> None:
     check("focus_visible", "focus-visible" in css, "keyboard focus styling remains present")
     check(
         "document_language_binding",
-        "document.documentElement.lang" in home,
-        "the selected voice locale updates the document language",
+        "document.documentElement.lang" in ui_provider,
+        "the selected locale updates the document language through the UI provider",
     )
     check(
         "main_landmark_label",
@@ -94,6 +98,14 @@ def main() -> None:
         "catalog_profiles",
         profiles == {"en", "hi", "kn", "ta", "te", "mr", "bn", "gu", "ml", "pa", "or"},
         "all 11 language profiles are registered",
+    )
+    ui_locale_tokens = {f'"{code}"' for code in profiles}
+    check(
+        "ui_locale_catalog",
+        all(token in ui_i18n for token in ui_locale_tokens)
+        and "ENGLISH_COPY" in ui_i18n
+        and "review_required" in ui_i18n,
+        "the typed UI catalog covers every planned locale and marks drafts for review",
     )
     for code, (start, end) in SCRIPT_RANGES.items():
         greeting = get_catalog(code).render("greeting")

@@ -3,6 +3,7 @@ import { BookOpen, ExternalLink, Info, Quote } from "lucide-react";
 import type { TurnResponse } from "@/lib/api";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
+import { useUi } from "@/features/i18n/ui-provider";
 
 type SourcesPanelProps = {
   turn: TurnResponse | null;
@@ -17,6 +18,7 @@ function relevanceLabel(score: number): string {
 }
 
 export function SourcesPanel({ turn }: SourcesPanelProps) {
+  const { t } = useUi();
   const sources = turn?.sources ?? [];
   const groundedAnswer = turn?.grounded_answer?.trim();
 
@@ -36,23 +38,22 @@ export function SourcesPanel({ turn }: SourcesPanelProps) {
               </span>
               <div>
                 <span className="font-mono text-[0.6rem] uppercase tracking-[0.2em] text-blue/80">
-                  Evidence trail
+                  {t("evidenceTrail")}
                 </span>
                 <h2 id="sources-title" className="mt-1 text-lg font-extrabold text-paper">
-                  Sources for this answer
+                  {t("sourcesForAnswer")}
                 </h2>
               </div>
             </div>
             <Badge variant="outline" className="border-blue/25 text-blue">
               <Quote className="size-3" aria-hidden="true" />
-              Source-grounded
+              {t("sourceGrounded")}
             </Badge>
           </div>
           <p className="flex items-start gap-2 text-sm leading-6 text-paper/65">
             <Info className="mt-1 size-4 shrink-0 text-blue" aria-hidden="true" />
             <span>
-              These documents are machine-extracted and may need human review. They provide
-              guidance, not an official eligibility decision.
+              {t("sourceDisclaimer")}
             </span>
           </p>
         </CardHeader>
@@ -61,7 +62,7 @@ export function SourcesPanel({ turn }: SourcesPanelProps) {
           {groundedAnswer && (
             <blockquote className="rounded-xl border border-paper/10 bg-ink/30 px-4 py-3 text-sm leading-6 text-paper/80">
               <span className="mb-2 block font-mono text-[0.58rem] uppercase tracking-[0.16em] text-paper/45">
-                Answer with citations
+                {t("answerWithCitations")}
               </span>
               {groundedAnswer}
             </blockquote>
@@ -82,7 +83,7 @@ export function SourcesPanel({ turn }: SourcesPanelProps) {
                       <div className="flex flex-wrap items-start justify-between gap-3">
                         <div className="min-w-0">
                           <p className="font-mono text-[0.58rem] uppercase tracking-[0.15em] text-blue/80">
-                            Source {index + 1}
+                            {t("source")} {index + 1}
                           </p>
                           <h3 id={sourceHeadingId} className="mt-1 break-words text-sm font-bold text-paper">
                             {source.filename || source.source_id}
@@ -95,10 +96,10 @@ export function SourcesPanel({ turn }: SourcesPanelProps) {
 
                       <details className="group mt-3 rounded-lg border border-paper/10 bg-paper/[0.03]">
                         <summary className="cursor-pointer px-3 py-2 text-xs font-semibold text-paper/70 outline-none transition hover:text-paper focus-visible:ring-2 focus-visible:ring-ring">
-                          Show supporting excerpt
+                          {t("showSupportingExcerpt")}
                         </summary>
                         <p className="border-t border-paper/10 px-3 py-3 text-xs leading-5 text-paper/60">
-                          {source.excerpt || "No excerpt was returned for this source."}
+                          {source.excerpt || t("noAdditionalReason")}
                         </p>
                       </details>
 
@@ -110,7 +111,7 @@ export function SourcesPanel({ turn }: SourcesPanelProps) {
                           rel="noopener noreferrer"
                           aria-label={`Open source document ${index + 1} in a new tab`}
                         >
-                          Open source document
+                          {t("openSourceDocument")}
                           <ExternalLink className="size-3" aria-hidden="true" />
                         </a>
                       )}
@@ -121,8 +122,7 @@ export function SourcesPanel({ turn }: SourcesPanelProps) {
             </ol>
           ) : (
             <p className="rounded-xl border border-orange/20 bg-orange/10 px-4 py-3 text-sm leading-6 text-orange">
-              No supporting source document was returned for this answer. Please treat it as
-              unconfirmed and ask a person if the decision affects you.
+              {t("noSupportingSource")}
             </p>
           )}
         </CardContent>

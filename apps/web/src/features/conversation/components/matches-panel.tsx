@@ -7,6 +7,8 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { CriterionEvidence } from "@/features/conversation/components/criterion-evidence";
+import { useUi } from "@/features/i18n/ui-provider";
+import type { UiTranslator } from "@/lib/i18n";
 
 type MatchesPanelProps = {
   turn: TurnResponse | null;
@@ -17,6 +19,7 @@ type MatchesPanelProps = {
 };
 
 export function MatchesPanel({ turn, savedBenefitIds = new Set(), onToggleSaved, comparedBenefitIds = new Set(), onToggleCompare }: MatchesPanelProps) {
+  const { t } = useUi();
   const matches = turn?.matches ?? [];
   if (matches.length === 0) return null;
 
@@ -24,14 +27,13 @@ export function MatchesPanel({ turn, savedBenefitIds = new Set(), onToggleSaved,
     <section className="space-y-5" aria-labelledby="matches-title">
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <span className="font-mono text-[0.6rem] uppercase tracking-[0.2em] text-acid/75">Eligibility readout</span>
-          <h2 id="matches-title" className="mt-2 text-2xl font-extrabold tracking-tight text-paper">What the agent found</h2>
+          <span className="font-mono text-[0.6rem] uppercase tracking-[0.2em] text-acid/75">{t("eligibilityReadout")}</span>
+          <h2 id="matches-title" className="mt-2 text-2xl font-extrabold tracking-tight text-paper">{t("whatAgentFound")}</h2>
         </div>
-        <span className="text-xs text-paper/40">Reasons come from structured criteria.</span>
+        <span className="text-xs text-paper/40">{t("structuredReasons")}</span>
       </div>
       <p className="max-w-3xl text-sm leading-6 text-paper/55">
-        These are guidance results based on the answers you shared. They are not an official
-        government decision; check the linked source before applying.
+        {t("guidanceDisclaimer")}
       </p>
       <ul className="grid list-none gap-4 p-0 md:grid-cols-2 lg:grid-cols-3">
         {matches.map((match) => (
@@ -63,11 +65,12 @@ function MatchCard({
   compared: boolean;
   onToggleCompare?: (benefitId: string, compared: boolean) => void;
 }) {
+  const { t } = useUi();
   const verdict = match.verdict.toLowerCase();
   const isEligible = verdict.includes("eligible") && !verdict.includes("not");
   const isNotEligible = verdict.includes("not") || verdict.includes("ineligible");
   const Icon = isEligible ? CheckCircle2 : isNotEligible ? CircleX : CircleAlert;
-  const verificationLabel = verificationLabelFor(match.verification_status);
+  const verificationLabel = verificationLabelFor(match.verification_status, t);
   const sourceUrl = match.source_document_url.trim();
 
   return (
@@ -112,7 +115,7 @@ function MatchCard({
           </div>
         </div>
         <h3 id={`match-${match.benefit_id}`} className="mt-5 text-lg font-bold leading-snug text-paper">{match.benefit_name}</h3>
-        <p className="mt-3 min-h-12 text-sm leading-6 text-paper/60">{match.reasons?.[0] ?? "No additional reason was returned."}</p>
+        <p className="mt-3 min-h-12 text-sm leading-6 text-paper/60">{match.reasons?.[0] ?? t("noAdditionalReason")}</p>
         <CriterionEvidence match={match} compact />
         <div className="mt-4 flex flex-wrap items-center gap-2 text-xs text-paper/45">
           <Badge variant={match.verification_status === "human_verified" ? "success" : "warning"}>
@@ -131,7 +134,7 @@ function MatchCard({
             rel="noopener noreferrer"
             aria-label={`Open the official source for ${match.benefit_name}`}
           >
-            Open source
+            {t("openSource")}
           </a>
         )}
         <Link
@@ -139,29 +142,29 @@ function MatchCard({
           params={{ benefitId: match.benefit_id }}
           className="mt-4 inline-flex text-xs font-semibold text-blue underline-offset-4 hover:underline"
         >
-          View details
+          {t("viewDetails")}
         </Link>
         <p className="mt-5 font-mono text-[0.65rem] uppercase tracking-[0.14em] text-paper/35">
-          confidence · {formatConfidence(match.confidence)}
+          {t("confidence")} · {formatConfidence(match.confidence)}
         </p>
       </CardContent>
     </Card>
   );
 }
 
-function verificationLabelFor(status: MatchSummary["verification_status"]): string {
+function verificationLabelFor(status: MatchSummary["verification_status"], t: UiTranslator): string {
   switch (status) {
     case "human_verified":
-      return "Verified source";
+      return t("verifiedSource");
     case "machine_reviewed":
-      return "AI reviewed · not verified";
+      return t("aiReviewedAwaitingHuman");
     case "machine_structured":
-      return "Machine structured · not verified";
+      return t("machineStructuredAwaitingReview");
     case "needs_review":
-      return "Needs human review";
+      return t("needsHumanReview");
     case "stale":
-      return "Source may be out of date";
+      return t("sourceMayBeOutOfDate");
     case "illustrative":
-      return "Illustrative demo data";
+      return t("illustrativeDemo");
   }
 }

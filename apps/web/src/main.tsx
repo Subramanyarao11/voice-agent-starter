@@ -6,6 +6,7 @@ import { MotionConfig } from "motion/react";
 import { RouterProvider } from "@tanstack/react-router";
 
 import { router } from "@/app/router";
+import { UiProvider } from "@/features/i18n/ui-provider";
 import "@/index.css";
 
 const queryClient = new QueryClient({
@@ -21,7 +22,9 @@ createRoot(document.getElementById("root")!).render(
   <StrictMode>
     <QueryClientProvider client={queryClient}>
       <MotionConfig reducedMotion="user">
-        <RouterProvider router={router} />
+        <UiProvider>
+          <RouterProvider router={router} />
+        </UiProvider>
       </MotionConfig>
     </QueryClientProvider>
   </StrictMode>,

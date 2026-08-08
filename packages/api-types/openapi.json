@@ -7686,6 +7686,39 @@
         ],
         "title": "RecentErrorOut"
       },
+      "ReleaseGateOut": {
+        "properties": {
+          "key": {
+            "type": "string",
+            "title": "Key"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "ready",
+              "not_configured",
+              "external_review"
+            ],
+            "title": "Status"
+          },
+          "detail": {
+            "type": "string",
+            "title": "Detail"
+          },
+          "next_action": {
+            "type": "string",
+            "title": "Next Action"
+          }
+        },
+        "type": "object",
+        "required": [
+          "key",
+          "status",
+          "detail",
+          "next_action"
+        ],
+        "title": "ReleaseGateOut"
+      },
       "ReminderCreate": {
         "properties": {
           "benefit_id": {
@@ -8193,6 +8226,17 @@
             },
             "type": "array",
             "title": "Deployment Notes"
+          },
+          "release_ready": {
+            "type": "boolean",
+            "title": "Release Ready"
+          },
+          "release_gates": {
+            "items": {
+              "$ref": "#/components/schemas/ReleaseGateOut"
+            },
+            "type": "array",
+            "title": "Release Gates"
           }
         },
         "type": "object",
@@ -8204,7 +8248,9 @@
           "migration_revision",
           "database_mode",
           "configuration",
-          "deployment_notes"
+          "deployment_notes",
+          "release_ready",
+          "release_gates"
         ],
         "title": "SystemOut"
       },
