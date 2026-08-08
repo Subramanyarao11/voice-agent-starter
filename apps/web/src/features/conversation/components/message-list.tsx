@@ -1,4 +1,5 @@
 import { AnimatePresence, motion } from "motion/react";
+import { MessageCircle } from "lucide-react";
 
 import type { ConversationMessage } from "@/features/conversation/store";
 import { Button } from "@/components/ui/button";
@@ -28,8 +29,8 @@ export function MessageList({ messages, isSending, onSuggestion }: MessageListPr
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.35 }}
         >
-          <span className="mb-4 grid size-12 place-items-center rounded-full border border-acid/30 bg-acid/10 text-xl text-acid">
-            ✦
+          <span className="mb-4 grid size-12 place-items-center rounded-lg border border-primary/30 bg-secondary text-primary" aria-hidden="true">
+            <MessageCircle className="size-6" />
           </span>
           <p className="text-sm text-paper/55">{t("startWith")}</p>
           <div className="mt-4 flex flex-wrap justify-center gap-2">
@@ -39,7 +40,7 @@ export function MessageList({ messages, isSending, onSuggestion }: MessageListPr
                 type="button"
                 variant="outline"
                 size="sm"
-                className="border-paper/15 bg-paper/[0.03] text-paper/75 hover:border-acid/50 hover:bg-acid/10 hover:text-acid"
+                className="border-border bg-background text-foreground hover:border-primary/60 hover:bg-secondary hover:text-primary"
                 onClick={() => onSuggestion(suggestion)}
               >
                 “{suggestion}”
@@ -61,14 +62,14 @@ export function MessageList({ messages, isSending, onSuggestion }: MessageListPr
               aria-label={message.role === "caller" ? t("yourMessage") : t("sahaayakMessage")}
             >
               <div className={`max-w-[88%] sm:max-w-[75%] ${message.role === "caller" ? "text-right" : "text-left"}`}>
-                <span className="mb-1 block font-mono text-[0.58rem] uppercase tracking-[0.18em] text-paper/35">
+                <span className="mb-1 block text-sm font-semibold text-muted-foreground">
                   {message.role === "caller" ? t("guest") : "sahaayak"}
                 </span>
                 <p
                   className={`rounded-2xl px-4 py-3 text-sm leading-6 ${
                     message.role === "caller"
-                      ? "rounded-br-sm bg-acid text-ink"
-                      : "rounded-bl-sm border border-paper/10 bg-paper/[0.06] text-paper/85"
+                      ? "rounded-br-sm bg-primary text-primary-foreground"
+                      : "rounded-bl-sm border border-border bg-muted/60 text-foreground"
                   }`}
                 >
                   {message.text}
@@ -86,12 +87,12 @@ export function MessageList({ messages, isSending, onSuggestion }: MessageListPr
           animate={{ opacity: 1, y: 0 }}
         >
           <div role="status" aria-label={t("preparingResponse")}>
-            <span className="mb-1 block font-mono text-[0.58rem] uppercase tracking-[0.18em] text-paper/35">sahaayak</span>
-            <div className="flex items-center gap-1 rounded-2xl rounded-bl-sm border border-paper/10 bg-paper/[0.06] px-4 py-4" aria-hidden="true">
+            <span className="mb-1 block text-sm font-semibold text-muted-foreground">sahaayak</span>
+            <div className="flex items-center gap-1 rounded-lg rounded-bl-sm border border-border bg-muted/60 px-4 py-4" aria-hidden="true">
               {[0, 1, 2].map((index) => (
                 <motion.i
                   key={index}
-                  className="size-1.5 rounded-full bg-acid"
+                  className="size-1.5 rounded-full bg-primary"
                   animate={{ opacity: [0.35, 1, 0.35], y: [0, -3, 0] }}
                   transition={{ duration: 0.8, repeat: Infinity, delay: index * 0.12 }}
                 />

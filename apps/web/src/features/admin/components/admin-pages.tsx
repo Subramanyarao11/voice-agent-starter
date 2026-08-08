@@ -776,16 +776,16 @@ function benefitEditDraft(item: import("@/features/admin/api").ReviewItem): Bene
 }
 
 function PageIntro({ title, description }: { title: string; description: string }) {
-  return <div><h2 className="text-2xl font-extrabold tracking-tight">{title}</h2><p className="mt-2 max-w-3xl text-sm leading-6 text-paper/55">{description}</p></div>;
+  return <div><h2 className="text-2xl font-bold tracking-tight text-foreground">{title}</h2><p className="mt-2 max-w-3xl text-base leading-6 text-muted-foreground">{description}</p></div>;
 }
 
 function MetricCard({ label, value, detail, tone = "default" }: { label: string; value: string; detail: string; tone?: "default" | "warning" }) {
-  return <Card className={`border-paper/10 bg-paper/[0.04] text-paper ${tone === "warning" ? "border-orange/25" : ""}`}><CardContent className="p-5"><p className="text-xs uppercase tracking-[0.14em] text-paper/45">{label}</p><p className="mt-3 font-mono text-3xl text-acid">{value}</p><p className="mt-2 text-xs text-paper/45">{detail}</p></CardContent></Card>;
+  return <Card className={`border-border bg-card ${tone === "warning" ? "border-warning/70" : ""}`}><CardContent className="p-5"><p className="text-sm font-semibold text-muted-foreground">{label}</p><p className={`mt-3 text-3xl font-bold ${tone === "warning" ? "text-warning-foreground" : "text-primary"}`}>{value}</p><p className="mt-2 text-sm text-muted-foreground">{detail}</p></CardContent></Card>;
 }
 
 function Stat({ label, value, tone = "default" }: { label: string; value: string | number; tone?: "default" | "good" | "warning" | "muted" }) {
-  const text = tone === "good" ? "text-blue" : tone === "warning" ? "text-orange" : tone === "muted" ? "text-paper/45" : "text-paper";
-  return <div className="rounded-xl border border-paper/10 bg-ink/20 px-3 py-3"><p className="text-xs capitalize text-paper/45">{label}</p><p className={`mt-1 font-mono text-lg ${text}`}>{value}</p></div>;
+  const text = tone === "good" ? "text-success" : tone === "warning" ? "text-destructive" : tone === "muted" ? "text-muted-foreground" : "text-foreground";
+  return <div className="rounded border border-border bg-muted/40 px-3 py-3"><p className="text-sm text-muted-foreground">{label}</p><p className={`mt-1 text-lg font-bold ${text}`}>{value}</p></div>;
 }
 
 function ProviderPolicyCard({
@@ -866,9 +866,9 @@ function ErrorTable({ errors }: { errors: import("@/features/admin/api").AdminOv
   return <div className="overflow-x-auto"><table className="w-full min-w-[620px] text-left text-sm"><caption className="sr-only">Recent server errors</caption><thead className="border-b border-paper/10 text-xs uppercase tracking-[0.12em] text-paper/40"><tr><th className="px-3 py-3">Time</th><th className="px-3 py-3">Route</th><th className="px-3 py-3">Status</th><th className="px-3 py-3">Request</th></tr></thead><tbody>{errors.map((error) => <tr key={`${error.request_id}-${error.created_at}`} className="border-b border-paper/5 last:border-0"><td className="px-3 py-3 text-paper/55">{formatTime(error.created_at)}</td><td className="px-3 py-3 font-mono text-xs">{error.method} {error.route}</td><td className="px-3 py-3 text-orange">{error.status_code ?? "—"}</td><td className="px-3 py-3 font-mono text-xs text-acid">{error.request_id ?? "—"}</td></tr>)}</tbody></table></div>;
 }
 
-function Loading({ label }: { label: string }) { return <div className="grid min-h-56 place-items-center rounded-2xl border border-paper/10 bg-paper/[0.03] text-sm text-paper/55"><span role="status" className="inline-flex items-center gap-2"><RefreshCw className="size-4 animate-spin" aria-hidden="true" />{label}</span></div>; }
-function ErrorPanel({ error }: { error: unknown }) { return <div role="alert" className="rounded-2xl border border-orange/25 bg-orange/10 p-5 text-sm leading-6 text-orange"><div className="flex items-start gap-3"><AlertTriangle className="mt-0.5 size-4 shrink-0" aria-hidden="true" /><span>{toUserMessage(error)}</span></div></div>; }
-function EmptyState({ label }: { label: string }) { return <p className="px-4 py-8 text-center text-sm text-paper/45">{label}</p>; }
+function Loading({ label }: { label: string }) { return <div className="grid min-h-56 place-items-center rounded-lg border border-border bg-muted/30 text-sm text-muted-foreground"><span role="status" className="inline-flex items-center gap-2"><RefreshCw className="size-4 animate-spin" aria-hidden="true" />{label}</span></div>; }
+function ErrorPanel({ error }: { error: unknown }) { return <div role="alert" className="rounded-lg border border-destructive/30 bg-destructive/10 p-5 text-base leading-6 text-destructive"><div className="flex items-start gap-3"><AlertTriangle className="mt-0.5 size-4 shrink-0" aria-hidden="true" /><span>{toUserMessage(error)}</span></div></div>; }
+function EmptyState({ label }: { label: string }) { return <p className="px-4 py-8 text-center text-base text-muted-foreground">{label}</p>; }
 function outcomeBadge(outcome: string) { if (outcome === "success") return <Badge variant="success"><CheckCircle2 className="size-3" aria-hidden="true" />success</Badge>; if (outcome === "error" || outcome === "escalated") return <Badge variant="warning"><ShieldAlert className="size-3" aria-hidden="true" />{outcome}</Badge>; return <Badge variant="outline" className="border-paper/15 text-paper/55"><Clock3 className="size-3" aria-hidden="true" />{outcome || "event"}</Badge>; }
 function formatTime(value: string) { const date = new Date(value); return Number.isNaN(date.valueOf()) ? value : date.toLocaleString([], {dateStyle: "medium", timeStyle: "short"}); }
 function formatNumber(value: number) { return new Intl.NumberFormat().format(value); }

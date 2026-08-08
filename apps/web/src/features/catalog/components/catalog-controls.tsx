@@ -27,10 +27,10 @@ export function CatalogControls({
 }: CatalogControlsProps) {
   const { t } = useUi();
   return (
-    <fieldset className="grid gap-3 rounded-2xl border border-paper/10 bg-paper/[0.04] p-3 sm:grid-cols-[1fr_1fr_auto] sm:items-end">
+    <fieldset id="conversation-preferences" className="grid scroll-mt-6 gap-4 rounded-lg border border-border bg-card p-4 shadow-sm sm:grid-cols-[1fr_1fr_auto] sm:items-end">
       <legend className="sr-only">{t("conversationPreferences")}</legend>
       <label className="grid gap-1.5">
-        <span className="px-1 font-mono text-[0.6rem] uppercase tracking-[0.18em] text-paper/45">{t("language")}</span>
+        <span className="px-1 text-sm font-semibold text-foreground">{t("language")}</span>
         <Select value={languageCode} onValueChange={onLanguageChange} disabled={disabled}>
           <SelectTrigger aria-label={t("chooseLanguage")}>
             <SelectValue placeholder={t("chooseLanguage")} />
@@ -46,7 +46,7 @@ export function CatalogControls({
       </label>
 
       <label className="grid gap-1.5">
-        <span className="px-1 font-mono text-[0.6rem] uppercase tracking-[0.18em] text-paper/45">{t("state")}</span>
+        <span className="px-1 text-sm font-semibold text-foreground">{t("state")}</span>
         <Select value={stateCode} onValueChange={onStateChange} disabled={disabled}>
           <SelectTrigger aria-label={t("chooseState")}>
             <SelectValue placeholder={t("chooseState")} />
@@ -62,14 +62,14 @@ export function CatalogControls({
       </label>
 
       <div
-        className="flex h-10 items-center gap-2 rounded-lg border border-acid/20 bg-acid/10 px-3 text-xs text-acid sm:min-w-32"
+        className="flex min-h-11 items-center gap-2 rounded border border-primary/30 bg-secondary px-3 text-sm text-secondary-foreground sm:min-w-40"
         role="status"
         aria-live="polite"
         aria-label={t("benefitsAvailableIn", {count: stateCoverage, state: stateName ?? stateCode})}
       >
-        <span className="size-2 rounded-full bg-acid" aria-hidden="true" />
+        <span className="size-2.5 rounded-full bg-primary" aria-hidden="true" />
         <span>
-          <strong className="font-mono text-sm">{stateCoverage}</strong> {t("benefitsInState", {state: stateName ?? stateCode})}
+          <strong className="font-bold">{stateCoverage}</strong> {t("benefitsInState", {state: stateName ?? stateCode})}
         </span>
       </div>
     </fieldset>

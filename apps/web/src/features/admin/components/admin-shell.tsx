@@ -71,67 +71,92 @@ export function AdminShell({ activeView, children }: AdminShellProps) {
   }
 
   return (
-    <main className="min-h-svh bg-ink px-4 py-5 text-paper sm:px-8 lg:px-12" aria-labelledby="admin-title">
-      <div className="mx-auto max-w-[1500px]">
-        <header className="flex flex-wrap items-start justify-between gap-5 border-b border-paper/10 pb-6">
+    <main className="min-h-svh bg-background text-foreground" aria-labelledby="admin-title">
+      <div className="mx-auto grid max-w-[1440px] gap-6 px-4 py-4 sm:px-6 lg:grid-cols-[236px_minmax(0,1fr)] lg:gap-8 lg:px-8">
+        <a
+          href="#admin-content"
+          className="sr-only rounded bg-primary px-3 py-2 font-semibold text-primary-foreground focus:not-sr-only focus:outline-none lg:col-span-2"
+        >
+          Skip to admin workspace
+        </a>
+        <header className="flex flex-wrap items-start justify-between gap-5 border-b border-border pb-6 lg:col-span-2">
           <div>
-            <Link to="/" className="inline-flex items-center gap-2 text-xs text-paper/50 hover:text-acid">
+            <Link to="/" className="inline-flex min-h-10 items-center gap-2 text-sm font-semibold text-muted-foreground hover:text-primary">
               <ArrowLeft className="size-3.5" aria-hidden="true" />
               Citizen experience
             </Link>
-            <p className="mt-6 font-mono text-[0.62rem] uppercase tracking-[0.24em] text-acid">Sahaayak operations</p>
-            <h1 id="admin-title" className="mt-2 text-3xl font-extrabold tracking-tight sm:text-5xl">Platform control center</h1>
-            <p className="mt-3 max-w-2xl text-sm leading-6 text-paper/55">
+            <p className="mt-6 text-sm font-semibold text-primary">Sahaayak operations</p>
+            <h1 id="admin-title" className="mt-2 text-3xl font-bold tracking-tight sm:text-4xl">Platform control center</h1>
+            <p className="mt-3 max-w-2xl text-base leading-6 text-muted-foreground">
               Observe reliability, quality, provider spend, content provenance, and workforce actions from one redacted-by-default surface.
             </p>
           </div>
           <div className="flex items-center gap-3">
-            <Badge variant="outline" className="border-acid/30 text-acid">
+            <Badge variant="outline" className="border-primary/30 bg-secondary text-secondary-foreground">
               <ShieldCheck className="size-3" aria-hidden="true" />
               {meQuery.data.role} · {meQuery.data.auth_source === "oidc" && meQuery.data.mfa_verified ? "MFA" : "local"}
             </Badge>
-            <Button variant="ghost" size="sm" onClick={() => { clearToken(); if (oidcConfigured) beginAdminOidcLogout(idToken); }} aria-label="End admin session">
+            <Button variant="ghost" onClick={() => { clearToken(); if (oidcConfigured) beginAdminOidcLogout(idToken); }} aria-label="End admin session">
               <LogOut className="size-3.5" aria-hidden="true" />
               Sign out
             </Button>
           </div>
         </header>
 
-        <nav className="mt-5 overflow-x-auto" aria-label="Admin sections">
-          <ul className="flex min-w-max gap-2">
-            {NAV_ITEMS.map((item) => {
-              const Icon = item.icon;
-              const active = item.view === activeView;
-              return (
-                <li key={item.view}>
-                  <Link
-                    to={item.href}
-                    aria-current={active ? "page" : undefined}
-                    className={`inline-flex items-center gap-2 rounded-full border px-3 py-2 text-xs font-semibold transition ${
-                      active
-                        ? "border-acid/40 bg-acid/10 text-acid"
-                        : "border-paper/10 text-paper/55 hover:border-paper/25 hover:text-paper"
-                    }`}
-                  >
-                    <Icon className="size-3.5" aria-hidden="true" />
-                    {item.label}
-                  </Link>
-                </li>
-              );
-            })}
-          </ul>
-        </nav>
+        <div className="lg:hidden">
+          <details className="rounded-lg border border-border bg-card shadow-sm">
+            <summary className="flex min-h-12 cursor-pointer items-center px-4 text-sm font-bold">Admin sections</summary>
+            <div className="border-t border-border p-2">
+              <AdminNavigation activeView={activeView} />
+            </div>
+          </details>
+        </div>
 
-        <div className="mt-8">{children}</div>
+        <aside className="hidden lg:block" aria-label="Admin navigation">
+          <AdminNavigation activeView={activeView} />
+        </aside>
 
-        <footer className="mt-12 border-t border-paper/10 py-5 text-xs text-paper/40">
+        <section id="admin-content" tabIndex={-1} className="min-w-0 scroll-mt-6 outline-none" aria-label="Admin workspace">
+          {children}
+        </section>
+
+        <footer className="border-t border-border py-5 text-sm text-muted-foreground lg:col-span-2">
           <div className="flex flex-wrap justify-between gap-3">
             <span>Admin telemetry is redacted by default. Elevated access must be separately authorized and audited.</span>
-            <span>actor · {meQuery.data.actor_id}</span>
+            <span>Actor · {meQuery.data.actor_id}</span>
           </div>
         </footer>
       </div>
     </main>
+  );
+}
+
+function AdminNavigation({ activeView }: { activeView: AdminView }) {
+  return (
+    <nav aria-label="Admin sections">
+      <ul className="grid gap-1">
+        {NAV_ITEMS.map((item) => {
+          const Icon = item.icon;
+          const active = item.view === activeView;
+          return (
+            <li key={item.view}>
+              <Link
+                to={item.href}
+                aria-current={active ? "page" : undefined}
+                className={`flex min-h-11 items-center gap-3 rounded-lg border-l-4 px-3 text-sm font-semibold transition-colors ${
+                  active
+                    ? "border-primary bg-secondary text-primary"
+                    : "border-transparent text-muted-foreground hover:bg-muted hover:text-foreground"
+                }`}
+              >
+                <Icon className="size-4" aria-hidden="true" />
+                {item.label}
+              </Link>
+            </li>
+          );
+        })}
+      </ul>
+    </nav>
   );
 }
 
@@ -145,29 +170,29 @@ function AdminAccessGate({ onToken, error, onClear, oidcConfigured }: { onToken:
   };
 
   return (
-    <main className="grid min-h-svh place-items-center bg-ink px-5 text-paper" aria-labelledby="admin-access-title">
-      <Card className="w-full max-w-lg border-acid/20 bg-paper/[0.04] text-paper">
+    <main className="grid min-h-svh place-items-center bg-background px-5 text-foreground" aria-labelledby="admin-access-title">
+      <Card className="w-full max-w-lg border-border bg-card shadow-sm">
         <CardContent className="space-y-6 p-6 sm:p-8">
           <div>
-            <p className="font-mono text-[0.62rem] uppercase tracking-[0.22em] text-acid">Workforce access</p>
-            <h1 id="admin-access-title" className="mt-3 text-3xl font-extrabold">Platform control center</h1>
-            <p className="mt-3 text-sm leading-6 text-paper/60">
+            <p className="text-sm font-semibold text-primary">Workforce access</p>
+            <h1 id="admin-access-title" className="mt-3 text-3xl font-bold">Platform control center</h1>
+            <p className="mt-3 text-base leading-6 text-muted-foreground">
               {oidcConfigured
                 ? "Use the organization identity provider. Sahaayak requires a workforce role and MFA assurance before showing platform data."
                 : "Enter the deployment’s admin bearer token. It is kept in this browser tab’s session storage and is never displayed back to the page."}
             </p>
           </div>
-          {error && <p role="alert" className="rounded-xl border border-orange/30 bg-orange/10 px-4 py-3 text-sm text-orange">{error}</p>}
+          {error && <p role="alert" className="rounded-lg border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive">{error}</p>}
           {oidcConfigured && (
             <div className="space-y-3">
               <Button
                 type="button"
-                className="w-full bg-acid text-ink hover:bg-acid/90"
+                className="w-full bg-primary text-primary-foreground hover:bg-primary/90"
                 onClick={() => { setOidcError(null); void beginAdminOidcLogin().catch((reason: unknown) => setOidcError(reason instanceof Error ? reason.message : "Could not start admin sign-in.")); }}
               >
                 Sign in with organization SSO
               </Button>
-              {oidcError && <p role="alert" className="text-sm text-orange">{oidcError}</p>}
+              {oidcError && <p role="alert" className="text-sm text-destructive">{oidcError}</p>}
             </div>
           )}
           {allowManualToken && <form className="space-y-3" onSubmit={submit} aria-label="Admin sign in">
@@ -179,14 +204,14 @@ function AdminAccessGate({ onToken, error, onClear, oidcConfigured }: { onToken:
                 value={draft}
                 onChange={(event) => setDraft(event.target.value)}
                 autoComplete="off"
-                className="h-11 rounded-xl border border-paper/15 bg-ink px-3 text-paper outline-none focus-visible:ring-2 focus-visible:ring-acid"
+                className="h-11 rounded border border-border bg-background px-3 text-foreground outline-none focus-visible:ring-2 focus-visible:ring-ring"
               />
             </label>
-            <Button type="submit" className="w-full bg-acid text-ink hover:bg-acid/90">Continue securely</Button>
+            <Button type="submit" className="w-full bg-primary text-primary-foreground hover:bg-primary/90">Continue securely</Button>
           </form>}
-          <div className="flex flex-wrap items-center justify-between gap-3 text-xs text-paper/45">
-            <Link to="/" className="inline-flex items-center gap-2 hover:text-acid"><ArrowLeft className="size-3.5" aria-hidden="true" />Return to citizen app</Link>
-            {onClear && <button type="button" onClick={onClear} className="underline underline-offset-4 hover:text-paper">Clear rejected session</button>}
+          <div className="flex flex-wrap items-center justify-between gap-3 text-sm text-muted-foreground">
+            <Link to="/" className="inline-flex min-h-10 items-center gap-2 hover:text-primary"><ArrowLeft className="size-3.5" aria-hidden="true" />Return to citizen app</Link>
+            {onClear && <button type="button" onClick={onClear} className="min-h-10 underline underline-offset-4 hover:text-foreground">Clear rejected session</button>}
           </div>
         </CardContent>
       </Card>
@@ -195,5 +220,5 @@ function AdminAccessGate({ onToken, error, onClear, oidcConfigured }: { onToken:
 }
 
 function AdminLoading() {
-  return <main className="grid min-h-svh place-items-center bg-ink text-paper"><p role="status" className="text-sm text-paper/60">Checking workforce access…</p></main>;
+  return <main className="grid min-h-svh place-items-center bg-background text-foreground"><p role="status" className="text-sm text-muted-foreground">Checking workforce access…</p></main>;
 }

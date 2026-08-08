@@ -14,7 +14,7 @@ import {
   TriangleAlert,
 } from "lucide-react";
 
-import { Topbar } from "@/components/app/topbar";
+import { PublicFooter, Topbar } from "@/components/app/topbar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
@@ -99,6 +99,7 @@ export function BenefitDetailPage() {
   const detailQuery = useBenefitDetailQuery(benefitId);
   const sessionId = useGuestSessionStore((state) => state.sessionId);
   const accessToken = useGuestSessionStore((state) => state.accessToken);
+  const languageCode = useConversationStore((state) => state.languageCode);
   const lastTurn = useConversationStore((state) => state.lastTurn);
   const [shareNotice, setShareNotice] = useState("");
 
@@ -124,9 +125,10 @@ export function BenefitDetailPage() {
   }
 
   return (
-    <main className="min-h-svh bg-ink px-4 py-5 text-paper sm:px-8 lg:px-12" aria-labelledby="benefit-title">
-      <Topbar sessionId={sessionId} connected={Boolean(sessionId)} />
-      <div className="mx-auto max-w-[1080px] py-10 sm:py-16">
+    <div className="min-h-svh bg-background text-foreground">
+      <Topbar sessionId={sessionId} connected={Boolean(sessionId)} currentLanguage={languageCode} />
+      <main id="main-content" tabIndex={-1} className="outline-none" aria-labelledby="benefit-title">
+        <div className="mx-auto max-w-[1200px] px-4 py-10 sm:px-6 sm:py-14 lg:px-8 lg:py-16">
         <Link
           to="/"
           className="inline-flex items-center gap-2 text-sm font-semibold text-blue underline-offset-4 hover:underline"
@@ -168,7 +170,7 @@ export function BenefitDetailPage() {
               </div>
               <div className="mt-5 flex flex-col gap-6 sm:flex-row sm:items-start sm:justify-between">
                 <div>
-                  <h1 id="benefit-title" className="max-w-3xl text-4xl font-extrabold tracking-tight sm:text-5xl">
+                  <h1 id="benefit-title" className="max-w-3xl text-3xl font-bold leading-tight tracking-tight sm:text-4xl">
                     {detail.name}
                   </h1>
                   <p className="mt-4 max-w-3xl text-base leading-7 text-paper/65">{detail.description}</p>
@@ -314,8 +316,10 @@ export function BenefitDetailPage() {
             <ReportIssuePanel benefitId={benefitId} accessToken={accessToken} />
           </>
         )}
-      </div>
-    </main>
+        </div>
+      </main>
+      <PublicFooter />
+    </div>
   );
 }
 

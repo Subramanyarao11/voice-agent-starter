@@ -2,7 +2,8 @@ import { useCallback, useEffect, useMemo, useState, type FormEvent } from "react
 
 import { motion } from "motion/react";
 
-import { Topbar } from "@/components/app/topbar";
+import { PublicFooter, Topbar } from "@/components/app/topbar";
+import { Card, CardContent } from "@/components/ui/card";
 import { ComparisonPanel } from "@/features/benefits/components/comparison-panel";
 import { useCompareStore } from "@/features/benefits/compare-store";
 import { CatalogControls } from "@/features/catalog/components/catalog-controls";
@@ -220,149 +221,132 @@ export function HomePage() {
   const connected = healthQuery.data?.status === "ok" && Boolean(accessToken);
 
   return (
-    <main
-      className="relative min-h-svh overflow-hidden bg-ink px-4 py-5 text-paper sm:px-8 lg:px-12"
-      aria-labelledby="page-title"
-    >
-      <div className="pointer-events-none absolute -left-40 top-16 size-[30rem] rounded-full bg-blue/10 blur-3xl" />
-      <div className="pointer-events-none absolute -right-48 top-[28rem] size-[36rem] rounded-full bg-orange/10 blur-3xl" />
+    <div className="min-h-svh bg-background text-foreground">
+      <Topbar
+        sessionId={sessionId}
+        connected={connected}
+        currentLanguage={selectedLanguage?.native_name ?? selectedLanguage?.name}
+        activeSection="home"
+      />
 
-      <a
-        href="#conversation"
-        onClick={(event) => {
-          event.preventDefault();
-          const target = document.getElementById("conversation");
-          target?.focus();
-          target?.scrollIntoView({ behavior: "smooth", block: "start" });
-        }}
-        className="sr-only fixed left-4 top-4 z-50 rounded-lg bg-acid px-4 py-2 font-semibold text-ink focus:not-sr-only focus:outline-none focus:ring-2 focus:ring-paper"
-      >
-        {t("skipToConversation")}
-      </a>
-
-      <Topbar sessionId={sessionId} connected={connected} />
-
-      <section className="relative mx-auto grid max-w-[1440px] gap-12 py-16 lg:grid-cols-[minmax(260px,.72fr)_minmax(520px,1.28fr)] lg:gap-24 lg:py-28">
-        <motion.div
-          className="self-start lg:sticky lg:top-12"
-          initial={{ opacity: 0, y: 18 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.55, ease: "easeOut" }}
-        >
-          <p className="font-mono text-[0.62rem] uppercase tracking-[0.24em] text-acid">{t("heroKicker")}</p>
-          <h1 id="page-title" className="mt-5 max-w-xl text-5xl font-extrabold leading-[0.98] tracking-[-0.055em] text-paper sm:text-7xl">
-            {t("heroTitle")}
-          </h1>
-          <p className="mt-7 max-w-md text-base leading-7 text-paper/60 sm:text-lg">
-            {t("heroDescription")}
-          </p>
-
-          <div className="mt-10 flex items-center gap-4">
-            <span className="grid size-11 place-items-center rounded-xl border border-acid/30 bg-acid/10 text-xl text-acid">↗</span>
-            <span className="grid gap-1">
-              <strong className="font-mono text-2xl font-medium text-paper">{catalogQuery.data?.coverage.total ?? "—"}</strong>
-              <span className="text-xs text-paper/45">{t("benefitsLoaded")}</span>
-            </span>
-          </div>
-
-          <div className="mt-12 flex flex-wrap gap-x-6 gap-y-3 font-mono text-[0.65rem] uppercase tracking-[0.14em] text-paper/40">
-            <span><b className="mr-2 text-acid">01</b>{t("schemes")}</span>
-            <span><b className="mr-2 text-acid">02</b>{t("scholarships")}</span>
-            <span><b className="mr-2 text-acid">03</b>{t("jobDiscovery")}</span>
-          </div>
-        </motion.div>
-
-        <motion.section
-          id="conversation"
-          aria-labelledby="conversation-title"
-          tabIndex={-1}
-          className="relative scroll-mt-8 space-y-4 outline-none"
-          initial={{ opacity: 0, y: 24 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.55, delay: 0.1, ease: "easeOut" }}
-        >
-          <CatalogControls
-            languages={activeLanguages}
-            states={activeStates}
-            languageCode={languageCode}
-            stateCode={stateCode}
-            stateName={selectedState?.name}
-            stateCoverage={stateCoverage}
-            disabled={catalogLoading || isSending}
-            onLanguageChange={setLanguageCode}
-            onStateChange={setStateCode}
-          />
-          <ConversationPanel
-            messages={messages}
-            draft={draft}
-            selectedLanguageName={selectedLanguage?.name}
-            audioSource={audioSource}
-            isSending={isSending}
-            isResetting={resetMutation.isPending}
-            disabled={disabled}
-            voiceDisabled={voiceDisabled}
-            recording={streamingVoice.supported ? streamingVoice.isListening : recorder.isRecording}
-            voiceInputAvailable={voiceInputAvailable}
-            textToSpeechAvailable={healthQuery.data?.text_to_speech ?? false}
-            recorderError={streamingVoice.supported ? streamingVoice.error : recorder.error}
-            transcriptDraft={streamingVoice.transcriptDraft}
-            onDraftChange={setDraft}
-            onTranscriptChange={streamingVoice.updateTranscript}
-            onSubmitTranscript={streamingVoice.submitTranscript}
-            onCancelTranscript={streamingVoice.cancelTranscript}
-            onSubmit={(event) => void handleTextSubmit(event)}
-            onSuggestion={setDraft}
-            onStartRecording={startRecording}
-            onStopRecording={stopRecording}
-            onReset={() => void handleReset()}
-          />
-
-          <div
-            className="min-h-6 px-1 text-xs"
-            role={feedback?.kind === "error" ? "alert" : "status"}
-            aria-live={feedback?.kind === "error" ? "assertive" : "polite"}
+      <main id="main-content" tabIndex={-1} className="outline-none" aria-labelledby="page-title">
+        <section className="mx-auto grid max-w-[1200px] gap-8 px-4 py-10 sm:px-6 sm:py-14 lg:grid-cols-[minmax(260px,.72fr)_minmax(520px,1.28fr)] lg:px-8 lg:py-16">
+          <motion.header
+            className="self-start lg:sticky lg:top-8"
+            initial={{ opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.35, ease: "easeOut" }}
           >
-            {feedback && (
-              <p className={cn("leading-5", feedback.kind === "error" ? "text-orange" : "text-acid")}>
-                {feedback.text}
-              </p>
-            )}
-            {!feedback && catalogLoading && <p className="text-paper/40">{t("loadingCatalog")}</p>}
-          </div>
-        </motion.section>
-      </section>
+            <p className="text-sm font-semibold text-primary">{t("heroKicker")}</p>
+            <h1 id="page-title" className="mt-4 max-w-xl text-3xl font-bold leading-tight tracking-tight text-foreground sm:text-4xl">
+              {t("heroTitle")}
+            </h1>
+            <p className="mt-5 max-w-xl text-base leading-7 text-muted-foreground">
+              {t("heroDescription")}
+            </p>
 
-      <div className="relative mx-auto max-w-[1440px] space-y-10 pb-14">
-        <TurnInspector turn={lastTurn} />
-        <SourcesPanel turn={lastTurn} />
-        <MatchesPanel
-          turn={lastTurn}
-          savedBenefitIds={savedBenefitIds}
-          onToggleSaved={handleToggleSaved}
-          comparedBenefitIds={new Set(comparedBenefitIds)}
-          onToggleCompare={(benefitId, compared) => {
-            if (compared || comparedBenefitIds.length < 3) toggleCompare(benefitId);
-          }}
-        />
-        <ComparisonPanel />
-        <SavedBenefitsPanel
-          sessionId={sessionId}
-          accessToken={accessToken}
-          savedBenefits={savedBenefitsQuery.data ?? []}
-        />
-        {accessToken ? (
-          <ContactSettingsPanel
-            sessionId={sessionId}
-            accessToken={accessToken}
-            languageCode={languageCode}
+            <Card className="mt-8 max-w-xl border-primary/25 bg-secondary/50">
+              <CardContent className="p-5">
+                <p className="text-sm font-semibold text-secondary-foreground">{t("benefitsLoaded")}</p>
+                <p className="mt-2 text-3xl font-bold text-primary">{catalogQuery.data?.coverage.total ?? "—"}</p>
+                <p className="mt-3 text-sm leading-6 text-muted-foreground">
+                  {t("schemes")} · {t("scholarships")} · {t("jobDiscovery")}
+                </p>
+              </CardContent>
+            </Card>
+          </motion.header>
+
+          <motion.section
+            id="conversation"
+            aria-labelledby="conversation-title"
+            tabIndex={-1}
+            className="scroll-mt-8 space-y-4 outline-none"
+            initial={{ opacity: 0, y: 16 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.35, delay: 0.05, ease: "easeOut" }}
+          >
+            <CatalogControls
+              languages={activeLanguages}
+              states={activeStates}
+              languageCode={languageCode}
+              stateCode={stateCode}
+              stateName={selectedState?.name}
+              stateCoverage={stateCoverage}
+              disabled={catalogLoading || isSending}
+              onLanguageChange={setLanguageCode}
+              onStateChange={setStateCode}
+            />
+            <ConversationPanel
+              messages={messages}
+              draft={draft}
+              selectedLanguageName={selectedLanguage?.name}
+              audioSource={audioSource}
+              isSending={isSending}
+              isResetting={resetMutation.isPending}
+              disabled={disabled}
+              voiceDisabled={voiceDisabled}
+              recording={streamingVoice.supported ? streamingVoice.isListening : recorder.isRecording}
+              voiceInputAvailable={voiceInputAvailable}
+              textToSpeechAvailable={healthQuery.data?.text_to_speech ?? false}
+              recorderError={streamingVoice.supported ? streamingVoice.error : recorder.error}
+              transcriptDraft={streamingVoice.transcriptDraft}
+              onDraftChange={setDraft}
+              onTranscriptChange={streamingVoice.updateTranscript}
+              onSubmitTranscript={streamingVoice.submitTranscript}
+              onCancelTranscript={streamingVoice.cancelTranscript}
+              onSubmit={(event) => void handleTextSubmit(event)}
+              onSuggestion={setDraft}
+              onStartRecording={startRecording}
+              onStopRecording={stopRecording}
+              onReset={() => void handleReset()}
+            />
+
+            <div
+              className="min-h-6 px-1 text-sm"
+              role={feedback?.kind === "error" ? "alert" : "status"}
+              aria-live={feedback?.kind === "error" ? "assertive" : "polite"}
+            >
+              {feedback && (
+                <p className={cn("leading-5", feedback.kind === "error" ? "text-destructive" : "text-success")}>
+                  {feedback.text}
+                </p>
+              )}
+              {!feedback && catalogLoading && <p className="text-muted-foreground">{t("loadingCatalog")}</p>}
+            </div>
+          </motion.section>
+        </section>
+
+        <section id="results" className="mx-auto max-w-[1200px] space-y-8 px-4 pb-14 sm:px-6 lg:px-8">
+          <TurnInspector turn={lastTurn} />
+          <SourcesPanel turn={lastTurn} />
+          <MatchesPanel
+            turn={lastTurn}
+            savedBenefitIds={savedBenefitIds}
+            onToggleSaved={handleToggleSaved}
+            comparedBenefitIds={new Set(comparedBenefitIds)}
+            onToggleCompare={(benefitId, compared) => {
+              if (compared || comparedBenefitIds.length < 3) toggleCompare(benefitId);
+            }}
           />
-        ) : null}
-      </div>
+          <ComparisonPanel />
+          <section id="saved-work" className="scroll-mt-8">
+            <SavedBenefitsPanel
+              sessionId={sessionId}
+              accessToken={accessToken}
+              savedBenefits={savedBenefitsQuery.data ?? []}
+            />
+          </section>
+          {accessToken ? (
+            <ContactSettingsPanel
+              sessionId={sessionId}
+              accessToken={accessToken}
+              languageCode={languageCode}
+            />
+          ) : null}
+        </section>
+      </main>
 
-      <footer className="relative mx-auto flex max-w-[1440px] flex-wrap justify-between gap-3 border-t border-paper/10 py-6 text-[0.68rem] uppercase tracking-[0.12em] text-paper/35">
-        <span>{t("builtForConversation")}</span>
-        <span>{t("coreLanguages")}</span>
-      </footer>
-    </main>
+      <PublicFooter />
+    </div>
   );
 }

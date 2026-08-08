@@ -26,18 +26,18 @@ export function AdminCallbackPage() {
   }, [navigate, setTokens]);
 
   return (
-    <main className="grid min-h-svh place-items-center bg-ink px-5 text-paper">
-      <Card className="w-full max-w-lg border-acid/20 bg-paper/[0.04] text-paper">
+    <main className="grid min-h-svh place-items-center bg-background px-5 text-foreground">
+      <Card className="w-full max-w-lg border-border bg-card shadow-sm">
         <CardContent className="space-y-4 p-8">
-          <p className="font-mono text-[0.62rem] uppercase tracking-[0.22em] text-acid">Workforce access</p>
-          <h1 className="text-2xl font-extrabold">Completing secure sign-in…</h1>
+          <p className="text-sm font-semibold text-primary">Workforce access</p>
+          <h1 className="text-2xl font-bold">Completing secure sign-in…</h1>
           {error ? (
             <>
-              <p role="alert" className="rounded-xl border border-orange/30 bg-orange/10 px-4 py-3 text-sm text-orange">{error}</p>
-              <Link to="/admin" className="text-sm text-acid underline underline-offset-4">Return to admin sign-in</Link>
+              <p role="alert" className="rounded-lg border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive">{error}</p>
+              <Link to="/admin" className="text-sm text-primary underline underline-offset-4">Return to admin sign-in</Link>
             </>
           ) : (
-            <p role="status" className="text-sm text-paper/60">Verifying the identity-provider response.</p>
+            <p role="status" className="text-base text-muted-foreground">Verifying the identity-provider response.</p>
           )}
         </CardContent>
       </Card>

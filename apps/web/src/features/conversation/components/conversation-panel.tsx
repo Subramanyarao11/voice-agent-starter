@@ -43,21 +43,21 @@ function AudioReply({ source }: { source: string | null }) {
 
   return (
     <section
-      className="flex flex-wrap items-center gap-3 border-t border-paper/10 px-5 py-3 sm:px-8"
+      className="flex flex-wrap items-center gap-3 border-t border-border px-5 py-4 sm:px-8"
       aria-label={t("audioAnswer")}
     >
-      <span className="font-mono text-[0.6rem] uppercase tracking-[0.18em] text-paper/40">{t("latestAnswer")}</span>
+      <span className="text-sm font-semibold text-muted-foreground">{t("latestAnswer")}</span>
       <audio
         ref={audioRef}
         controls
         src={source}
-        className="h-8 min-w-56 flex-1 accent-acid"
+        className="h-10 min-w-56 flex-1 accent-primary"
         aria-label={t("playLatestAnswer")}
       >
         {t("browserCannotPlay")}
       </audio>
       {autoplayBlocked && (
-        <span className="text-[0.68rem] text-paper/40" role="status">
+          <span className="text-sm text-muted-foreground" role="status">
           {t("pressPlay")}
         </span>
       )}
@@ -91,18 +91,18 @@ export function ConversationPanel({
 }: ConversationPanelProps) {
   const { t } = useUi();
   return (
-    <div className="overflow-hidden rounded-3xl border border-paper/15 bg-ink-soft/90 shadow-2xl shadow-black/20 backdrop-blur-sm">
+    <div className="overflow-hidden rounded-lg border border-border bg-card shadow-sm">
       <div className="flex items-start justify-between gap-4 px-5 pb-3 pt-6 sm:px-8">
         <div>
-          <span className="font-mono text-[0.62rem] uppercase tracking-[0.2em] text-acid/80">{t("yourConversation")}</span>
-          <h2 id="conversation-title" className="mt-2 text-xl font-extrabold tracking-tight text-paper sm:text-2xl">
+          <span className="text-sm font-semibold text-primary">{t("yourConversation")}</span>
+          <h2 id="conversation-title" className="mt-2 text-xl font-bold tracking-tight text-foreground sm:text-2xl">
             {t("conversationTitle")}
           </h2>
         </div>
         <Button
           variant="ghost"
           size="sm"
-          className="-mr-2 mt-[-0.35rem] text-paper/45 hover:bg-paper/10 hover:text-paper"
+          className="-mr-2 mt-[-0.35rem] text-muted-foreground hover:bg-secondary hover:text-foreground"
           onClick={onReset}
           disabled={isResetting || isSending}
         >
