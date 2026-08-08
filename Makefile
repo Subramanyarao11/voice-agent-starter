@@ -1,6 +1,6 @@
 .DEFAULT_GOAL := help
 .PHONY: help setup up down infra api web lint fmt test check types seed validate-data migrate \
-pipeline extract prefilter structure spotcheck evaluate retention rate-limit-smoke \
+pipeline extract prefilter structure spotcheck jobs evaluate retention rate-limit-smoke \
 notifications notifications-dry-run logs-api ps clean
 
 help: ## Show every available target
@@ -22,7 +22,7 @@ infra: ## Start only Postgres and Redis, for running services on the host
 	docker compose up -d postgres redis
 
 api: ## Run the API on the host with reload
-	uv run uvicorn sahaayak_api.main:app --reload --port 8000
+	uv run python -m uvicorn sahaayak_api.main:app --reload --port 8000
 
 web: ## Run the browser-mic demo (http://localhost:5173)
 	npm run dev --workspace @sahaayak/web
@@ -36,11 +36,11 @@ fmt: ## Apply Ruff formatting and import ordering
 	uv run ruff format .
 
 test: ## Run the Python test suite
-	uv run pytest -q
+	uv run python -m pytest -q
 
 check: ## Everything CI runs: lint, tests, and the JS build
 	uv run ruff check .
-	uv run pytest -q
+	uv run python -m pytest -q
 	@if [ -d apps/web ]; then npm run build; fi
 
 types: ## Regenerate TypeScript API types from the running API's OpenAPI schema
@@ -68,7 +68,7 @@ notifications-dry-run: ## Show which reminders are due without sending anything
 	uv run python scripts/14_run_notification_worker.py --dry-run
 
 migrate: ## Apply all Alembic migrations to the configured database
-	uv run alembic upgrade head
+	uv run python -m alembic upgrade head
 
 pipeline: extract prefilter structure ## Run the full myScheme ingestion pipeline
 
@@ -83,6 +83,9 @@ structure: ## Step 3 — LLM pass into the structured eligibility schema
 
 spotcheck: ## Step 5 — review structured rows against their source text
 	uv run python scripts/05_spotcheck.py --n 20
+
+jobs: ## Import current UPSC postings into the inactive job review queue
+	uv run --group pipeline python scripts/ingest_upsc_jobs.py --dry-run
 
 logs-api: ## Tail API container logs
 	docker compose logs -f api

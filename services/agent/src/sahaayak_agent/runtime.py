@@ -279,15 +279,35 @@ def to_response(session: UserSession, state: AgentState) -> TurnResponse:
                 domain=m.domain,
                 verdict=m.verdict.value,
                 confidence=m.confidence,
-                reasons=[o.requirement for o in m.passed] or [o.requirement for o in m.failed],
+                reasons=_match_reasons(m),
                 verification_status=m.verification_status,
                 source_title=m.source_title,
                 source_document_url=m.source_document_url,
                 verified_at=m.verified_at,
                 last_verified_date=m.last_verified_date,
+                job_metadata=m.job_metadata,
             )
             for m in state.matches[:10]
         ],
         needs_escalation=state.needs_escalation,
         escalation_reason=state.escalation_reason,
     )
+
+
+def _match_reasons(match) -> list[str]:
+    """Expose pass/fail/unknown evidence to the result page.
+
+    Previously an insufficient-information result could have an empty reasons
+    list because neither a pass nor a fail existed yet. Naming unresolved
+    requirements is what lets the UI explain why it is uncertain without
+    exposing the caller's sensitive profile values.
+    """
+    reasons: list[str] = []
+    for outcome in match.outcomes:
+        if outcome.status.value == "pass":
+            reasons.append("Meets: " + outcome.requirement)
+        elif outcome.status.value == "fail":
+            reasons.append("Does not meet: " + outcome.requirement)
+        else:
+            reasons.append("Still need to confirm: " + outcome.requirement)
+    return reasons

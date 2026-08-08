@@ -51,6 +51,15 @@ def test_benefit_detail_exposes_provenance(client):
     assert client.get("/api/benefits/does-not-exist").status_code == 404
 
 
+def test_job_detail_exposes_posting_metadata(client):
+    response = client.get("/api/benefits/demo-ka-anganwadi-helper")
+    assert response.status_code == 200
+    body = response.json()
+    assert body["domain"] == "job"
+    assert body["job_metadata"]["employer"]
+    assert body["job_metadata"]["source_kind"] == "illustrative_demo"
+
+
 def test_a_text_turn_returns_a_question(client, guest_session):
     session = guest_session()
     response = client.post(

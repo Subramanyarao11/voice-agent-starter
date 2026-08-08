@@ -108,6 +108,10 @@ class EligibilityMatchResult(BaseModel):
     verified_at: datetime | None = None
     last_verified_date: date | None = None
 
+    # Present for job-domain results; empty for schemes and scholarships.
+    # Values are source metadata, never caller profile data.
+    job_metadata: dict[str, str | int | float | bool | None] = Field(default_factory=dict)
+
     @property
     def passed(self) -> list[CriterionOutcome]:
         return [o for o in self.outcomes if o.status is CriterionStatus.PASS]

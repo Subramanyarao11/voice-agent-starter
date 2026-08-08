@@ -134,6 +134,16 @@ class Benefit(SQLModel, table=True):
     # Pre-translated at ingestion so a call never waits on a translation.
     localized_summary: dict = Field(default_factory=dict, sa_column=json_dict())
 
+    # Job postings need a few fields that do not belong in generic eligibility
+    # criteria: vacancy reference, employer, deadline, pay/employment details,
+    # and the official application endpoint. Keeping these in one namespaced
+    # JSON object lets other domains evolve without a column per domain while
+    # preserving the same provenance/review lifecycle.
+    job_metadata: dict | None = Field(
+        default=None,
+        sa_column=Column(MutableDict.as_mutable(JSON), nullable=True),
+    )
+
     is_active: bool = True
 
 

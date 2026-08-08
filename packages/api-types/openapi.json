@@ -2385,6 +2385,12 @@
               }
             ],
             "title": "Valid Until"
+          },
+          "job_metadata": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Job Metadata",
+            "default": {}
           }
         },
         "type": "object",
@@ -2526,6 +2532,11 @@
               }
             ],
             "title": "Valid Until"
+          },
+          "job_metadata": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Job Metadata"
           }
         },
         "type": "object",
@@ -2544,7 +2555,8 @@
           "verified_at",
           "last_verified_date",
           "valid_from",
-          "valid_until"
+          "valid_until",
+          "job_metadata"
         ],
         "title": "BenefitReviewOut"
       },
@@ -3592,6 +3604,29 @@
               }
             ],
             "title": "Last Verified Date"
+          },
+          "job_metadata": {
+            "additionalProperties": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "boolean"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "type": "object",
+            "title": "Job Metadata"
           }
         },
         "type": "object",
@@ -4631,6 +4666,12 @@
             "type": "string",
             "format": "date-time",
             "title": "Saved At"
+          },
+          "job_metadata": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Job Metadata",
+            "default": {}
           }
         },
         "type": "object",

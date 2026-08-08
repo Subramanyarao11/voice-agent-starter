@@ -239,6 +239,7 @@ class BenefitReviewOut(BaseModel):
     last_verified_date: date | None
     valid_from: date | None
     valid_until: date | None
+    job_metadata: dict
 
 
 class ReviewQueueOut(BaseModel):
@@ -954,6 +955,7 @@ def _benefit_review_out(row: Benefit) -> BenefitReviewOut:
         last_verified_date=row.last_verified_date,
         valid_from=row.valid_from,
         valid_until=row.valid_until,
+        job_metadata=dict(row.job_metadata or {}),
     )
 
 

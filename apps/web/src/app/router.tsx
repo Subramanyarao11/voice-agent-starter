@@ -3,6 +3,7 @@ import { createRootRoute, createRoute, createRouter, Outlet } from "@tanstack/re
 import { HomePage } from "@/routes/home";
 import { AdminRoutePage } from "@/routes/admin";
 import { AdminCallbackPage } from "@/routes/admin-callback";
+import { BenefitDetailRoutePage } from "@/routes/benefit-detail";
 
 function RootLayout() {
   return <Outlet />;
@@ -27,6 +28,12 @@ const indexRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/",
   component: HomePage,
+});
+
+const benefitDetailRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/benefits/$benefitId",
+  component: BenefitDetailRoutePage,
 });
 
 const adminRoute = createRoute({
@@ -97,6 +104,7 @@ const adminSystemRoute = createRoute({
 
 const routeTree = rootRoute.addChildren([
   indexRoute,
+  benefitDetailRoute,
   adminRoute,
   adminCallbackRoute,
   adminOverviewRoute,

@@ -1,4 +1,5 @@
 import { Bookmark, BookmarkCheck, CheckCircle2, CircleAlert, CircleX } from "lucide-react";
+import { Link } from "@tanstack/react-router";
 
 import type { MatchSummary, TurnResponse } from "@/lib/api";
 import { formatConfidence } from "@/lib/utils";
@@ -110,6 +111,13 @@ function MatchCard({
             Open source
           </a>
         )}
+        <Link
+          to="/benefits/$benefitId"
+          params={{ benefitId: match.benefit_id }}
+          className="mt-4 inline-flex text-xs font-semibold text-blue underline-offset-4 hover:underline"
+        >
+          View details
+        </Link>
         <p className="mt-5 font-mono text-[0.65rem] uppercase tracking-[0.14em] text-paper/35">
           confidence · {formatConfidence(match.confidence)}
         </p>

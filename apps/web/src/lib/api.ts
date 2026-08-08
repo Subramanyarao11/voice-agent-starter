@@ -80,6 +80,7 @@ const matchSchema = z.object({
   source_document_url: z.string().default(""),
   verified_at: z.string().nullable().optional(),
   last_verified_date: z.string().nullable().optional(),
+  job_metadata: z.record(z.string(), z.unknown()).default(() => ({})),
 });
 
 export const benefitDetailSchema = z.object({
@@ -108,6 +109,7 @@ export const benefitDetailSchema = z.object({
   last_verified_date: z.string().nullable(),
   valid_from: z.string().nullable(),
   valid_until: z.string().nullable(),
+  job_metadata: z.record(z.string(), z.unknown()).default(() => ({})),
 });
 
 export const savedBenefitSchema = z.object({
@@ -121,6 +123,7 @@ export const savedBenefitSchema = z.object({
   source_document_url: z.string(),
   verification_status: z.string(),
   saved_at: z.string(),
+  job_metadata: z.record(z.string(), z.unknown()).default(() => ({})),
 });
 
 export const reminderSchema = z.object({

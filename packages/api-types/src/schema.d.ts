@@ -970,6 +970,13 @@ export interface components {
             valid_from: string | null;
             /** Valid Until */
             valid_until: string | null;
+            /**
+             * Job Metadata
+             * @default {}
+             */
+            job_metadata: {
+                [key: string]: unknown;
+            };
         };
         /** BenefitReviewOut */
         BenefitReviewOut: {
@@ -1005,6 +1012,10 @@ export interface components {
             valid_from: string | null;
             /** Valid Until */
             valid_until: string | null;
+            /** Job Metadata */
+            job_metadata: {
+                [key: string]: unknown;
+            };
         };
         /** BenefitReviewRequest */
         BenefitReviewRequest: {
@@ -1456,6 +1467,10 @@ export interface components {
             verified_at?: string | null;
             /** Last Verified Date */
             last_verified_date?: string | null;
+            /** Job Metadata */
+            job_metadata?: {
+                [key: string]: string | number | boolean | null;
+            };
         };
         /** NotificationOverviewOut */
         NotificationOverviewOut: {
@@ -1851,6 +1866,13 @@ export interface components {
              * Format: date-time
              */
             saved_at: string;
+            /**
+             * Job Metadata
+             * @default {}
+             */
+            job_metadata: {
+                [key: string]: unknown;
+            };
         };
         /** SessionOut */
         SessionOut: {

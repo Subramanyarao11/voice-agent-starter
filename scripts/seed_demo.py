@@ -172,6 +172,13 @@ DEMO_BENEFITS: list[dict] = [
         "application_process": "Apply through the district Women and Child Development office "
         "when a notification is published.",
         "source_url": "https://www.myscheme.gov.in/",
+        "job_metadata": {
+            "employer": "Karnataka Women and Child Development Department",
+            "employment_type": "Government honorarium post",
+            "application_deadline": None,
+            "vacancy_count": None,
+            "source_kind": "illustrative_demo",
+        },
         "localized_summary": {
             "en": "Anganwadi helper posts for women in Karnataka who have passed Class 10.",
             "hi": "कर्नाटक में दसवीं पास महिलाओं के लिए आंगनवाड़ी सहायिका के पद।",

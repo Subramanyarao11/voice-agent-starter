@@ -69,6 +69,7 @@ class BenefitDetailOut(BaseModel):
     last_verified_date: date | None
     valid_from: date | None
     valid_until: date | None
+    job_metadata: dict[str, Any] = {}
 
 
 @router.get("/languages", response_model=list[LanguageOut])
@@ -167,4 +168,5 @@ def benefit_detail(benefit_id: str, db: Session = Depends(get_session)) -> Benef
         ),
         valid_from=benefit.valid_from,
         valid_until=benefit.valid_until,
+        job_metadata=dict(benefit.job_metadata or {}),
     )

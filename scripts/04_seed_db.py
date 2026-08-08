@@ -91,6 +91,7 @@ def build_benefit(row: dict) -> Benefit:
         valid_until=parse_date(row["valid_until"]) if row.get("valid_until") else None,
         is_active=bool(row.get("is_active", status is VerificationStatus.HUMAN_VERIFIED)),
         localized_summary=dict(row.get("localized_summary") or {}),
+        job_metadata=dict(row.get("job_metadata") or {}) or None,
     )
 
 

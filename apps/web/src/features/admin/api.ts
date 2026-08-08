@@ -121,6 +121,7 @@ const reviewSchema = z.object({
   last_verified_date: z.string().nullable(),
   valid_from: z.string().nullable(),
   valid_until: z.string().nullable(),
+  job_metadata: z.record(z.string(), z.unknown()).default(() => ({})),
 });
 
 const reviewQueueSchema = z.object({

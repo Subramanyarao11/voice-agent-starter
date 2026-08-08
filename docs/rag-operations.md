@@ -100,7 +100,7 @@ verdict, and unreviewed machine-structured rows remain inactive.
 ## Verification checklist
 
 ```bash
-uv run pytest -q
+uv run python -m pytest -q
 uv run ruff check .
 uv lock --check
 git diff --check

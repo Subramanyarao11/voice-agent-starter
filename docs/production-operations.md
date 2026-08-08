@@ -107,7 +107,7 @@ The API limiter uses one atomic Redis Lua script, so independent workers share
 the same sliding window. Run the smoke test against the Compose Redis service:
 
 ```bash
-REDIS_URL=redis://localhost:6379/0 uv run python scripts/13_rate_limit_smoke.py
+REDIS_URL=redis://localhost:6380/0 uv run python scripts/13_rate_limit_smoke.py
 ```
 
 Before launch, repeat this at the HTTP layer with the actual reverse proxy and

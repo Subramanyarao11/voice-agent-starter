@@ -146,7 +146,22 @@ make structure     # turn source text into EligibilityCriteria JSON
 make spotcheck     # review structured rows against source text
 make seed          # load reviewed rows
 uv run python scripts/06_localize.py --languages kn hi
+
 ```
+
+Government jobs use the same deterministic matcher but have a separate
+official-source importer and review gate:
+
+~~~bash
+make jobs
+uv run --group pipeline python scripts/ingest_upsc_jobs.py
+uv run python scripts/04_seed_db.py --file data/structured/jobs.jsonl
+~~~
+
+The first adapter reads current UPSC recruitment PDFs only. Imported jobs stay
+inactive until an authorised reviewer confirms the notification, deadline,
+qualifications, documents, and application URL. See
+[docs/jobs-operations.md](docs/jobs-operations.md).
 
 Pipeline outputs under `data/` are regenerable and ignored by Git. Do not
 commit `.env`, SQLite databases, downloaded PDFs, or unreviewed structured

@@ -1,9 +1,9 @@
 # Sahaayak — Team Handoff and Conversation Context
 
-**Last updated:** 2026-08-03  
+**Last updated:** 2026-08-08
 **Repository:** voice-agent-starter  
 **Current branch:** main  
-**Current commit:** b7a89a7 — feat: productionize platform and add optional product foundations  
+**Current commit:** 6ae4865 plus uncommitted working-tree changes
 **GitHub remote:** private repository at Subramanyarao11/voice-agent-starter
 
 This document consolidates the product decisions, architecture, implementation
@@ -66,7 +66,9 @@ behavior have been checked.
 ### Scope boundaries
 
 - Schemes and scholarships are the first serious domains.
-- Jobs are a later, lightweight domain with explicit deadlines or rolling status.
+- Jobs are a lightweight domain with explicit deadlines or rolling status. The
+  first official UPSC importer is now present, but imported rows remain inactive
+  until review and publication.
 - Citizen discovery is guest-accessible; a citizen login is not required for the
   initial beta.
 - Admin/operator access is authenticated and role-controlled.
@@ -287,6 +289,10 @@ native-language review, or production evidence are complete.
   reverse proxy and multiple workers is still required.
 - Backup/restore, alert delivery, retention policy, and multi-instance evidence
   need a staging deployment rather than only Compose files.
+- The first official UPSC job adapter, job metadata contract, deadline-aware
+  matcher behavior, and benefit/job detail route are implemented. The importer
+  currently yields machine-structured inactive rows; NCS and state-recruitment
+  adapters remain future work.
 
 ### Not complete yet
 
@@ -298,7 +304,9 @@ native-language review, or production evidence are complete.
 - Production Langfuse and OpenTelemetry endpoint/secret configuration.
 - Jambonz-specific adapter, authorized Indian SIP trunk, Indian number, and
   inbound telephony test.
-- External SMS, WhatsApp, and email provider adapters.
+- Live SMS, WhatsApp, and email activation, provider approvals, consent policy,
+  webhooks, and delivery evidence. Provider adapter code exists but remains
+  disabled until configured and tested.
 - Full reviewed translations and voice validation for the eight additional
   languages.
 - Complete deployment-specific backup destination, incident alert receiver,
@@ -601,7 +609,7 @@ docker compose -f docker-compose.yml -f docker-compose.auth.yml up -d --build
 ### Verification commands
 
 ~~~bash
-uv run pytest -q
+uv run python -m pytest -q
 uv run ruff check .
 uv lock --check
 git diff --check
@@ -638,7 +646,8 @@ npm run build --workspace @sahaayak/web
 
 1. Human-review and publish 20–50 benefits with source URLs, dates, criteria,
    application steps, and human_verified status.
-2. Complete actionable result/source pages and accessibility QA.
+2. Complete accessibility QA for the new actionable result/source pages and add
+   incorrect-information reporting and comparison.
 3. Run one tightly budgeted real Kannada voice test, then a short Hindi test.
 4. Verify guest-token ownership and Redis rate limits through the HTTP/reverse-proxy
    path with multiple workers.
@@ -655,7 +664,8 @@ npm run build --workspace @sahaayak/web
 4. Add profile correction and returning-user continuity only with explicit consent.
 5. Add privacy-aware product analytics and feedback.
 6. Harden CI/CD, migrations, backups, and release gates.
-7. Add jobs only with accurate deadlines or rolling-status semantics.
+7. Review and publish the imported UPSC queue, then add NCS/state adapters only
+   with authoritative source contracts and freshness rules.
 
 ### P2 — Optional enhancements after the core is stable
 

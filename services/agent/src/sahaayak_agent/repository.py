@@ -8,6 +8,8 @@ to the caller.
 
 from __future__ import annotations
 
+from datetime import date
+
 from pydantic import BaseModel, Field, ValidationError
 from sqlmodel import Session, or_, select
 
@@ -33,7 +35,14 @@ def load_candidates(
     Central schemes have a NULL state and apply everywhere, so they are always
     included alongside the state's own.
     """
-    statement = select(Benefit).where(Benefit.domain == domain, Benefit.is_active.is_(True))
+    statement = select(Benefit).where(
+        Benefit.domain == domain,
+        Benefit.is_active.is_(True),
+        # A posting whose application window has closed must not remain a
+        # match merely because an operator forgot to flip is_active. Schemes
+        # without an expiry keep the NULL branch.
+        or_(Benefit.valid_until.is_(None), Benefit.valid_until >= date.today()),
+    )
     if state_code:
         statement = statement.where(
             or_(Benefit.state_code == state_code, Benefit.state_code.is_(None))

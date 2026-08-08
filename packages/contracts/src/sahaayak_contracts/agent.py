@@ -96,6 +96,7 @@ class MatchSummary(BaseModel):
     source_document_url: str = ""
     verified_at: datetime | None = None
     last_verified_date: date | None = None
+    job_metadata: dict[str, str | int | float | bool | None] = Field(default_factory=dict)
 
 
 class TurnResponse(BaseModel):

@@ -43,6 +43,7 @@ async def match(state: AgentState, deps: GraphDeps) -> dict:
                     if benefit.verification_status is VerificationStatus.HUMAN_VERIFIED
                     else None
                 ),
+                job_metadata=benefit.job_metadata,
             )
             for benefit in candidates
         ]

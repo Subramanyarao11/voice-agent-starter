@@ -93,11 +93,11 @@ product target is now broader and more explicit:
 | Agent | Language-agnostic LangGraph flow, rule-first understanding, optional LLM understanding, deterministic matching, adaptive follow-up questions, and escalation | `services/agent` |
 | Language | English, Hindi, and Kannada prompt catalogs are active; Marathi, Tamil, and Telugu reference rows are inactive | prompt modules + local DB |
 | State | Karnataka and Delhi are active; Maharashtra, Tamil Nadu, and Telangana are inactive | local DB |
-| Data | Eight hand-entered illustrative benefits: 2 schemes, 5 scholarships, and 1 job | local SQLite DB |
-| Voice code | OpenAI transcription, Sarvam synthesis, WAV chunk merge, and Redis/in-memory TTS caching exist | `services/agent/.../voice` |
+| Data | Eight hand-entered illustrative benefits remain active; an official UPSC importer now produces inactive, review-gated job rows | local DB + `scripts/ingest_upsc_jobs.py` |
+| Voice code | OpenAI Whisper transcription, Sarvam Bulbul synthesis, WAV chunk merge, and Redis/in-memory TTS caching exist | `services/agent/.../voice` |
 | Persistence | SQLite fallback and Postgres-compatible SQLModel tables for benefits, sessions, transcripts, and escalation tickets | `packages/common` |
 | Types | OpenAPI and generated TypeScript declarations are committed and consumed by the web app | `packages/api-types` |
-| Verification | Ruff passes, 130 Python tests pass, TypeScript typechecks, and the primary browser text flow has been smoke-tested | `make check` + browser smoke |
+| Verification | Ruff passes, 443 Python tests pass, the web production build passes, the migration round-trip passes, and the UPSC importer has parser tests | `uv run python -m pytest -q` + web build |
 
 ### 2.2 What is still demonstration-only or unverified
 
@@ -108,8 +108,10 @@ product target is now broader and more explicit:
 - Langfuse/OpenTelemetry export is wired conditionally with an explicit
   redaction layer; a real external collector/Langfuse trace still needs a
   deployment smoke and screenshot/evidence artifact.
-- The web match cards do not expose application steps, documents, caveats, source
-  links, or verification freshness.
+- A dedicated `/benefits/$benefitId` detail route now exposes application steps,
+  documents, caveats, source links, verification status, freshness, job metadata,
+  and the latest match explanation. Report-incorrect-information and comparison
+  flows are still pending.
 - Browser history is not rehydrated from the durable transcript after reload.
 - Browser session, turn, RAG, transcript, and reset ownership now use a
   server-issued bearer token; telephony identity and operator escalation
@@ -276,7 +278,8 @@ not silently replace a human-verified row with a new machine-only extraction.
 
 - Extend `GET /api/coverage` with `verified_total`, `illustrative_total`, and
   `last_data_update`.
-- Add `GET /api/benefits/{benefit_id}` for complete benefit details.
+- `GET /api/benefits/{benefit_id}` now returns complete benefit/job details and
+  provenance; extend it only when new detail fields are introduced.
 - Return verification status and last verified date with every match.
 - Add an internal validation command that exits non-zero when active rows have
   no source, invalid criteria, an expired date, or an unsupported state/domain.
@@ -286,7 +289,9 @@ not silently replace a human-verified row with a new machine-only extraction.
 - Display a clear `Verified`, `Needs review`, or `Illustrative demo` badge.
 - Show “Data last updated …” near coverage.
 - Hide or visually separate illustrative rows in production mode.
-- Show the source name and external source link on result details.
+- Show the source name, external source link, verification status, and freshness
+  on the dedicated result detail route. Add incorrect-information reporting and
+  comparison actions in the next slice.
 - Add a short disclaimer explaining that Sahaayak provides guidance, not an
   official eligibility decision.
 
@@ -362,7 +367,8 @@ application process, source, and dates.
 
 ### Tests and acceptance
 
-- [ ] The top result exposes source, verification date, documents, and steps.
+- [x] The dedicated result detail route exposes source, verification date,
+      documents, and steps.
 - [ ] Passed, failed, and unresolved outcomes render correctly.
 - [ ] Caveats are never omitted from the detail view.
 - [ ] Source links open safely with `rel="noopener noreferrer"`.
@@ -1217,17 +1223,22 @@ smaller than schemes/scholarships.
 
 ### Implementation
 
-- Curate 10–30 public job openings from authoritative sources.
-- Add `published_at`, `application_deadline`, `employer`, `vacancy_count`, and
-  `employment_type` to a job-specific detail payload or metadata field.
-- Enforce automatic expiry and source verification.
+- Import current UPSC recruitment advertisements from the official index into a
+  machine-structured, inactive review queue. A second NCS adapter needs an API
+  key and confirmed terms/fields.
+- Store `published_at`, `application_deadline`, `employer`, `vacancy_count`, and
+  `employment_type` in job metadata and render a job-specific detail view.
+- Enforce automatic expiry and source verification; publication still requires
+  an authorised human reviewer.
 - Tune minimum/follow-up slots for location, education, age, and experience.
 - Add a jobs-specific result layout and deadline warning.
 
 ### Acceptance
 
-- [ ] Every active job has a future deadline or explicit rolling status.
-- [ ] Expired jobs never match.
+- [x] Expired jobs are excluded by the deterministic matcher.
+- [ ] Every published job has a future deadline or explicit rolling status.
+- [ ] At least 10–30 jobs are human-reviewed and published from authoritative
+      sources.
 - [ ] One job conversation reaches an explainable match and one honest no-match.
 
 ---

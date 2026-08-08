@@ -25,6 +25,7 @@ dist/
 # The pipeline is the deliverable, not its output.
 data/raw_pdfs/
 data/raw_pdfs_hf_cache/
+data/jobs/
 data/structured/
 data/usage/
 data/rag/

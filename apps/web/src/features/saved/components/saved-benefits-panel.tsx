@@ -1,5 +1,6 @@
 import { useState } from "react";
 
+import { Link } from "@tanstack/react-router";
 import { Bell, BookmarkCheck, ExternalLink, X } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
@@ -65,7 +66,15 @@ export function SavedBenefitsPanel({
                   <Badge variant="outline" className="border-acid/25 text-acid">
                     {benefit.domain}
                   </Badge>
-                  <h3 className="mt-3 text-lg font-bold leading-snug">{benefit.name}</h3>
+                  <h3 className="mt-3 text-lg font-bold leading-snug">
+                    <Link
+                      to="/benefits/$benefitId"
+                      params={{ benefitId: benefit.benefit_id }}
+                      className="underline-offset-4 hover:underline"
+                    >
+                      {benefit.name}
+                    </Link>
+                  </h3>
                 </div>
                 <Button
                   type="button"

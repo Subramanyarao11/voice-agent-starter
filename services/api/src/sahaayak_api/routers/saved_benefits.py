@@ -41,6 +41,7 @@ class SavedBenefitOut(BaseModel):
     source_document_url: str
     verification_status: str
     saved_at: datetime
+    job_metadata: dict = {}
 
 
 class SaveBenefitRequest(BaseModel):
@@ -262,6 +263,7 @@ def _saved_out(
         source_document_url=benefit.source_document_url or benefit.source_url,
         verification_status=benefit.verification_status.value,
         saved_at=row.created_at,
+        job_metadata=dict(benefit.job_metadata or {}),
     )
 
 

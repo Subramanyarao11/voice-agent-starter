@@ -292,6 +292,7 @@ def evaluate(
     source_document_url: str = "",
     verified_at: datetime | None = None,
     last_verified_date: date | None = None,
+    job_metadata: dict | None = None,
 ) -> EligibilityMatchResult:
     """Check one benefit's criteria against one caller's collected slots."""
     checks = [
@@ -340,6 +341,7 @@ def evaluate(
         source_document_url=source_document_url,
         verified_at=verified_at,
         last_verified_date=last_verified_date,
+        job_metadata=dict(job_metadata or {}),
     )
 
 
