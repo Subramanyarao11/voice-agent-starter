@@ -29,6 +29,15 @@ def test_application_case_materializes_checklist_and_records_safe_status(client,
     assert len(body["tasks"]) >= 2
     assert [event["status"] for event in body["status_events"]] == ["draft"]
 
+    pack = client.post(
+        f"/api/sessions/{session['session_id']}/applications/{body['id']}/packs/preview",
+        headers=session["headers"],
+    )
+    assert pack.status_code == 200
+    assert pack.headers["cache-control"] == "no-store, private"
+    assert "Central Sector Scheme" in pack.json()["html"]
+    assert pack.json()["content_sha256"]
+
     # Completing tasks works even when the citizen started from a benefit
     # detail page rather than saving the benefit first.
     for task in body["tasks"]:
@@ -56,6 +65,23 @@ def test_application_case_materializes_checklist_and_records_safe_status(client,
     assert updated["readiness_state"] == "ready"
     assert updated["external_reference_masked"] == "••••1234"
     assert updated["status_events"][-1]["external_reference_masked"] == "••••1234"
+
+    action_required = client.post(
+        f"/api/sessions/{session['session_id']}/applications/{body['id']}/status-events",
+        json={"status": "action_required", "reason_code": "missing_document"},
+        headers=session["headers"],
+    )
+    assert action_required.status_code == 200
+    reminders = client.get(
+        f"/api/sessions/{session['session_id']}/reminders",
+        headers=session["headers"],
+    )
+    assert reminders.status_code == 200
+    assert any(
+        reminder["application_case_id"] == body["id"]
+        and reminder["channel"] == "in_app"
+        for reminder in reminders.json()
+    )
 
     with session_scope() as db:
         case = db.get(ApplicationCase, body["id"])

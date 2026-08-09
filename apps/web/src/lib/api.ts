@@ -153,6 +153,7 @@ export const savedBenefitSchema = z.object({
 export const reminderSchema = z.object({
   id: z.string(),
   benefit_id: z.string(),
+  application_case_id: z.string().nullable().optional(),
   benefit_name: z.string(),
   due_at: z.string(),
   note: z.string(),
@@ -222,6 +223,13 @@ export const applicationCaseSchema = z.object({
   status_events: z.array(applicationStatusEventSchema),
 });
 
+export const applicationPackPreviewSchema = z.object({
+  html: z.string(),
+  generated_at: z.string(),
+  expires_at: z.string(),
+  content_sha256: z.string(),
+});
+
 export const contactPointSchema = z.object({
   id: z.string(),
   channel: z.string(),
@@ -285,6 +293,7 @@ export type Reminder = z.infer<typeof reminderSchema>;
 export type ApplicationTask = z.infer<typeof applicationTaskSchema>;
 export type ApplicationStatusEvent = z.infer<typeof applicationStatusEventSchema>;
 export type ApplicationCase = z.infer<typeof applicationCaseSchema>;
+export type ApplicationPackPreview = z.infer<typeof applicationPackPreviewSchema>;
 export type ContactPoint = z.infer<typeof contactPointSchema>;
 export type ChannelStatus = z.infer<typeof channelStatusSchema>;
 
@@ -569,6 +578,25 @@ export function recordApplicationStatus(
     {
       method: "POST",
       body: JSON.stringify(payload),
+      headers: { Authorization: "Bearer " + accessToken },
+    },
+  );
+}
+
+export function previewApplicationPack(
+  sessionId: string,
+  applicationId: string,
+  accessToken: string,
+): Promise<ApplicationPackPreview> {
+  return request(
+    "/api/sessions/" +
+      encodeURIComponent(sessionId) +
+      "/applications/" +
+      encodeURIComponent(applicationId) +
+      "/packs/preview",
+    applicationPackPreviewSchema,
+    {
+      method: "POST",
       headers: { Authorization: "Bearer " + accessToken },
     },
   );

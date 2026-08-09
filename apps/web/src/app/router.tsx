@@ -16,6 +16,10 @@ const ApplicationDetailRoutePage = lazyRouteComponent(
   () => import("@/routes/applications"),
   "ApplicationDetailRoutePage",
 );
+const ApplicationPackRoutePage = lazyRouteComponent(
+  () => import("@/routes/applications"),
+  "ApplicationPackRoutePage",
+);
 
 function RootLayout() {
   return <Outlet />;
@@ -58,6 +62,12 @@ const applicationDetailRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/applications/$applicationId",
   component: ApplicationDetailRoutePage,
+});
+
+const applicationPackRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/applications/$applicationId/pack",
+  component: ApplicationPackRoutePage,
 });
 
 const adminRoute = createRoute({
@@ -155,6 +165,7 @@ const routeTree = rootRoute.addChildren([
   benefitDetailRoute,
   applicationsRoute,
   applicationDetailRoute,
+  applicationPackRoute,
   adminRoute,
   adminCallbackRoute,
   adminOverviewRoute,

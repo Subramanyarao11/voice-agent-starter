@@ -907,6 +907,57 @@
         }
       }
     },
+    "/api/sessions/{session_id}/applications/{application_id}/packs/preview": {
+      "post": {
+        "tags": [
+          "applications"
+        ],
+        "summary": "Preview Application Pack",
+        "operationId": "preview_application_pack_api_sessions__session_id__applications__application_id__packs_preview_post",
+        "parameters": [
+          {
+            "name": "session_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Session Id"
+            }
+          },
+          {
+            "name": "application_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Application Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApplicationPackPreviewOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/sessions/{session_id}/applications/{application_id}/status-events": {
       "post": {
         "tags": [
@@ -4201,6 +4252,36 @@
           "status_events"
         ],
         "title": "ApplicationCaseOut"
+      },
+      "ApplicationPackPreviewOut": {
+        "properties": {
+          "html": {
+            "type": "string",
+            "title": "Html"
+          },
+          "generated_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Generated At"
+          },
+          "expires_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Expires At"
+          },
+          "content_sha256": {
+            "type": "string",
+            "title": "Content Sha256"
+          }
+        },
+        "type": "object",
+        "required": [
+          "html",
+          "generated_at",
+          "expires_at",
+          "content_sha256"
+        ],
+        "title": "ApplicationPackPreviewOut"
       },
       "ApplicationStatusEventCreate": {
         "properties": {
@@ -8858,6 +8939,17 @@
           "benefit_id": {
             "type": "string",
             "title": "Benefit Id"
+          },
+          "application_case_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Application Case Id"
           },
           "benefit_name": {
             "type": "string",

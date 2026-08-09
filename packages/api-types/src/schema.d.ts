@@ -353,6 +353,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/sessions/{session_id}/applications/{application_id}/packs/preview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Preview Application Pack */
+        post: operations["preview_application_pack_api_sessions__session_id__applications__application_id__packs_preview_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/sessions/{session_id}/applications/{application_id}/status-events": {
         parameters: {
             query?: never;
@@ -1532,6 +1549,23 @@ export interface components {
             tasks: components["schemas"]["ApplicationTaskOut"][];
             /** Status Events */
             status_events: components["schemas"]["ApplicationStatusEventOut"][];
+        };
+        /** ApplicationPackPreviewOut */
+        ApplicationPackPreviewOut: {
+            /** Html */
+            html: string;
+            /**
+             * Generated At
+             * Format: date-time
+             */
+            generated_at: string;
+            /**
+             * Expires At
+             * Format: date-time
+             */
+            expires_at: string;
+            /** Content Sha256 */
+            content_sha256: string;
         };
         /** ApplicationStatusEventCreate */
         ApplicationStatusEventCreate: {
@@ -3408,6 +3442,8 @@ export interface components {
             id: string;
             /** Benefit Id */
             benefit_id: string;
+            /** Application Case Id */
+            application_case_id?: string | null;
             /** Benefit Name */
             benefit_name: string;
             /**
@@ -4581,6 +4617,38 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ApplicationCaseOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    preview_application_pack_api_sessions__session_id__applications__application_id__packs_preview_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                session_id: string;
+                application_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApplicationPackPreviewOut"];
                 };
             };
             /** @description Validation Error */

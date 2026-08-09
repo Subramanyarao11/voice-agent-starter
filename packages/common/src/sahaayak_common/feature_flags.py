@@ -69,6 +69,11 @@ DEFAULT_FEATURE_FLAGS: dict[str, dict[str, Any]] = {
         "enabled": True,
         "rollout_percentage": 100,
     },
+    "application_pack": {
+        "description": "On-demand, source-backed application preparation pack preview.",
+        "enabled": True,
+        "rollout_percentage": 100,
+    },
     "application_status_sync": {
         "description": (
             "Authorized provider adapters that verify application status from official systems."

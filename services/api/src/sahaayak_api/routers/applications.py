@@ -2,8 +2,11 @@
 
 from __future__ import annotations
 
-from datetime import UTC, date, datetime, timedelta
+import hashlib
+import html
+from datetime import UTC, date, datetime, time, timedelta
 from typing import Literal
+from urllib.parse import urlparse
 
 from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
 from pydantic import BaseModel, Field
@@ -23,6 +26,7 @@ from sahaayak_common import (
     ApplicationStatusEvent,
     ApplicationTask,
     Benefit,
+    Reminder,
     benefit_snapshot,
     encrypt_reference,
     feature_flag_enabled,
@@ -131,6 +135,13 @@ class ApplicationCaseOut(BaseModel):
     status_events: list[ApplicationStatusEventOut]
 
 
+class ApplicationPackPreviewOut(BaseModel):
+    html: str
+    generated_at: datetime
+    expires_at: datetime
+    content_sha256: str
+
+
 @router.get("/{session_id}/applications", response_model=list[ApplicationCaseOut])
 def list_applications(
     session_id: str,
@@ -211,6 +222,7 @@ async def create_application(
         benefit,
         application_case_id=case.id,
     )
+    _schedule_deadline_reminder(db, case, snapshot, now=now)
     db.add(
         ApplicationStatusEvent(
             id=new_id("application-event"),
@@ -241,6 +253,50 @@ def get_application(
     _require_application_copilot(principal)
     case = _case_for_session(db, principal.session_id, application_id)
     return _case_out(db, case)
+
+
+@router.post(
+    "/{session_id}/applications/{application_id}/packs/preview",
+    response_model=ApplicationPackPreviewOut,
+)
+async def preview_application_pack(
+    session_id: str,
+    application_id: str,
+    request: Request,
+    http_response: Response,
+    db: Session = Depends(get_session),
+    principal: BrowserSessionPrincipal = Depends(require_browser_session),
+) -> ApplicationPackPreviewOut:
+    _require_own_session(session_id, principal)
+    _require_application_copilot(principal)
+    if not feature_flag_enabled(
+        "application_pack",
+        subject=principal.session_id,
+        language_code=principal.language_code,
+        state_code=principal.state_code,
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Application packs are not available in this rollout.",
+        )
+    decision = await enforce_rate_limit(
+        request, session_id=principal.session_id, bucket="application_pack"
+    )
+    apply_rate_limit_headers(http_response, decision)
+    case = _case_for_session(db, principal.session_id, application_id)
+    generated_at = datetime.now(UTC)
+    expires_at = generated_at + timedelta(minutes=15)
+    pack_html = _render_pack_html(db, case, generated_at=generated_at, expires_at=expires_at)
+    http_response.headers["Cache-Control"] = "no-store, private"
+    http_response.headers["Content-Security-Policy"] = (
+        "default-src 'none'; style-src 'unsafe-inline'; base-uri 'none'; frame-ancestors 'none'"
+    )
+    return ApplicationPackPreviewOut(
+        html=pack_html,
+        generated_at=generated_at,
+        expires_at=expires_at,
+        content_sha256=hashlib.sha256(pack_html.encode("utf-8")).hexdigest(),
+    )
 
 
 @router.post(
@@ -322,6 +378,15 @@ async def record_application_status(
         case.closed_at = now
     elif case.closed_at is not None:
         case.closed_at = None
+    if payload.status == "action_required":
+        _ensure_in_app_reminder(
+            db,
+            case,
+            due_at=now + timedelta(days=1),
+            note="Review the action requested by the department.",
+        )
+    else:
+        _cancel_action_reminders(db, case)
     db.add(case)
     db.add(
         ApplicationStatusEvent(
@@ -453,6 +518,178 @@ def _readiness(tasks: list[ApplicationTask]) -> tuple[str, list[str]]:
     if skipped:
         return "ready_with_warnings", [f"Confirm skipped item: {title}" for title in skipped[:8]]
     return "ready", []
+
+
+def _render_pack_html(
+    db: Session,
+    case: ApplicationCase,
+    *,
+    generated_at: datetime,
+    expires_at: datetime,
+) -> str:
+    """Render a bounded, escaped HTML pack without persisting an artifact."""
+    snapshot = dict(case.benefit_snapshot or {})
+    tasks = db.exec(
+        select(ApplicationTask)
+        .where(
+            ApplicationTask.session_id == case.session_id,
+            ApplicationTask.benefit_id == case.benefit_id,
+            or_(
+                ApplicationTask.application_case_id == case.id,
+                ApplicationTask.application_case_id.is_(None),
+            ),
+        )
+        .order_by(ApplicationTask.position, ApplicationTask.created_at)
+    ).all()
+    source_url = str(snapshot.get("source_document_url") or snapshot.get("source_url") or "")
+    safe_source_url = _safe_http_url(source_url)
+    source_link = (
+        f'<a href="{html.escape(safe_source_url, quote=True)}">Open official source</a>'
+        if safe_source_url
+        else html.escape(source_url)
+    )
+    document_items = "".join(
+        f"<li>{html.escape(task.title)} — {html.escape(task.status)}</li>"
+        for task in tasks
+        if task.kind == "document"
+    ) or "<li>Confirm the document list in the official notification.</li>"
+    step_items = "".join(
+        f"<li>{html.escape(task.title)}: {html.escape(task.description)}</li>"
+        for task in tasks
+        if task.kind == "application_step"
+    ) or "<li>Follow the official source for application instructions.</li>"
+    warning_items = "".join(
+        f"<li>{html.escape(blocker)}</li>"
+        for blocker in _readiness(tasks)[1]
+    ) or "<li>Confirm the latest official instructions before submitting.</li>"
+    deadline = str(snapshot.get("valid_until") or "Not stated")
+    description = str(snapshot.get("description") or "")
+    benefits_text = str(snapshot.get("benefits_text") or "")
+    generated_text = generated_at.astimezone(UTC).isoformat()
+    expiry_text = expires_at.astimezone(UTC).isoformat()
+    return f"""<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Sahaayak application preparation pack</title>
+  <style>
+    :root {{ color-scheme: light; font-family: system-ui, sans-serif; line-height: 1.5; }}
+    body {{ color: #17202a; margin: 2rem auto; max-width: 52rem; padding: 0 1rem; }}
+    h1, h2 {{ line-height: 1.2; }}
+    section {{ border-top: 1px solid #c7ced6; margin-top: 1.5rem; padding-top: 1rem; }}
+    .notice {{ background: #fff4d6; border-left: 0.25rem solid #a86500; padding: 0.75rem 1rem; }}
+    .meta {{ color: #44515e; font-size: 0.9rem; }}
+    a {{ color: #005ea8; }}
+    @media print {{ body {{ margin: 0; }} .no-print {{ display: none; }} }}
+  </style>
+</head>
+<body>
+  <p class="meta">Sahaayak preparation pack · This is not a government form or
+    proof of submission.</p>
+  <h1>{html.escape(str(snapshot.get("name") or case.benefit_id))}</h1>
+  <p>{html.escape(description)}</p>
+  <section><h2>Source and application channel</h2>
+    <p>Channel: {html.escape(case.application_channel)}</p>
+    <p>Source: {source_link}</p>
+    <p>Benefit revision: {case.benefit_revision} · Last stated deadline: {html.escape(deadline)}</p>
+  </section>
+  <section><h2>What this provides</h2><p>{html.escape(benefits_text)}</p></section>
+  <section><h2>Documents to prepare</h2><ul>{document_items}</ul></section>
+  <section><h2>Application steps</h2><ol>{step_items}</ol></section>
+  <section class="notice"><h2>Before you submit</h2><ul>{warning_items}</ul></section>
+  <section><h2>Generated details</h2>
+    <p class="meta">Generated at {html.escape(generated_text)} UTC. Preview expires at
+      {html.escape(expiry_text)} UTC.</p>
+  </section>
+</body>
+</html>"""
+
+
+def _safe_http_url(value: str) -> str:
+    parsed = urlparse(value.strip())
+    if parsed.scheme in {"http", "https"} and parsed.netloc:
+        return value.strip()
+    return ""
+
+
+def _schedule_deadline_reminder(
+    db: Session,
+    case: ApplicationCase,
+    snapshot: dict,
+    *,
+    now: datetime,
+) -> None:
+    raw_deadline = snapshot.get("valid_until")
+    if not raw_deadline:
+        metadata = snapshot.get("job_metadata")
+        if isinstance(metadata, dict):
+            raw_deadline = metadata.get("application_deadline")
+    if not raw_deadline:
+        return
+    try:
+        deadline = date.fromisoformat(str(raw_deadline)[:10])
+    except ValueError:
+        return
+    if deadline <= now.date():
+        return
+    due_date = deadline - timedelta(days=7)
+    due_at = datetime.combine(due_date, time(hour=9), tzinfo=UTC)
+    if due_at <= now:
+        due_at = now + timedelta(hours=1)
+    _ensure_in_app_reminder(
+        db,
+        case,
+        due_at=due_at,
+        note="Check the application deadline and submit through the official channel.",
+    )
+
+
+def _ensure_in_app_reminder(
+    db: Session,
+    case: ApplicationCase,
+    *,
+    due_at: datetime,
+    note: str,
+) -> None:
+    existing = db.exec(
+        select(Reminder).where(
+            Reminder.application_case_id == case.id,
+            Reminder.channel == "in_app",
+            Reminder.status == "scheduled",
+            Reminder.note == note,
+        )
+    ).first()
+    if existing is not None:
+        return
+    db.add(
+        Reminder(
+            id=new_id("reminder"),
+            session_id=case.session_id,
+            benefit_id=case.benefit_id,
+            application_case_id=case.id,
+            note=note,
+            due_at=due_at,
+            timezone="Asia/Kolkata",
+            channel="in_app",
+            status="scheduled",
+        )
+    )
+
+
+def _cancel_action_reminders(db: Session, case: ApplicationCase) -> None:
+    action_note = "Review the action requested by the department."
+    rows = db.exec(
+        select(Reminder).where(
+            Reminder.application_case_id == case.id,
+            Reminder.channel == "in_app",
+            Reminder.status == "scheduled",
+            Reminder.note == action_note,
+        )
+    ).all()
+    for row in rows:
+        row.status = "cancelled"
+        db.add(row)
 
 
 def _status_event_out(row: ApplicationStatusEvent) -> ApplicationStatusEventOut:

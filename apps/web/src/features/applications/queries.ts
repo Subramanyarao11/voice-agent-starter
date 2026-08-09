@@ -4,6 +4,7 @@ import {
   createApplication,
   getApplication,
   getApplications,
+  previewApplicationPack,
   recordApplicationStatus,
 } from "@/lib/api";
 
@@ -66,5 +67,18 @@ export function useRecordApplicationStatusMutation(
       void queryClient.invalidateQueries({ queryKey: applicationsQueryKey(sessionId) });
       void queryClient.invalidateQueries({ queryKey: ["application-tasks", sessionId] });
     },
+  });
+}
+
+export function useApplicationPackPreviewQuery(
+  sessionId: string,
+  applicationId: string,
+  accessToken: string,
+) {
+  return useQuery({
+    queryKey: ["application-pack-preview", sessionId, applicationId],
+    queryFn: () => previewApplicationPack(sessionId, applicationId, accessToken),
+    enabled: Boolean(sessionId && applicationId && accessToken),
+    staleTime: 10 * 60 * 1000,
   });
 }

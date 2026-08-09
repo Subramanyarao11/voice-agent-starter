@@ -78,6 +78,7 @@ class ReminderCreate(BaseModel):
 class ReminderOut(BaseModel):
     id: str
     benefit_id: str
+    application_case_id: str | None = None
     benefit_name: str
     due_at: datetime
     note: str
@@ -466,6 +467,7 @@ def _reminder_out(
     return ReminderOut(
         id=row.id,
         benefit_id=row.benefit_id,
+        application_case_id=row.application_case_id,
         benefit_name=benefit.name if benefit else row.benefit_id,
         due_at=row.due_at,
         note=row.note,

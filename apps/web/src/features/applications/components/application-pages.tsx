@@ -9,6 +9,7 @@ import {
   ExternalLink,
   FileText,
   LockKeyhole,
+  Printer,
   TriangleAlert,
 } from "lucide-react";
 
@@ -18,6 +19,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import {
   useApplicationQuery,
+  useApplicationPackPreviewQuery,
   useApplicationsQuery,
   useRecordApplicationStatusMutation,
 } from "@/features/applications/queries";
@@ -278,6 +280,16 @@ export function ApplicationDetailPage() {
                 <SourceCard application={application} />
               </div>
 
+              <Button asChild variant="outline">
+                <Link
+                  to="/applications/$applicationId/pack"
+                  params={{ applicationId: application.id }}
+                >
+                  <Printer className="size-4" aria-hidden="true" />
+                  Preview or print preparation pack
+                </Link>
+              </Button>
+
               <StatusCard
                 application={application}
                 status={status}
@@ -298,6 +310,96 @@ export function ApplicationDetailPage() {
               </Button>
             </>
           )}
+        </div>
+      </main>
+      <PublicFooter />
+    </div>
+  );
+}
+
+export function ApplicationPackPage() {
+  const { applicationId } = useParams({ from: "/applications/$applicationId/pack" });
+  const sessionId = useGuestSessionStore((state) => state.sessionId);
+  const accessToken = useGuestSessionStore((state) => state.accessToken);
+  const packQuery = useApplicationPackPreviewQuery(sessionId, applicationId, accessToken);
+  const navigate = useNavigate();
+
+  function printPack() {
+    const html = packQuery.data?.html;
+    if (!html) return;
+    const printWindow = window.open("", "_blank", "noopener,noreferrer");
+    if (!printWindow) return;
+    printWindow.document.write(html);
+    printWindow.document.close();
+    printWindow.focus();
+    printWindow.print();
+  }
+
+  return (
+    <div className="min-h-svh bg-background text-foreground">
+      <Topbar sessionId={sessionId} connected={Boolean(sessionId)} activeSection="applications" />
+      <main id="main-content" tabIndex={-1} className="outline-none">
+        <div className="mx-auto max-w-[1000px] space-y-8 px-4 py-10 sm:px-6 sm:py-14 lg:px-8">
+          <header>
+            <Link
+              to="/applications/$applicationId"
+              params={{ applicationId }}
+              className="inline-flex items-center gap-2 text-sm font-semibold text-primary underline-offset-4 hover:underline"
+            >
+              <ArrowLeft className="size-4" aria-hidden="true" />
+              Back to application
+            </Link>
+            <p className="mt-8 text-xs font-semibold uppercase tracking-[0.16em] text-primary">
+              Source-backed preparation
+            </p>
+            <h1 className="mt-2 text-3xl font-bold tracking-tight sm:text-4xl">
+              Application preparation pack
+            </h1>
+            <p className="mt-3 max-w-2xl text-sm leading-6 text-muted-foreground">
+              This pack is a private, on-demand checklist summary. It is not a government form or proof that an application was submitted.
+            </p>
+          </header>
+          {!sessionId && <GuestSessionNotice />}
+          {packQuery.isPending && sessionId && (
+            <p role="status" aria-live="polite" className="text-sm text-muted-foreground">
+              Preparing a printable preview…
+            </p>
+          )}
+          {packQuery.error && (
+            <p role="alert" className="rounded-lg border border-destructive/30 bg-destructive/10 p-4 text-sm">
+              {toUserMessage(packQuery.error)}
+            </p>
+          )}
+          {packQuery.data && (
+            <Card>
+              <CardHeader className="flex-row flex-wrap items-center justify-between gap-3">
+                <div>
+                  <h2 className="text-lg font-bold">Preview</h2>
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    Preview expires {formatDateTime(packQuery.data.expires_at)} · checksum {packQuery.data.content_sha256.slice(0, 12)}…
+                  </p>
+                </div>
+                <Button type="button" onClick={printPack}>
+                  <Printer className="size-4" aria-hidden="true" />
+                  Print
+                </Button>
+              </CardHeader>
+              <CardContent>
+                <iframe
+                  title="Sahaayak application preparation pack preview"
+                  srcDoc={packQuery.data.html}
+                  sandbox=""
+                  className="min-h-[720px] w-full rounded-lg border border-border bg-white"
+                />
+                <p className="mt-3 text-xs text-muted-foreground">
+                  The preview is generated without storing a durable document. Close it when you finish printing.
+                </p>
+              </CardContent>
+            </Card>
+          )}
+          <Button type="button" variant="outline" onClick={() => void navigate({ to: "/applications/$applicationId", params: { applicationId } })}>
+            Return to application
+          </Button>
         </div>
       </main>
       <PublicFooter />

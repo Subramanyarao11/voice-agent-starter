@@ -649,6 +649,9 @@ class Reminder(SQLModel, table=True):
     id: str = Field(primary_key=True)
     session_id: str = Field(foreign_key="user_session.id", index=True)
     benefit_id: str = Field(foreign_key="benefit.id", index=True)
+    application_case_id: str | None = Field(
+        default=None, foreign_key="application_case.id", index=True
+    )
     note: str = ""
     due_at: datetime = Field(index=True)
     timezone: str = "Asia/Kolkata"

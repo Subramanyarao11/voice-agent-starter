@@ -185,6 +185,10 @@ async def enforce_rate_limit(
             settings.rate_limit_application_status_per_session,
             settings.rate_limit_application_status_per_ip,
         ),
+        "application_pack": (
+            settings.rate_limit_application_pack_per_session,
+            settings.rate_limit_application_pack_per_ip,
+        ),
         # Contact verification gets its own budget rather than sharing the
         # text bucket. Each challenge sends a real charged message, and the
         # attempt limit is an anti-guessing control as much as an abuse one.

@@ -122,6 +122,8 @@ class Settings(BaseSettings):
     rate_limit_application_create_per_ip: int = 30
     rate_limit_application_status_per_session: int = 20
     rate_limit_application_status_per_ip: int = 60
+    rate_limit_application_pack_per_session: int = 10
+    rate_limit_application_pack_per_ip: int = 30
     rate_limit_window_seconds: int = 60
     rate_limit_key_salt: str = ""
     rate_limit_enabled: bool = True

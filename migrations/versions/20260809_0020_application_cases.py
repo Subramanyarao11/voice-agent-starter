@@ -101,11 +101,26 @@ def upgrade() -> None:
         )
         batch.create_index("ix_application_task_application_case_id", ["application_case_id"])
 
+    with op.batch_alter_table("reminder") as batch:
+        batch.add_column(sa.Column("application_case_id", sa.String(), nullable=True))
+        batch.create_foreign_key(
+            "fk_reminder_application_case_id",
+            "application_case",
+            ["application_case_id"],
+            ["id"],
+        )
+        batch.create_index("ix_reminder_application_case_id", ["application_case_id"])
+
 
 def downgrade() -> None:
     with op.batch_alter_table("application_task") as batch:
         batch.drop_index("ix_application_task_application_case_id")
         batch.drop_constraint("fk_application_task_application_case_id", type_="foreignkey")
+        batch.drop_column("application_case_id")
+
+    with op.batch_alter_table("reminder") as batch:
+        batch.drop_index("ix_reminder_application_case_id")
+        batch.drop_constraint("fk_reminder_application_case_id", type_="foreignkey")
         batch.drop_column("application_case_id")
 
     for name in (
