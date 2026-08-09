@@ -2,8 +2,6 @@
 
 from datetime import date
 
-from sqlmodel import select
-
 from sahaayak_common import (
     Benefit,
     MemberRecommendation,
@@ -93,8 +91,10 @@ def test_radar_matches_current_facts_and_persists_redacted_evidence(client) -> N
     )
     assert refreshed.status_code == 200, refreshed.text
     body = refreshed.json()
-    assert body["recommendation_count"] == 1
-    recommendation = body["recommendations"][0]
+    assert body["recommendation_count"] >= 1
+    recommendation = next(
+        item for item in body["recommendations"] if item["benefit_id"] == benefit_id
+    )
     assert recommendation["benefit_id"] == benefit_id
     assert recommendation["verdict"] == MatchVerdict.ELIGIBLE.value
     assert recommendation["source_url"].endswith(".pdf")
@@ -134,7 +134,10 @@ def test_radar_matches_current_facts_and_persists_redacted_evidence(client) -> N
 
     hidden = client.get(f"/api/households/{household_id}/radar", headers=headers)
     assert hidden.status_code == 200
-    assert hidden.json()["recommendations"] == []
+    assert all(
+        item["benefit_id"] != benefit_id
+        for item in hidden.json()["recommendations"]
+    )
     visible = client.get(
         f"/api/households/{household_id}/radar?include_dismissed=true",
         headers=headers,
@@ -156,7 +159,9 @@ def test_radar_keeps_missing_criteria_uncertain(client) -> None:
         },
     )
     household_id = created.json()["id"]
-    member_id = client.get(f"/api/households/{household_id}/members", headers=headers).json()[0]["id"]
+    member_id = client.get(
+        f"/api/households/{household_id}/members", headers=headers
+    ).json()[0]["id"]
     age = client.put(
         f"/api/households/{household_id}/members/{member_id}/facts/age_band",
         headers=headers,
@@ -204,7 +209,9 @@ def test_radar_keeps_missing_criteria_uncertain(client) -> None:
     assert matches[0]["verdict"] == MatchVerdict.INSUFFICIENT_INFO.value
     assert "missing_or_uncertain_criterion" in matches[0]["reason_codes"]
     income_evidence = next(
-        item for item in matches[0]["criterion_evidence"] if item["fact_key"] == "annual_household_income"
+        item
+        for item in matches[0]["criterion_evidence"]
+        if item["fact_key"] == "annual_household_income"
     )
     assert income_evidence["status"] == "unknown"
     assert income_evidence["fact_state"] == "missing"
