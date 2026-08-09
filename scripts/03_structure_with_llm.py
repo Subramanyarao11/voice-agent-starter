@@ -124,6 +124,21 @@ def canonical_source_id(record_id: str) -> str:
     return re.sub(r"\s*\(\d+\)$", "", canonical)
 
 
+def source_url_for(record: dict, record_id: str) -> str:
+    """Prefer a captured official URL; never publish a guessed unsafe slug."""
+    explicit = str(record.get("source_url") or "").strip()
+    if explicit.startswith(("https://", "http://")):
+        return explicit
+
+    canonical = canonical_source_id(record_id).strip()
+    # Export filenames occasionally contain spaces, copy markers, or other
+    # text that is not a real myScheme route. A generic official landing page
+    # is safer than creating a link that predictably returns 404.
+    if not re.fullmatch(r"[A-Za-z0-9]+(?:-[A-Za-z0-9]+)*", canonical):
+        return "https://www.myscheme.gov.in/"
+    return f"https://www.myscheme.gov.in/schemes/{quote(canonical, safe='')}"
+
+
 def load_candidates() -> list[dict]:
     if not INPUT_PATH.exists():
         raise SystemExit(f"{INPUT_PATH} not found — run steps 01 and 02 first.")
@@ -228,7 +243,7 @@ async def run(state_code: str, limit: int | None, resume: bool) -> None:
 
             source_record = source_by_id.get(record_id, {})
             raw_source_text = source_record.get("raw_text", "")
-            encoded_record_id = quote(canonical_source_id(record_id), safe="")
+            official_source_url = source_url_for(source_record, record_id)
             row = {
                 "id": record_id or slugify(structured.name),
                 **structured.model_dump(mode="json"),
@@ -236,11 +251,9 @@ async def run(state_code: str, limit: int | None, resume: bool) -> None:
                 # a prefilter, not evidence that a scheme is state-specific;
                 # null remains the correct value for central/all-India schemes.
                 "state_code": structured.state_code,
-                "source_url": f"https://www.myscheme.gov.in/schemes/{encoded_record_id}",
+                "source_url": official_source_url,
                 "source_title": source_record.get("filename") or record_id,
-                "source_document_url": (
-                    f"https://www.myscheme.gov.in/schemes/{encoded_record_id}"
-                ),
+                "source_document_url": official_source_url,
                 # Review aid only. A human reviewer can replace this with a
                 # tighter excerpt before approving the row.
                 "source_excerpt": raw_source_text[:4000],

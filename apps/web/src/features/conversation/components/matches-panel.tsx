@@ -21,35 +21,59 @@ type MatchesPanelProps = {
 export function MatchesPanel({ turn, savedBenefitIds = new Set(), onToggleSaved, comparedBenefitIds = new Set(), onToggleCompare }: MatchesPanelProps) {
   const { t } = useUi();
   const matches = turn?.matches ?? [];
-  if (matches.length === 0) return null;
+  if (!turn) return null;
+
+  const hasClearMatch = !turn.needs_escalation && matches.some(isClearMatch);
+  const needsMoreInformation = Boolean(turn.pending_slot);
 
   return (
     <section className="space-y-5" aria-labelledby="matches-title">
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <span className="font-mono text-[0.6rem] uppercase tracking-[0.2em] text-acid/75">{t("eligibilityReadout")}</span>
-          <h2 id="matches-title" className="mt-2 text-2xl font-extrabold tracking-tight text-paper">{t("whatAgentFound")}</h2>
+          <span className="font-mono text-[0.6rem] uppercase tracking-[0.2em] text-primary">{t("eligibilityReadout")}</span>
+          <h2 id="matches-title" className="mt-2 text-2xl font-extrabold tracking-tight text-foreground">
+            {hasClearMatch ? t("whatAgentFound") : matches.length > 0 ? t("possibleOptions") : t("noClearMatchTitle")}
+          </h2>
         </div>
-        <span className="text-xs text-paper/40">{t("structuredReasons")}</span>
+        <span className="max-w-xs text-right text-xs text-muted-foreground">{t("structuredReasons")}</span>
       </div>
-      <p className="max-w-3xl text-sm leading-6 text-paper/55">
-        {t("guidanceDisclaimer")}
+      <p className="max-w-3xl text-sm leading-6 text-muted-foreground">
+        {hasClearMatch ? t("guidanceDisclaimer") : matches.length > 0 ? t("possibleOptionsDescription") : t("noClearMatchDescription")}
       </p>
-      <ul className="grid list-none gap-4 p-0 md:grid-cols-2 lg:grid-cols-3">
-        {matches.map((match) => (
-          <li key={match.benefit_id}>
-            <MatchCard
-              match={match}
-              saved={savedBenefitIds.has(match.benefit_id)}
-              onToggleSaved={onToggleSaved}
-              compared={comparedBenefitIds.has(match.benefit_id)}
-              onToggleCompare={onToggleCompare}
-            />
-          </li>
-        ))}
-      </ul>
+      {!hasClearMatch && (
+        <Card className="border-warning/45 bg-warning/10 text-warning-foreground" role="status">
+          <CardContent className="p-4 sm:p-5">
+            <p className="font-semibold">
+              {needsMoreInformation ? t("resultNeedsMoreInfo") : t("noClearMatchTitle")}
+            </p>
+            <p className="mt-1 text-sm leading-6 opacity-90">
+              {needsMoreInformation ? t("resultNeedsMoreInfoDescription") : t("noClearMatchDescription")}
+            </p>
+          </CardContent>
+        </Card>
+      )}
+      {matches.length > 0 && (
+        <ul className="grid list-none gap-4 p-0 md:grid-cols-2 lg:grid-cols-3">
+          {matches.map((match) => (
+            <li key={match.benefit_id}>
+              <MatchCard
+                match={match}
+                saved={savedBenefitIds.has(match.benefit_id)}
+                onToggleSaved={onToggleSaved}
+                compared={comparedBenefitIds.has(match.benefit_id)}
+                onToggleCompare={onToggleCompare}
+              />
+            </li>
+          ))}
+        </ul>
+      )}
     </section>
   );
+}
+
+function isClearMatch(match: MatchSummary): boolean {
+  const verdict = match.verdict.trim().toLowerCase();
+  return verdict === "eligible" || (verdict.includes("eligible") && !verdict.includes("not"));
 }
 
 function MatchCard({
@@ -75,19 +99,19 @@ function MatchCard({
 
   return (
     <Card
-      className="h-full border-paper/10 bg-paper/[0.04] text-paper transition-colors hover:border-acid/30"
+      className="h-full border-border bg-card text-card-foreground transition-colors hover:border-primary/45"
       aria-labelledby={`match-${match.benefit_id}`}
     >
       <CardContent className="p-5">
         <div className="flex items-center justify-between gap-3">
-          <span className="font-mono text-[0.6rem] uppercase tracking-[0.16em] text-paper/45">{match.domain}</span>
+          <span className="font-mono text-[0.6rem] uppercase tracking-[0.16em] text-muted-foreground">{match.domain}</span>
           <div className="flex items-center gap-2">
             {onToggleSaved && (
               <Button
                 type="button"
                 size="icon"
                 variant="ghost"
-                className="size-8 text-paper/50 hover:text-acid"
+                className="size-8 text-muted-foreground hover:text-primary"
                 aria-pressed={saved}
                 aria-label={`${saved ? "Remove" : "Save"} ${match.benefit_name}`}
                 onClick={() => onToggleSaved(match.benefit_id, saved)}
@@ -100,7 +124,7 @@ function MatchCard({
                 type="button"
                 size="icon"
                 variant="ghost"
-                className="size-8 text-paper/50 hover:text-blue"
+                className="size-8 text-muted-foreground hover:text-info"
                 aria-pressed={compared}
                 aria-label={`${compared ? "Remove" : "Add"} ${match.benefit_name} ${compared ? "from" : "to"} comparison`}
                 onClick={() => onToggleCompare(match.benefit_id, compared)}
@@ -114,10 +138,10 @@ function MatchCard({
             </Badge>
           </div>
         </div>
-        <h3 id={`match-${match.benefit_id}`} className="mt-5 text-lg font-bold leading-snug text-paper">{match.benefit_name}</h3>
-        <p className="mt-3 min-h-12 text-sm leading-6 text-paper/60">{match.reasons?.[0] ?? t("noAdditionalReason")}</p>
+        <h3 id={`match-${match.benefit_id}`} className="mt-5 text-lg font-bold leading-snug text-foreground">{match.benefit_name}</h3>
+        <p className="mt-3 min-h-12 text-sm leading-6 text-muted-foreground">{match.reasons?.[0] ?? t("noAdditionalReason")}</p>
         <CriterionEvidence match={match} compact />
-        <div className="mt-4 flex flex-wrap items-center gap-2 text-xs text-paper/45">
+        <div className="mt-4 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
           <Badge variant={match.verification_status === "human_verified" ? "success" : "warning"}>
             {verificationLabel}
           </Badge>
@@ -128,7 +152,7 @@ function MatchCard({
         </div>
         {sourceUrl && (
           <a
-            className="mt-4 inline-flex text-xs font-semibold text-acid underline-offset-4 hover:underline"
+            className="mt-4 inline-flex text-xs font-semibold text-primary underline-offset-4 hover:underline"
             href={sourceUrl}
             target="_blank"
             rel="noopener noreferrer"
@@ -140,11 +164,11 @@ function MatchCard({
         <Link
           to="/benefits/$benefitId"
           params={{ benefitId: match.benefit_id }}
-          className="mt-4 inline-flex text-xs font-semibold text-blue underline-offset-4 hover:underline"
+          className="mt-4 inline-flex text-xs font-semibold text-info underline-offset-4 hover:underline"
         >
           {t("viewDetails")}
         </Link>
-        <p className="mt-5 font-mono text-[0.65rem] uppercase tracking-[0.14em] text-paper/35">
+        <p className="mt-5 font-mono text-[0.65rem] uppercase tracking-[0.14em] text-muted-foreground">
           {t("confidence")} · {formatConfidence(match.confidence)}
         </p>
       </CardContent>

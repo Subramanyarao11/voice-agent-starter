@@ -53,8 +53,6 @@ export default function HomeResults({
 
   return (
     <section id="results" className="mx-auto max-w-[1200px] space-y-8 px-4 pb-14 sm:px-6 lg:px-8">
-      <TurnInspector turn={lastTurn} />
-      <SourcesPanel turn={lastTurn} />
       <MatchesPanel
         turn={lastTurn}
         savedBenefitIds={savedBenefitIds}
@@ -64,6 +62,8 @@ export default function HomeResults({
           if (compared || comparedBenefitIds.length < 3) toggleCompare(benefitId);
         }}
       />
+      <SourcesPanel turn={lastTurn} />
+      <TurnInspector turn={lastTurn} />
       <ComparisonPanel />
       <section id="saved-work" className="scroll-mt-8">
         <SavedBenefitsPanel

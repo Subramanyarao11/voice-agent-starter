@@ -25,15 +25,15 @@ export function TranscriptEditor({ value, onChange, onSubmit, onCancel }: Transc
   }, []);
 
   return (
-    <Card className="mx-5 mb-4 border-acid/25 bg-acid/[0.06] text-paper sm:mx-8">
+    <Card className="mx-5 mb-4 border-primary/25 bg-secondary/50 text-foreground sm:mx-8">
       <CardContent className="space-y-3 p-4 sm:p-5">
         <div className="flex items-start gap-3">
-          <span className="mt-0.5 grid size-8 shrink-0 place-items-center rounded-full bg-acid/15 text-acid" aria-hidden="true">
+          <span className="mt-0.5 grid size-8 shrink-0 place-items-center rounded-full bg-secondary text-primary" aria-hidden="true">
             <PencilLine className="size-4" />
           </span>
           <div>
             <h3 className="text-sm font-bold">{t("reviewHeard")}</h3>
-            <p className="mt-1 text-xs leading-5 text-paper/60">
+            <p className="mt-1 text-xs leading-5 text-muted-foreground">
               {t("reviewHeardDescription")}
             </p>
           </div>
@@ -56,18 +56,18 @@ export function TranscriptEditor({ value, onChange, onSubmit, onCancel }: Transc
             rows={3}
             onChange={(event) => onChange(event.target.value)}
             aria-describedby="voice-transcript-help"
-            className="border-paper/15 bg-ink/40 text-paper placeholder:text-paper/35 focus-visible:border-acid/50"
+            className="border-border bg-background text-foreground placeholder:text-muted-foreground focus-visible:border-primary"
           />
-          <div id="voice-transcript-help" className="mt-2 flex flex-wrap items-center justify-between gap-2 text-[0.68rem] text-paper/45">
+          <div id="voice-transcript-help" className="mt-2 flex flex-wrap items-center justify-between gap-2 text-xs text-muted-foreground">
             <span>{t("transcriptNotSent")}</span>
             <span aria-live="polite">{value.length}/2,000</span>
           </div>
           <div className="mt-4 flex flex-wrap justify-end gap-2">
-            <Button type="button" variant="ghost" size="sm" className="text-paper/65 hover:bg-paper/10 hover:text-paper" onClick={onCancel}>
+          <Button type="button" variant="ghost" size="sm" className="text-muted-foreground hover:bg-secondary hover:text-foreground" onClick={onCancel}>
               <X className="size-3.5" aria-hidden="true" />
               {t("cancel")}
             </Button>
-            <Button type="submit" size="sm" className="bg-acid text-ink hover:bg-acid/90" disabled={!value.trim()}>
+          <Button type="submit" size="sm" disabled={!value.trim()}>
               <Check className="size-3.5" aria-hidden="true" />
               {t("useTranscript")}
             </Button>

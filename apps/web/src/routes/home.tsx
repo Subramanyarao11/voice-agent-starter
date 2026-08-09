@@ -3,8 +3,10 @@ import { lazy, Suspense, useCallback, useEffect, useMemo, useState, type FormEve
 import { m } from "motion/react";
 
 import { PublicFooter, Topbar } from "@/components/app/topbar";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { CatalogControls } from "@/features/catalog/components/catalog-controls";
+import { useCompareStore } from "@/features/benefits/compare-store";
 import { ConversationPanel } from "@/features/conversation/components/conversation-panel";
 import { useResetSessionMutation, useTextTurnMutation, useVoiceTurnMutation } from "@/features/conversation/queries";
 import { useConversationStore } from "@/features/conversation/store";
@@ -49,6 +51,7 @@ export function HomePage() {
   const setDraft = useConversationStore((state) => state.setDraft);
   const appendTurn = useConversationStore((state) => state.appendTurn);
   const clearConversation = useConversationStore((state) => state.clearConversation);
+  const clearComparison = useCompareStore((state) => state.clear);
 
   const [feedback, setFeedback] = useState<{ kind: "error" | "notice"; text: string } | null>(null);
 
@@ -197,22 +200,39 @@ export function HomePage() {
   const handleReset = useCallback(async () => {
     if (isSending || resetMutation.isPending) return;
     setFeedback(null);
+    let remoteResetFailed = false;
     try {
-      await resetMutation.mutateAsync({ sessionId, accessToken });
-      clearConversation();
-      clearSession();
-      setFeedback({ kind: "notice", text: t("sessionCleared") });
+      if (sessionId && accessToken) {
+        await resetMutation.mutateAsync({ sessionId, accessToken });
+      }
     } catch (error) {
-      setFeedback({ kind: "error", text: toUserMessage(error) });
+      remoteResetFailed = true;
+      // The user asked to clear the conversation. Do not leave the visible
+      // transcript in place just because an old server-side child record
+      // temporarily blocked deletion; the notice tells them exactly what was
+      // and was not confirmed.
+      console.warn("server_session_reset_failed", error);
+    } finally {
+      clearConversation();
+      clearComparison();
+      clearSession();
+      setFeedback({
+        kind: remoteResetFailed ? "error" : "notice",
+        text: remoteResetFailed ? t("sessionClearedLocally") : t("sessionCleared"),
+      });
     }
-  }, [accessToken, clearConversation, clearSession, isSending, resetMutation, sessionId, t]);
+  }, [accessToken, clearComparison, clearConversation, clearSession, isSending, resetMutation, sessionId, t]);
 
   const connected = healthQuery.data?.status === "ok" && Boolean(accessToken);
 
   const [showDeferredResults, setShowDeferredResults] = useState(Boolean(lastTurn));
 
   useEffect(() => {
-    if (lastTurn || showDeferredResults) return;
+    if (lastTurn) {
+      setShowDeferredResults(true);
+      return;
+    }
+    if (showDeferredResults) return;
     const timer = window.setTimeout(() => setShowDeferredResults(true), 1200);
     return () => window.clearTimeout(timer);
   }, [lastTurn, showDeferredResults]);
@@ -311,6 +331,26 @@ export function HomePage() {
               )}
               {!feedback && catalogLoading && <p className="text-muted-foreground">{t("loadingCatalog")}</p>}
             </div>
+
+            {lastTurn && (
+              <Card id="result-notice" className="scroll-mt-8 border-primary/35 bg-secondary/60 shadow-sm">
+                <CardContent className="flex flex-col gap-4 p-4 sm:flex-row sm:items-center sm:justify-between sm:p-5">
+                  <div>
+                    <p className="text-sm font-bold text-secondary-foreground">
+                      {lastTurn.pending_slot ? t("resultNeedsMoreInfo") : t("resultReadyTitle")}
+                    </p>
+                    <p className="mt-1 text-sm leading-6 text-muted-foreground">
+                      {lastTurn.pending_slot
+                        ? t("resultNeedsMoreInfoDescription")
+                        : t("resultReadyDescription", {count: lastTurn.matches.length})}
+                    </p>
+                  </div>
+                  <Button asChild size="sm" className="shrink-0">
+                    <a href="#results">{t("reviewResults")}</a>
+                  </Button>
+                </CardContent>
+              </Card>
+            )}
           </m.section>
         </section>
 

@@ -1,5 +1,9 @@
 """Private document checklist and application task contracts."""
 
+from sqlmodel import select
+
+from sahaayak_common import ApplicationTask, EscalationTicket, SavedBenefit, UserSession, session_scope
+
 
 def test_saving_a_benefit_materializes_idempotent_tasks(client, guest_session):
     session = guest_session()
@@ -73,3 +77,37 @@ def test_tasks_are_private_to_the_owning_guest_session(client, guest_session):
     )
     assert response.status_code == 404
 
+
+def test_reset_removes_saved_tasks_and_escalation_ticket(client, guest_session):
+    session = guest_session()
+    save = client.post(
+        f"/api/sessions/{session['session_id']}/saved-benefits",
+        json={"benefit_id": "demo-csss-cus"},
+        headers=session["headers"],
+    )
+    assert save.status_code == 201
+
+    with session_scope() as db:
+        db.add(
+            EscalationTicket(
+                id=f"ticket-reset-{session['session_id']}",
+                session_id=session["session_id"],
+                reason="caller_requested",
+            )
+        )
+
+    reset = client.delete(
+        f"/api/sessions/{session['session_id']}",
+        headers=session["headers"],
+    )
+    assert reset.status_code == 204
+
+    with session_scope() as db:
+        assert db.get(UserSession, session["session_id"]) is None
+        assert db.exec(
+            select(SavedBenefit).where(SavedBenefit.session_id == session["session_id"])
+        ).first() is None
+        assert db.exec(
+            select(ApplicationTask).where(ApplicationTask.session_id == session["session_id"])
+        ).first() is None
+        assert db.get(EscalationTicket, f"ticket-reset-{session['session_id']}") is None

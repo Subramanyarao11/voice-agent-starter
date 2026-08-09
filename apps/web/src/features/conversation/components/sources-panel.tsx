@@ -26,32 +26,32 @@ export function SourcesPanel({ turn }: SourcesPanelProps) {
 
   return (
     <section className="space-y-4" aria-labelledby="sources-title">
-      <Card className="border-blue/20 bg-blue/[0.06] text-paper">
+      <Card className="border-info/25 bg-info/5 text-foreground">
         <CardHeader className="gap-3 px-5 pb-4 pt-5 sm:px-7">
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div className="flex items-start gap-3">
               <span
-                className="grid size-10 shrink-0 place-items-center rounded-xl border border-blue/25 bg-blue/10 text-blue"
+                className="grid size-10 shrink-0 place-items-center rounded-xl border border-info/25 bg-info/10 text-info"
                 aria-hidden="true"
               >
                 <BookOpen className="size-4" />
               </span>
               <div>
-                <span className="font-mono text-[0.6rem] uppercase tracking-[0.2em] text-blue/80">
+                <span className="font-mono text-[0.6rem] uppercase tracking-[0.2em] text-info">
                   {t("evidenceTrail")}
                 </span>
-                <h2 id="sources-title" className="mt-1 text-lg font-extrabold text-paper">
+                <h2 id="sources-title" className="mt-1 text-lg font-extrabold text-foreground">
                   {t("sourcesForAnswer")}
                 </h2>
               </div>
             </div>
-            <Badge variant="outline" className="border-blue/25 text-blue">
+            <Badge variant="outline" className="border-info/35 text-info">
               <Quote className="size-3" aria-hidden="true" />
               {t("sourceGrounded")}
             </Badge>
           </div>
-          <p className="flex items-start gap-2 text-sm leading-6 text-paper/65">
-            <Info className="mt-1 size-4 shrink-0 text-blue" aria-hidden="true" />
+          <p className="flex items-start gap-2 text-sm leading-6 text-muted-foreground">
+            <Info className="mt-1 size-4 shrink-0 text-info" aria-hidden="true" />
             <span>
               {t("sourceDisclaimer")}
             </span>
@@ -60,8 +60,8 @@ export function SourcesPanel({ turn }: SourcesPanelProps) {
 
         <CardContent className="space-y-4 px-5 pb-6 sm:px-7">
           {groundedAnswer && (
-            <blockquote className="rounded-xl border border-paper/10 bg-ink/30 px-4 py-3 text-sm leading-6 text-paper/80">
-              <span className="mb-2 block font-mono text-[0.58rem] uppercase tracking-[0.16em] text-paper/45">
+            <blockquote className="rounded-xl border border-border bg-background/70 px-4 py-3 text-sm leading-6 text-foreground">
+              <span className="mb-2 block font-mono text-[0.58rem] uppercase tracking-[0.16em] text-muted-foreground">
                 {t("answerWithCitations")}
               </span>
               {groundedAnswer}
@@ -77,35 +77,35 @@ export function SourcesPanel({ turn }: SourcesPanelProps) {
                 return (
                   <li key={`${source.source_id}-${source.filename}`}>
                     <article
-                      className="rounded-xl border border-paper/10 bg-ink/20 px-4 py-4"
+                      className="rounded-xl border border-border bg-background/70 px-4 py-4"
                       aria-labelledby={sourceHeadingId}
                     >
                       <div className="flex flex-wrap items-start justify-between gap-3">
                         <div className="min-w-0">
-                          <p className="font-mono text-[0.58rem] uppercase tracking-[0.15em] text-blue/80">
+                          <p className="font-mono text-[0.58rem] uppercase tracking-[0.15em] text-info">
                             {t("source")} {index + 1}
                           </p>
-                          <h3 id={sourceHeadingId} className="mt-1 break-words text-sm font-bold text-paper">
+                          <h3 id={sourceHeadingId} className="mt-1 break-words text-sm font-bold text-foreground">
                             {source.filename || source.source_id}
                           </h3>
                         </div>
-                        <Badge variant="outline" className="border-paper/15 text-paper/55">
+                        <Badge variant="outline" className="border-border text-muted-foreground">
                           {relevanceLabel(source.score)}
                         </Badge>
                       </div>
 
-                      <details className="group mt-3 rounded-lg border border-paper/10 bg-paper/[0.03]">
-                        <summary className="cursor-pointer px-3 py-2 text-xs font-semibold text-paper/70 outline-none transition hover:text-paper focus-visible:ring-2 focus-visible:ring-ring">
+                      <details className="group mt-3 rounded-lg border border-border bg-muted/30">
+                        <summary className="cursor-pointer px-3 py-2 text-xs font-semibold text-foreground outline-none transition hover:text-primary focus-visible:ring-2 focus-visible:ring-ring">
                           {t("showSupportingExcerpt")}
                         </summary>
-                        <p className="border-t border-paper/10 px-3 py-3 text-xs leading-5 text-paper/60">
+                        <p className="border-t border-border px-3 py-3 text-xs leading-5 text-muted-foreground">
                           {source.excerpt || t("noAdditionalReason")}
                         </p>
                       </details>
 
                       {isSafeExternalUrl(sourceUrl) && (
                         <a
-                          className="mt-3 inline-flex items-center gap-1.5 text-xs font-semibold text-acid underline-offset-4 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                          className="mt-3 inline-flex items-center gap-1.5 text-xs font-semibold text-primary underline-offset-4 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                           href={sourceUrl}
                           target="_blank"
                           rel="noopener noreferrer"
@@ -121,7 +121,7 @@ export function SourcesPanel({ turn }: SourcesPanelProps) {
               })}
             </ol>
           ) : (
-            <p className="rounded-xl border border-orange/20 bg-orange/10 px-4 py-3 text-sm leading-6 text-orange">
+            <p className="rounded-xl border border-warning/40 bg-warning/10 px-4 py-3 text-sm leading-6 text-warning-foreground">
               {t("noSupportingSource")}
             </p>
           )}

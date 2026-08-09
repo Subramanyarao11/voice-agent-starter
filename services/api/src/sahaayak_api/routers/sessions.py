@@ -10,10 +10,34 @@ from datetime import datetime
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel, Field
+from sqlalchemy import delete, update
 from sqlmodel import Session, select
 
 from sahaayak_api.browser_auth import BrowserSessionPrincipal, require_browser_session
-from sahaayak_common import ConversationTurnLog, Reminder, SavedBenefit, UserSession, get_session
+from sahaayak_common import (
+    ApplicationCase,
+    ApplicationFieldValue,
+    ApplicationOutcomeFeedback,
+    ApplicationRequirement,
+    ApplicationStatusEvent,
+    ApplicationTask,
+    AssistanceAction,
+    AssistanceConsent,
+    AssistanceSession,
+    BenefitIssueReport,
+    CallSession,
+    ConsentEvent,
+    ContactPoint,
+    ConversationTurnLog,
+    EscalationTicket,
+    GuestMigration,
+    MemberRecommendation,
+    NotificationDelivery,
+    Reminder,
+    SavedBenefit,
+    UserSession,
+    get_session,
+)
 
 router = APIRouter(prefix="/api/sessions", tags=["sessions"])
 
@@ -86,18 +110,118 @@ def reset_session(
     row = db.get(UserSession, principal.session_id)
     if row is None:
         return
-    for turn in db.exec(
-        select(ConversationTurnLog).where(ConversationTurnLog.session_id == row.id)
-    ).all():
-        db.delete(turn)
-    for saved in db.exec(
-        select(SavedBenefit).where(SavedBenefit.session_id == row.id)
-    ).all():
-        db.delete(saved)
-    for reminder in db.exec(
-        select(Reminder).where(Reminder.session_id == row.id)
-    ).all():
-        db.delete(reminder)
+
+    # This endpoint is a user-requested deletion, not a soft UI reset. Delete
+    # every guest-owned row in dependency order so old escalations, contact
+    # points, application workspaces, and delivery records cannot prevent the
+    # session itself from being removed.
+    case_ids = list(
+        db.exec(select(ApplicationCase.id).where(ApplicationCase.session_id == row.id)).all()
+    )
+    if case_ids:
+        db.exec(
+            update(MemberRecommendation)
+            .where(MemberRecommendation.linked_application_case_id.in_(case_ids))
+            .values(linked_application_case_id=None)
+        )
+        db.exec(
+            delete(ApplicationFieldValue).where(
+                ApplicationFieldValue.application_case_id.in_(case_ids)
+            )
+        )
+        db.exec(
+            delete(ApplicationOutcomeFeedback).where(
+                ApplicationOutcomeFeedback.application_case_id.in_(case_ids)
+            )
+        )
+        db.exec(
+            delete(ApplicationRequirement).where(
+                ApplicationRequirement.application_case_id.in_(case_ids)
+            )
+        )
+        db.exec(
+            delete(ApplicationStatusEvent).where(
+                ApplicationStatusEvent.application_case_id.in_(case_ids)
+            )
+        )
+
+    task_ids = list(
+        db.exec(select(ApplicationTask.id).where(ApplicationTask.session_id == row.id)).all()
+    )
+    if task_ids:
+        db.exec(
+            update(ApplicationRequirement)
+            .where(ApplicationRequirement.task_id.in_(task_ids))
+            .values(task_id=None)
+        )
+    db.exec(delete(ApplicationTask).where(ApplicationTask.session_id == row.id))
+    if case_ids:
+        case_reminder_ids = list(
+            db.exec(
+                select(Reminder.id).where(Reminder.application_case_id.in_(case_ids))
+            ).all()
+        )
+        if case_reminder_ids:
+            db.exec(
+                delete(NotificationDelivery).where(
+                    NotificationDelivery.reminder_id.in_(case_reminder_ids)
+                )
+            )
+        db.exec(delete(Reminder).where(Reminder.application_case_id.in_(case_ids)))
+        db.exec(delete(ApplicationCase).where(ApplicationCase.id.in_(case_ids)))
+
+    assistance_ids = list(
+        db.exec(
+            select(AssistanceSession.id).where(
+                AssistanceSession.citizen_session_id == row.id
+            )
+        ).all()
+    )
+    if assistance_ids:
+        db.exec(
+            delete(AssistanceAction).where(
+                AssistanceAction.assistance_session_id.in_(assistance_ids)
+            )
+        )
+        db.exec(
+            delete(AssistanceConsent).where(
+                AssistanceConsent.assistance_session_id.in_(assistance_ids)
+            )
+        )
+        db.exec(delete(AssistanceSession).where(AssistanceSession.id.in_(assistance_ids)))
+
+    contact_ids = list(
+        db.exec(select(ContactPoint.id).where(ContactPoint.session_id == row.id)).all()
+    )
+    db.exec(delete(ConsentEvent).where(ConsentEvent.session_id == row.id))
+    db.exec(delete(NotificationDelivery).where(NotificationDelivery.session_id == row.id))
+    db.exec(delete(Reminder).where(Reminder.session_id == row.id))
+    if contact_ids:
+        db.exec(
+            delete(ConsentEvent).where(ConsentEvent.contact_point_id.in_(contact_ids))
+        )
+    db.exec(delete(ContactPoint).where(ContactPoint.session_id == row.id))
+
+    saved_ids = list(
+        db.exec(select(SavedBenefit.id).where(SavedBenefit.session_id == row.id)).all()
+    )
+    if saved_ids:
+        db.exec(
+            update(MemberRecommendation)
+            .where(MemberRecommendation.linked_saved_benefit_id.in_(saved_ids))
+            .values(linked_saved_benefit_id=None)
+        )
+
+    for model in (
+        BenefitIssueReport,
+        CallSession,
+        ConversationTurnLog,
+        EscalationTicket,
+        SavedBenefit,
+    ):
+        db.exec(delete(model).where(model.session_id == row.id))
+    db.exec(delete(GuestMigration).where(GuestMigration.guest_session_id == row.id))
+
     db.delete(row)
     db.commit()
 

@@ -35,7 +35,14 @@ export default defineConfig({
   server: {
     port: 5173,
     proxy: {
-      "/api": "http://localhost:8000",
+      // The citizen voice flow uses the same /api origin over WebSocket. Vite
+      // must explicitly forward upgrade requests or the browser falls back to
+      // a generic connection error before the microphone can start.
+      "/api": {
+        target: "http://localhost:8000",
+        changeOrigin: true,
+        ws: true,
+      },
       "/health": "http://localhost:8000",
     },
   },

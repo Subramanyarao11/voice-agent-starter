@@ -6,7 +6,7 @@ from logging.config import fileConfig
 
 from alembic import context
 from alembic.config import Config
-from sqlalchemy import engine_from_config, pool
+from sqlalchemy import engine_from_config, pool, text
 from sqlmodel import SQLModel
 
 import sahaayak_common.models  # noqa: F401 — registers all tables
@@ -49,15 +49,33 @@ def run_migrations_online() -> None:
     )
 
     with connectable.connect() as connection:
-        context.configure(
-            connection=connection,
-            target_metadata=target_metadata,
-            compare_type=True,
-            render_as_batch=settings.using_sqlite,
-        )
+        # API and worker processes all call init_db() during startup. A
+        # PostgreSQL advisory lock makes that safe when Compose starts them at
+        # the same time; without it, two migration runners can both create the
+        # same enum/table and leave an otherwise healthy stack returning 500s.
+        migration_lock_acquired = False
+        if connection.dialect.name == "postgresql":
+            connection.execute(text("SELECT pg_advisory_lock(736168431)"))
+            # SQLAlchemy begins an implicit transaction for the lock query.
+            # Commit it before Alembic opens its own migration transaction;
+            # otherwise the migration can appear to run successfully but be
+            # rolled back when the connection is closed.
+            connection.commit()
+            migration_lock_acquired = True
+        try:
+            context.configure(
+                connection=connection,
+                target_metadata=target_metadata,
+                compare_type=True,
+                render_as_batch=settings.using_sqlite,
+            )
 
-        with context.begin_transaction():
-            context.run_migrations()
+            with context.begin_transaction():
+                context.run_migrations()
+        finally:
+            if migration_lock_acquired:
+                connection.execute(text("SELECT pg_advisory_unlock(736168431)"))
+                connection.commit()
 
     connectable.dispose()
 

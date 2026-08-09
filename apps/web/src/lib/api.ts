@@ -1354,6 +1354,9 @@ export function toUserMessage(error: unknown): string {
     if (error.status === 429) {
       return "You are sending requests too quickly. Please wait a moment and try again.";
     }
+    if (error.status >= 500) {
+      return "Sahaayak is temporarily unavailable. Your question is still here—please try again in a moment.";
+    }
     return error.message;
   }
   return error instanceof Error ? error.message : "Something went wrong. Please try again.";

@@ -98,7 +98,10 @@ def canonical_score(record: dict) -> tuple[int, int, int, str]:
 
 
 def source_url(source_id: str) -> str:
-    return f"https://www.myscheme.gov.in/schemes/{quote(source_id, safe='')}"
+    canonical = canonical_source_id(source_id).strip()
+    if not re.fullmatch(r"[A-Za-z0-9]+(?:-[A-Za-z0-9]+)*", canonical):
+        return "https://www.myscheme.gov.in/"
+    return f"https://www.myscheme.gov.in/schemes/{quote(canonical, safe='')}"
 
 
 def _load_jsonl(path: Path, *, required: bool) -> list[dict]:
@@ -173,7 +176,7 @@ def load_unique_sources(
         content_hash = str(record.get("source_hash") or "")
         content_hash = content_hash or hashlib.sha256(raw_text.encode("utf-8")).hexdigest()
         record_url = str(record.get("source_url") or "")
-        if record_dataset == DATASET_NAME:
+        if not record_url.startswith(("https://", "http://")):
             record_url = source_url(record_id)
         selected.append(
             SourceRecord(
