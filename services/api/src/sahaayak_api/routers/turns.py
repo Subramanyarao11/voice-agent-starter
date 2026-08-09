@@ -15,7 +15,7 @@ from sahaayak_agent import AgentRuntime, to_response
 from sahaayak_agent.voice import VoiceService, VoiceUnavailable
 from sahaayak_api.browser_auth import BrowserSessionPrincipal, require_browser_session
 from sahaayak_api.deps import get_runtime, get_voice
-from sahaayak_api.rate_limit import apply_rate_limit_headers, enforce_rate_limit
+from sahaayak_api.rate_limit import apply_rate_limit_headers, enforce_request_limits
 from sahaayak_api.telemetry import record_telemetry
 from sahaayak_common import get_logger
 from sahaayak_contracts import TurnRequest, TurnResponse
@@ -38,7 +38,9 @@ async def take_text_turn(
     principal: BrowserSessionPrincipal = Depends(require_browser_session),
 ) -> TurnResponse:
     """One text turn. The fastest way to exercise the dialogue during a build."""
-    decision = await enforce_rate_limit(request, session_id=principal.session_id, bucket="text")
+    decision = await enforce_request_limits(
+        request, session_id=principal.session_id, bucket="text"
+    )
     apply_rate_limit_headers(http_response, decision)
     session, state = await runtime.run_turn(
         caller_id=principal.caller_id,
@@ -73,7 +75,9 @@ async def take_voice_turn(
     principal: BrowserSessionPrincipal = Depends(require_browser_session),
 ) -> TurnResponse:
     """Audio in, audio out. Shared by the browser demo and any telephony webhook."""
-    decision = await enforce_rate_limit(request, session_id=principal.session_id, bucket="voice")
+    decision = await enforce_request_limits(
+        request, session_id=principal.session_id, bucket="voice"
+    )
     apply_rate_limit_headers(http_response, decision)
     audio_bytes = await audio.read()
     if not audio_bytes:

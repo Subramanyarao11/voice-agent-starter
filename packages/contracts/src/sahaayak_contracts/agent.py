@@ -61,6 +61,10 @@ class AgentState(BaseModel):
     knowledge_sources: list[RetrievedSource] = Field(default_factory=list)
     knowledge_error: str | None = None
 
+    # A deterministic product-scope guard stops unrelated or prompt-injection
+    # shaped requests before a model or hosted retrieval provider is called.
+    scope_blocked: bool = False
+
     response_text: str = ""
     needs_escalation: bool = False
     escalation_reason: EscalationReason | None = None

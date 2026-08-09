@@ -4,6 +4,9 @@ This document describes the deployment foundation added after the local demo.
 It is intentionally explicit about which pieces are ready to run and which
 still require deployment-owned credentials or policies.
 
+For the complete public-abuse, provider-budget, and guardrail runbook, see
+[security-operations.md](security-operations.md).
+
 ## Development with local Keycloak
 
 Keycloak is the open-source OIDC provider for the workforce console. Citizens

@@ -51,6 +51,8 @@ def route_after_understand(state: AgentState) -> str:
     new question to mention facts such as a category without leaving the RAG
     lane.
     """
+    if state.scope_blocked:
+        return "compose"
     knowledge_intents = {
         Intent.ASK_ABOUT_BENEFIT,
         Intent.ASK_HOW_TO_APPLY,
@@ -84,7 +86,11 @@ def build_graph(deps: GraphDeps | None = None):
     graph.add_conditional_edges(
         "understand",
         route_after_understand,
-        {"answer_from_knowledge": "answer_from_knowledge", "gather": "gather"},
+        {
+            "answer_from_knowledge": "answer_from_knowledge",
+            "gather": "gather",
+            "compose": "compose",
+        },
     )
     graph.add_edge("answer_from_knowledge", "compose")
     graph.add_conditional_edges(

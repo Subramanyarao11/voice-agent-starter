@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import asyncio
 import hashlib
+import ipaddress
 import secrets
 import time
 from collections import deque
@@ -119,7 +120,16 @@ async def _get_backend():
     async with _backend_lock:
         if _backend is not None:
             return _backend
+        if settings.is_production and not settings.rate_limit_key_salt.strip():
+            log.error("rate_limit_key_salt_not_configured")
+            raise RateLimitUnavailable
         if not settings.redis_url:
+            if settings.is_production or (
+                settings.rate_limit_fail_closed
+                and not (settings.is_development or settings.is_test)
+            ):
+                log.error("rate_limit_redis_not_configured")
+                raise RateLimitUnavailable
             _backend = _memory_backend
             return _backend
         try:
@@ -130,8 +140,9 @@ async def _get_backend():
             _backend = _RedisSlidingWindow(client)
             log.info("rate_limit_backend_selected", backend="redis")
         except Exception as exc:
-            if settings.rate_limit_fail_closed and not (
-                settings.is_development or settings.is_test
+            if settings.is_production or (
+                settings.rate_limit_fail_closed
+                and not (settings.is_development or settings.is_test)
             ):
                 log.error("rate_limit_backend_unavailable", error=exc.__class__.__name__)
                 raise RateLimitUnavailable from exc
@@ -150,8 +161,18 @@ def _fingerprint(value: str) -> str:
 
 
 def _client_ip(request: Request) -> str:
-    # Do not trust X-Forwarded-For until the deployment explicitly configures
-    # its trusted proxy chain. The direct socket address cannot be caller-set.
+    # The custom header is only accepted when the deployment explicitly opts in
+    # and its reverse proxy overwrites the header. This avoids trusting a
+    # caller-controlled X-Forwarded-For value while still giving each visitor a
+    # distinct limiter key behind the bundled Nginx proxy.
+    if settings.trust_proxy_client_ip:
+        candidate = request.headers.get(settings.proxy_client_ip_header, "").strip()
+        try:
+            ipaddress.ip_address(candidate)
+        except ValueError:
+            pass
+        else:
+            return candidate
     return request.client.host if request.client else "unknown"
 
 
@@ -167,43 +188,73 @@ async def enforce_rate_limit(
     *,
     session_id: str | None,
     bucket: str,
+    window_seconds: int | None = None,
 ) -> RateLimitDecision | None:
     if not settings.rate_limit_enabled:
+        if settings.is_production:
+            log.error("rate_limit_disabled_in_production")
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail="Abuse protection is temporarily unavailable",
+            )
         return None
 
     window = max(1, settings.rate_limit_window_seconds)
-    config: dict[str, tuple[int, int]] = {
-        "session_create": (0, settings.rate_limit_session_create_per_ip),
-        "text": (settings.rate_limit_text_per_session, settings.rate_limit_text_per_ip),
-        "voice": (settings.rate_limit_voice_per_session, settings.rate_limit_voice_per_ip),
-        "rag": (settings.rate_limit_rag_per_session, settings.rate_limit_rag_per_ip),
+    config: dict[str, tuple[int, int, int]] = {
+        "session_create": (0, settings.rate_limit_session_create_per_ip, window),
+        "session_create_daily": (0, settings.rate_limit_session_create_per_ip_per_day, 86_400),
+        "text": (settings.rate_limit_text_per_session, settings.rate_limit_text_per_ip, window),
+        "text_daily": (
+            settings.rate_limit_text_per_session_per_day,
+            settings.rate_limit_text_per_ip_per_day,
+            86_400,
+        ),
+        "voice": (settings.rate_limit_voice_per_session, settings.rate_limit_voice_per_ip, window),
+        "voice_daily": (
+            settings.rate_limit_voice_per_session_per_day,
+            settings.rate_limit_voice_per_ip_per_day,
+            86_400,
+        ),
+        "rag": (settings.rate_limit_rag_per_session, settings.rate_limit_rag_per_ip, window),
+        "rag_daily": (
+            settings.rate_limit_rag_per_session_per_day,
+            settings.rate_limit_rag_per_ip_per_day,
+            86_400,
+        ),
         "application_create": (
             settings.rate_limit_application_create_per_session,
             settings.rate_limit_application_create_per_ip,
+            window,
         ),
         "application_status": (
             settings.rate_limit_application_status_per_session,
             settings.rate_limit_application_status_per_ip,
+            window,
         ),
         "application_pack": (
             settings.rate_limit_application_pack_per_session,
             settings.rate_limit_application_pack_per_ip,
+            window,
         ),
         "assistance": (
             settings.rate_limit_assistance_per_session,
             settings.rate_limit_assistance_per_ip,
+            window,
         ),
         "radar": (
             settings.rate_limit_radar_per_session,
             settings.rate_limit_radar_per_ip,
+            window,
         ),
         "life_event": (
             settings.rate_limit_life_event_per_session,
             settings.rate_limit_life_event_per_ip,
+            window,
         ),
         "migration": (
             settings.rate_limit_migration_per_session,
             settings.rate_limit_migration_per_ip,
+            window,
         ),
         # Contact verification gets its own budget rather than sharing the
         # text bucket. Each challenge sends a real charged message, and the
@@ -211,10 +262,19 @@ async def enforce_rate_limit(
         "contact_verify": (
             settings.rate_limit_contact_verify_per_session,
             settings.rate_limit_contact_verify_per_ip,
+            window,
         ),
         "feedback": (
             settings.rate_limit_feedback_per_session,
             settings.rate_limit_feedback_per_ip,
+            window,
+        ),
+        "auth_exchange": (0, settings.rate_limit_auth_exchange_per_ip, window),
+        "auth_exchange_daily": (0, settings.rate_limit_auth_exchange_per_ip_per_day, 86_400),
+        "voice_socket": (
+            0,
+            settings.rate_limit_voice_socket_per_ip,
+            settings.rate_limit_voice_socket_window_seconds,
         ),
     }
     limits = config.get(bucket)
@@ -238,7 +298,7 @@ async def enforce_rate_limit(
         decision = await backend.consume(
             f"sahaayak:rate:{bucket}:{dimension}:{identity}",
             limit=max(1, limit),
-            window_seconds=window,
+            window_seconds=max(1, window_seconds or limits[2]),
         )
         decision = RateLimitDecision(
             allowed=decision.allowed,
@@ -252,6 +312,34 @@ async def enforce_rate_limit(
             _raise_rate_limit(decision)
 
     return min(decisions, key=lambda item: (item.remaining, item.reset_seconds))
+
+
+async def enforce_request_limits(
+    request: Request,
+    *,
+    session_id: str | None,
+    bucket: str,
+) -> RateLimitDecision | None:
+    """Apply the short-window and durable daily guest limits for one operation."""
+    decision = await enforce_rate_limit(request, session_id=session_id, bucket=bucket)
+    daily_bucket = {
+        "session_create": "session_create_daily",
+        "text": "text_daily",
+        "voice": "voice_daily",
+        "rag": "rag_daily",
+        "auth_exchange": "auth_exchange_daily",
+    }.get(bucket)
+    if daily_bucket is None:
+        return decision
+    daily = await enforce_rate_limit(request, session_id=session_id, bucket=daily_bucket)
+    if decision is None:
+        return daily
+    if daily is None:
+        return decision
+    return min(
+        (decision, daily),
+        key=lambda item: (item.remaining, item.reset_seconds),
+    )
 
 
 async def consume_channel_limit(

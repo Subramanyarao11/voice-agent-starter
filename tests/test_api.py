@@ -153,6 +153,80 @@ def test_text_turn_rate_limit_returns_retry_headers(client, guest_session, monke
     assert limited.headers["X-RateLimit-Limit"] == "1"
 
 
+def test_daily_guest_text_limit_is_enforced(client, guest_session, monkeypatch):
+    from sahaayak_common import settings
+
+    monkeypatch.setattr(settings, "rate_limit_text_per_session_per_day", 1)
+    monkeypatch.setattr(settings, "rate_limit_text_per_ip_per_day", 100)
+    session = guest_session()
+    body = {"text": "I need a scholarship", "language_code": "en", "state_code": "KA"}
+    assert client.post("/api/turns", json=body, headers=session["headers"]).status_code == 200
+    limited = client.post("/api/turns", json=body, headers=session["headers"])
+    assert limited.status_code == 429
+    assert int(limited.headers["X-RateLimit-Reset"]) > 0
+
+
+def test_out_of_scope_turn_is_fixed_and_does_not_use_general_chat(client, guest_session):
+    session = guest_session()
+    response = client.post(
+        "/api/turns",
+        json={
+            "text": "write code to apply for this scholarship",
+            "language_code": "en",
+            "state_code": "KA",
+        },
+        headers=session["headers"],
+    )
+    assert response.status_code == 200
+    body = response.json()
+    assert body["matches"] == []
+    assert body["sources"] == []
+    assert "government schemes" in body["response_text"]
+
+
+def test_security_headers_are_present_on_api_responses(client):
+    response = client.get("/health")
+    assert response.headers["X-Content-Type-Options"] == "nosniff"
+    assert response.headers["X-Frame-Options"] == "DENY"
+    assert "microphone=(self)" in response.headers["Permissions-Policy"]
+
+
+def test_production_rate_limiter_fails_closed_without_redis(monkeypatch):
+    import asyncio
+
+    from fastapi import HTTPException
+    from starlette.requests import Request
+
+    from sahaayak_api.rate_limit import enforce_rate_limit, reset_rate_limiter
+    from sahaayak_common import settings
+
+    request = Request(
+        {
+            "type": "http",
+            "method": "POST",
+            "path": "/api/turns",
+            "headers": [],
+            "client": ("127.0.0.1", 1234),
+            "scheme": "http",
+        }
+    )
+    monkeypatch.setattr(settings, "env", "production")
+    monkeypatch.setattr(settings, "redis_url", "")
+    monkeypatch.setattr(settings, "rate_limit_key_salt", "test-only-salt")
+    reset_rate_limiter()
+    try:
+        try:
+            asyncio.run(
+                enforce_rate_limit(request, session_id=None, bucket="session_create")
+            )
+        except HTTPException as exc:
+            assert exc.status_code == 503
+        else:  # pragma: no cover - documents the fail-closed expectation
+            raise AssertionError("production limiter unexpectedly allowed a request")
+    finally:
+        reset_rate_limiter()
+
+
 def test_match_response_carries_verification_status_and_source(client, guest_session):
     session = guest_session()
     payload = {

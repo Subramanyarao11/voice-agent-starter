@@ -25,7 +25,7 @@ from sahaayak_api.integrations.infobip.whatsapp import (
     open_window,
 )
 from sahaayak_api.notifications import get_provider
-from sahaayak_api.rate_limit import consume_channel_limit
+from sahaayak_api.rate_limit import RateLimitUnavailable, consume_channel_limit
 from sahaayak_common import (
     UserSession,
     channel_identity_hash,
@@ -38,9 +38,9 @@ from sahaayak_contracts import NotificationChannel
 
 log = get_logger(__name__)
 
-# Per-sender budget. Independent of the browser limits so a WhatsApp flood
-# cannot exhaust the protection on the web demo.
-INBOUND_LIMIT = 12
+# Per-sender budgets are independent of browser limits so a WhatsApp flood
+# cannot exhaust the protection on the web demo or spend the shared provider
+# cap through a second transport.
 INBOUND_WINDOW_SECONDS = 60
 
 # Answers that need no agent turn, so they cost nothing and cannot be made to
@@ -91,11 +91,29 @@ async def _handle(event: dict) -> None:
     # act on: the user did message us, and that is what Meta's rule turns on.
     await open_window(sender)
 
-    decision = await consume_channel_limit(
-        identity, bucket="whatsapp_inbound", limit=INBOUND_LIMIT,
-        window_seconds=INBOUND_WINDOW_SECONDS,
-    )
+    try:
+        decision = await consume_channel_limit(
+            identity,
+            bucket="whatsapp_inbound",
+            limit=settings.rate_limit_whatsapp_inbound_per_sender,
+            window_seconds=INBOUND_WINDOW_SECONDS,
+        )
+        daily_decision = await consume_channel_limit(
+            identity,
+            bucket="whatsapp_inbound_daily",
+            limit=settings.rate_limit_whatsapp_inbound_per_sender_per_day,
+            window_seconds=86_400,
+        )
+    except RateLimitUnavailable:
+        # Do not turn a limiter outage into an unbounded paid channel. The
+        # webhook has already been acknowledged; the provider will not get an
+        # AI response until Redis protection is healthy again.
+        log.error("whatsapp_rate_limiter_unavailable", identity=identity[:12])
+        return
     if not decision.allowed:
+        await _reply(provider, sender, BUSY_REPLY, identity=identity)
+        return
+    if not daily_decision.allowed:
         await _reply(provider, sender, BUSY_REPLY, identity=identity)
         return
 

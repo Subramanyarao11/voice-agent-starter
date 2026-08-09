@@ -19,7 +19,7 @@ from sqlmodel import Session
 from sahaayak_agent import AgentRuntime, to_response
 from sahaayak_agent.voice import VoiceService, VoiceUnavailable
 from sahaayak_api.deps import get_runtime, get_voice
-from sahaayak_api.rate_limit import apply_rate_limit_headers, enforce_rate_limit
+from sahaayak_api.rate_limit import apply_rate_limit_headers, enforce_request_limits
 from sahaayak_api.telemetry import record_telemetry
 from sahaayak_common import UserSession, get_logger, get_session, settings
 from sahaayak_contracts import TurnResponse
@@ -58,7 +58,7 @@ async def take_telephony_turn(
         state_code=state_code or settings.default_state,
     )
     _mark_telephony_session(db, session.id)
-    decision = await enforce_rate_limit(request, session_id=session.id, bucket="voice")
+    decision = await enforce_request_limits(request, session_id=session.id, bucket="voice")
     apply_rate_limit_headers(http_response, decision)
     session, state = await runtime.run_turn(
         caller_id=identity,

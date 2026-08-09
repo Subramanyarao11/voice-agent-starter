@@ -25,9 +25,9 @@ from sahaayak_agent import AgentRuntime, to_response
 from sahaayak_agent.voice import VoiceService, VoiceUnavailable
 from sahaayak_api.browser_auth import principal_for_access_token
 from sahaayak_api.deps import get_runtime, get_voice
-from sahaayak_api.rate_limit import enforce_rate_limit
+from sahaayak_api.rate_limit import enforce_rate_limit, enforce_request_limits
 from sahaayak_api.telemetry import record_telemetry
-from sahaayak_common import feature_flag_enabled, get_logger, get_session
+from sahaayak_common import feature_flag_enabled, get_logger, get_session, settings
 
 log = get_logger(__name__)
 
@@ -35,7 +35,6 @@ router = APIRouter(tags=["conversation"])
 
 MAX_STREAM_AUDIO_BYTES = 10 * 1024 * 1024
 MAX_STREAM_CHUNKS = 480
-MAX_STREAM_SECONDS = 90
 TRANSCRIPT_REVIEW_SECONDS = 120
 
 
@@ -67,6 +66,20 @@ async def voice_stream(websocket: WebSocket) -> None:
     try:
         start = await _receive_start(websocket)
         if start is None:
+            return
+
+        # A WebSocket is an expensive long-lived resource. Limit handshakes
+        # before resolving the bearer token so unauthenticated socket floods do
+        # not consume database or provider work.
+        try:
+            await enforce_rate_limit(
+                websocket,
+                session_id=None,
+                bucket="voice_socket",
+            )
+        except Exception as exc:
+            await _send_error(websocket, "rate_limited", _rate_limit_message(exc))
+            await websocket.close(code=1013)
             return
 
         principal = principal_for_access_token(db_session, start.access_token)
@@ -103,6 +116,10 @@ async def voice_stream(websocket: WebSocket) -> None:
         speak = start.speak
         chunks: list[bytes] = []
         total_bytes = 0
+        completed_turns = 0
+        connection_deadline = asyncio.get_running_loop().time() + max(
+            30, settings.voice_stream_max_seconds
+        )
 
         if start.audio_format == "pcm16" and isinstance(voice, VoiceService):
             try:
@@ -136,7 +153,28 @@ async def voice_stream(websocket: WebSocket) -> None:
             }
         )
         while True:
-            message = await websocket.receive()
+            remaining_connection = connection_deadline - asyncio.get_running_loop().time()
+            if remaining_connection <= 0:
+                await _send_error(
+                    websocket,
+                    "voice_connection_expired",
+                    "This voice connection has reached its safety time limit.",
+                )
+                await websocket.close(code=1000)
+                return
+            try:
+                message = await asyncio.wait_for(
+                    websocket.receive(),
+                    timeout=min(settings.voice_stream_idle_timeout_seconds, remaining_connection),
+                )
+            except TimeoutError:
+                await _send_error(
+                    websocket,
+                    "voice_connection_idle",
+                    "The voice connection was idle for too long. Please start again.",
+                )
+                await websocket.close(code=1000)
+                return
             if message.get("type") == "websocket.disconnect":
                 break
 
@@ -189,6 +227,14 @@ async def voice_stream(websocket: WebSocket) -> None:
 
             event_type = event.get("type")
             if event_type == "end_turn":
+                if completed_turns >= settings.voice_stream_max_turns_per_socket:
+                    await _send_error(
+                        websocket,
+                        "voice_turn_limit",
+                        "Please start a new voice connection for more turns.",
+                    )
+                    await websocket.close(code=1000)
+                    return
                 if total_bytes <= 0:
                     await _send_error(
                         websocket,
@@ -204,7 +250,7 @@ async def voice_stream(websocket: WebSocket) -> None:
                     )
                     continue
                 try:
-                    await enforce_rate_limit(
+                    await enforce_request_limits(
                         websocket,
                         session_id=principal.session_id,
                         bucket="voice",
@@ -243,6 +289,7 @@ async def voice_stream(websocket: WebSocket) -> None:
                         ),
                     )
                 )
+                completed_turns += 1
                 continue
 
             if event_type in {"interrupt", "cancel"}:

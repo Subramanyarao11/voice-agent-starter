@@ -49,6 +49,7 @@ from sahaayak_common import (
     Language,
     LanguageReadinessReview,
     OpenAIBudgetLedger,
+    ProviderBudgetLedger,
     ProviderPolicy,
     ProviderPolicyRevision,
     SourceFreshnessAlert,
@@ -182,8 +183,8 @@ class ProviderPolicyUpdateRequest(BaseModel):
     primary_provider: str = Field(min_length=2, max_length=80)
     fallback_provider: str | None = Field(default=None, max_length=80)
     circuit_state: Literal["closed", "open", "half_open"] = "closed"
-    daily_budget_usd: float | None = Field(default=None, ge=0, le=15)
-    monthly_budget_usd: float | None = Field(default=None, ge=0, le=15)
+    daily_budget_usd: float | None = Field(default=None, ge=0, le=10)
+    monthly_budget_usd: float | None = Field(default=None, ge=0, le=10)
     override_expires_at: datetime | None = None
     reason: str = Field(min_length=3, max_length=500)
 
@@ -3128,6 +3129,15 @@ def _provider_statuses(
         ).summary()
     except Exception as exc:
         log.warning("admin_openai_budget_unavailable", error=exc.__class__.__name__)
+    sarvam_budget: dict[str, Any] = {}
+    try:
+        sarvam_budget = ProviderBudgetLedger(
+            "sarvam",
+            settings.sarvam_budget_usd,
+            settings.resolved_sarvam_budget_ledger_path,
+        ).summary()
+    except Exception as exc:
+        log.warning("admin_sarvam_budget_unavailable", error=exc.__class__.__name__)
     return [
         ProviderStatusOut(
             name="openai",
@@ -3163,12 +3173,19 @@ def _provider_statuses(
             tts_billed_characters_by_language=_sum_metadata_by_language(
                 tts_events, "tts_billed_characters"
             ),
-            cost_scope="Sarvam billing is not available from the current provider contract.",
-            controls_available=True,
-            note=(
-                "Sarvam credit reconciliation is not available from the current "
-                "provider contract; request and cache telemetry is shown."
+            budget_usd=_float_or_none(sarvam_budget.get("budget_usd")),
+            reserved_usd=_float_or_none(sarvam_budget.get("reserved_usd")),
+            observed_usd=_float_or_none(sarvam_budget.get("observed_usd")),
+            remaining_usd=_float_or_none(sarvam_budget.get("remaining_usd")),
+            cost_by_operation=_budget_cost_by_operation(
+                sarvam_budget.get("by_operation")
             ),
+            controls_available=True,
+            cost_scope=(
+                "Sarvam provider contract billing is not exposed to the app; "
+                "the persistent reservation ledger is the application safety view."
+            ),
+            note="STT and TTS share one fail-closed Sarvam application budget.",
         ),
         ProviderStatusOut(
             name="sarvam_saaras",
@@ -3176,13 +3193,20 @@ def _provider_statuses(
             health="configured" if settings.tts_enabled else "not configured",
             requests=len(sarvam_stt_events),
             failures=sum(event.outcome == "error" for event in sarvam_stt_events),
-            voice_requests_by_language=_counts_by_language(sarvam_stt_events),
-            cost_scope="Sarvam billing is not available from the current provider contract.",
-            controls_available=True,
-            note=(
-                "Used as the explicit Indian-language STT fallback where the OpenAI "
-                "transcription endpoint rejects a locale hint."
+            budget_usd=_float_or_none(sarvam_budget.get("budget_usd")),
+            reserved_usd=_float_or_none(sarvam_budget.get("reserved_usd")),
+            observed_usd=_float_or_none(sarvam_budget.get("observed_usd")),
+            remaining_usd=_float_or_none(sarvam_budget.get("remaining_usd")),
+            cost_by_operation=_budget_cost_by_operation(
+                sarvam_budget.get("by_operation")
             ),
+            voice_requests_by_language=_counts_by_language(sarvam_stt_events),
+            cost_scope=(
+                "Sarvam provider contract billing is not exposed to the app; "
+                "the persistent reservation ledger is the application safety view."
+            ),
+            controls_available=True,
+            note="Used as the explicit Indian-language STT fallback; shares the Sarvam cap.",
         ),
         ProviderStatusOut(
             name="redis",

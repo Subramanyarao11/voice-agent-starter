@@ -13,7 +13,13 @@ import httpx
 
 from sahaayak_agent.tracing import start_span
 from sahaayak_agent.voice.base import STTProvider, VoiceUnavailable
-from sahaayak_common import get_logger, settings
+from sahaayak_common import (
+    ProviderBudgetError,
+    ProviderBudgetLedger,
+    ProviderBudgetReservation,
+    get_logger,
+    settings,
+)
 from sahaayak_contracts import LanguageProfile, TranscriptionResult
 
 log = get_logger(__name__)
@@ -30,10 +36,26 @@ class SarvamSaarasSTT(STTProvider):
             raise VoiceUnavailable("SARVAM_API_KEY is not configured")
         self._api_key = settings.sarvam_api_key
         self._timeout = timeout
+        self._budget = ProviderBudgetLedger(
+            "sarvam",
+            settings.sarvam_budget_usd,
+            settings.resolved_sarvam_budget_ledger_path,
+        )
 
     async def transcribe(
         self, audio: bytes, *, profile: LanguageProfile, filename: str = "audio.wav"
     ) -> TranscriptionResult:
+        try:
+            reservation: ProviderBudgetReservation = self._budget.reserve_fixed(
+                model=self.MODEL,
+                cost_usd=settings.sarvam_stt_request_reservation_usd,
+                operation=f"voice:transcription:{profile.code}",
+            )
+        except ProviderBudgetError as exc:
+            raise VoiceUnavailable(
+                "speech-to-text is unavailable because the Sarvam budget cap "
+                "has been reached or its ledger is unsafe"
+            ) from exc
         with start_span(
             "provider.sarvam.transcription",
             {
@@ -58,12 +80,17 @@ class SarvamSaarasSTT(STTProvider):
                     )
                     response.raise_for_status()
             except Exception as exc:
+                self._budget.record_failure(reservation, exc)
                 if span is not None:
                     span.record_exception(exc)
                     span.set_attribute("error.type", exc.__class__.__name__)
                 raise
 
         payload = response.json()
+        self._budget.record_completion(
+            reservation,
+            metadata={"language": profile.code, "audio_bytes": len(audio)},
+        )
         text = str(payload.get("transcript") or payload.get("text") or "").strip()
         log.info(
             "transcribed",

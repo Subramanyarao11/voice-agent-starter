@@ -18,7 +18,13 @@ import httpx
 
 from sahaayak_agent.tracing import start_span
 from sahaayak_agent.voice.base import TTSProvider, VoiceUnavailable
-from sahaayak_common import get_logger, settings
+from sahaayak_common import (
+    ProviderBudgetError,
+    ProviderBudgetLedger,
+    ProviderBudgetReservation,
+    get_logger,
+    settings,
+)
 from sahaayak_contracts import LanguageProfile, SynthesisResult
 
 log = get_logger(__name__)
@@ -111,6 +117,11 @@ class SarvamBulbulTTS(TTSProvider):
             raise VoiceUnavailable("SARVAM_API_KEY is not configured")
         self._api_key = settings.sarvam_api_key
         self._timeout = timeout
+        self._budget = ProviderBudgetLedger(
+            "sarvam",
+            settings.sarvam_budget_usd,
+            settings.resolved_sarvam_budget_ledger_path,
+        )
 
     async def synthesize(self, text: str, *, profile: LanguageProfile) -> SynthesisResult:
         chunks = split_for_synthesis(text)
@@ -120,6 +131,21 @@ class SarvamBulbulTTS(TTSProvider):
         audio_parts: list[bytes] = []
         async with httpx.AsyncClient(timeout=self._timeout) as client:
             for chunk in chunks:
+                try:
+                    reservation: ProviderBudgetReservation = self._budget.reserve_fixed(
+                        model=self.MODEL,
+                        cost_usd=(
+                            settings.sarvam_tts_reservation_usd_per_1000_characters
+                            * len(chunk)
+                            / 1000
+                        ),
+                        operation=f"voice:synthesis:{profile.code}",
+                    )
+                except ProviderBudgetError as exc:
+                    raise VoiceUnavailable(
+                        "text-to-speech is unavailable because the Sarvam budget "
+                        "cap has been reached or its ledger is unsafe"
+                    ) from exc
                 with start_span(
                     "provider.sarvam.tts",
                     {
@@ -142,11 +168,16 @@ class SarvamBulbulTTS(TTSProvider):
                         )
                         response.raise_for_status()
                     except Exception as exc:
+                        self._budget.record_failure(reservation, exc)
                         if span is not None:
                             span.record_exception(exc)
                             span.set_attribute("error.type", exc.__class__.__name__)
                         raise
                 payload = response.json()
+                self._budget.record_completion(
+                    reservation,
+                    metadata={"language": profile.code, "characters": len(chunk)},
+                )
                 encoded = (payload.get("audios") or [None])[0]
                 if not encoded:
                     log.error("sarvam_returned_no_audio", keys=sorted(payload))

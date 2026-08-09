@@ -132,6 +132,13 @@ from sahaayak_common.profile_crypto import (
     profile_value_hash,
     reset_profile_encryption_cache,
 )
+from sahaayak_common.provider_budget import (
+    MAX_PROVIDER_BUDGET_USD,
+    ProviderBudgetError,
+    ProviderBudgetExceeded,
+    ProviderBudgetLedger,
+    ProviderBudgetReservation,
+)
 from sahaayak_common.provider_policy import (
     DEFAULT_PROVIDER_POLICIES,
     get_effective_provider_policy,
@@ -192,6 +199,11 @@ __all__ = [
     "NotificationDelivery",
     "NotificationTemplate",
     "OpenAIBudgetLedger",
+    "MAX_PROVIDER_BUDGET_USD",
+    "ProviderBudgetError",
+    "ProviderBudgetExceeded",
+    "ProviderBudgetLedger",
+    "ProviderBudgetReservation",
     "ProviderPolicy",
     "ProviderPolicyRevision",
     "MemberRecommendation",

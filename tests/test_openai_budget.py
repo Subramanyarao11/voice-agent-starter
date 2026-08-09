@@ -9,9 +9,9 @@ import pytest
 from sahaayak_common import BudgetError, BudgetExceeded, OpenAIBudgetLedger
 
 
-def test_budget_rejects_a_ceiling_above_fifteen_dollars(tmp_path):
-    with pytest.raises(BudgetError, match=r"cannot exceed \$15.00"):
-        OpenAIBudgetLedger(15.01, tmp_path / "budget.json")
+def test_budget_rejects_a_ceiling_above_ten_dollars(tmp_path):
+    with pytest.raises(BudgetError, match=r"cannot exceed \$10.00"):
+        OpenAIBudgetLedger(10.01, tmp_path / "budget.json")
 
 
 def test_reservations_persist_and_stop_before_the_cap(tmp_path):

@@ -18,11 +18,30 @@ from sahaayak_agent.tracing import (
     start_span,
 )
 from sahaayak_api.telemetry import record_telemetry
-from sahaayak_common import get_logger, new_id, request_id_var
+from sahaayak_common import get_logger, new_id, request_id_var, settings
 
 log = get_logger(__name__)
 
 REQUEST_ID_HEADER = "X-Request-ID"
+
+
+class SecurityHeadersMiddleware(BaseHTTPMiddleware):
+    """Add browser hardening headers to direct API responses as well as Nginx."""
+
+    async def dispatch(self, request: Request, call_next):
+        response = await call_next(request)
+        response.headers.setdefault("X-Content-Type-Options", "nosniff")
+        response.headers.setdefault("X-Frame-Options", "DENY")
+        response.headers.setdefault("Referrer-Policy", "strict-origin-when-cross-origin")
+        response.headers.setdefault(
+            "Permissions-Policy", "microphone=(self), camera=(), geolocation=()"
+        )
+        response.headers.setdefault("Cross-Origin-Resource-Policy", "same-site")
+        if settings.is_production:
+            response.headers.setdefault(
+                "Strict-Transport-Security", "max-age=31536000; includeSubDomains"
+            )
+        return response
 
 
 class RequestContextMiddleware(BaseHTTPMiddleware):

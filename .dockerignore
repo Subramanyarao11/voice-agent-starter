@@ -11,6 +11,12 @@ __pycache__/
 !.env.example
 data/raw_pdfs/
 data/raw_pdfs_hf_cache/
+data/usage/
+data/rag/
+data/structured/
+data/jobs/
+data/directory/snapshots/
+media/
 apps/*/dist/
 docs/
 tests/

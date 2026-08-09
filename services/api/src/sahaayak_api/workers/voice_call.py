@@ -28,6 +28,7 @@ from sahaayak_api.integrations.infobip.calls import (
     InfobipCallsProvider,
     build_calls_provider,
 )
+from sahaayak_api.rate_limit import RateLimitUnavailable, consume_channel_limit
 from sahaayak_api.telemetry import record_telemetry
 from sahaayak_common import (
     CallSession,
@@ -146,6 +147,32 @@ async def _on_speech(
         language = row.language_code
         turn_count = row.turn_count
         started_at = _as_utc(row.started_at)
+
+    # Event callbacks do not have a browser IP or guest token. Use the
+    # provider-asserted caller identity only after it has been HMAC-derived and
+    # stored as a hash, and apply both short-window and daily ceilings before
+    # transcription or agent work can spend provider budget.
+    try:
+        burst = await consume_channel_limit(
+            identity,
+            bucket="telephony_inbound",
+            limit=settings.rate_limit_telephony_inbound_per_caller,
+            window_seconds=60,
+        )
+        daily = await consume_channel_limit(
+            identity,
+            bucket="telephony_inbound_daily",
+            limit=settings.rate_limit_telephony_inbound_per_caller_per_day,
+            window_seconds=86_400,
+        )
+    except RateLimitUnavailable:
+        log.error("voice_call_rate_limiter_unavailable", identity=identity[:12])
+        await _end(provider, call_id, reason="rate_limiter_unavailable")
+        return
+    if not burst.allowed or not daily.allowed:
+        log.warning("voice_call_rate_limited", identity=identity[:12], call_id=call_id)
+        await _end(provider, call_id, reason="caller_rate_limited")
+        return
 
     now = datetime.now(UTC)
     if (now - started_at).total_seconds() > MAX_CALL_SECONDS:

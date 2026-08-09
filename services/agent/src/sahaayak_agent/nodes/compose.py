@@ -14,6 +14,7 @@ import re
 from sahaayak_agent.nodes.deps import GraphDeps
 from sahaayak_agent.prompts import get_catalog
 from sahaayak_agent.repository import load_briefs
+from sahaayak_agent.scope import out_of_scope_message
 from sahaayak_common import State, get_logger, settings
 from sahaayak_contracts import (
     SLOT_REGISTRY,
@@ -39,6 +40,9 @@ def _join(parts: list[str]) -> str:
 async def compose(state: AgentState, deps: GraphDeps) -> dict:
     catalog = get_catalog(state.language_code)
     parts: list[str] = []
+
+    if state.scope_blocked:
+        return _finish(state, [out_of_scope_message(state.language_code)])
 
     if state.knowledge_answer:
         # Source markers are preserved in ``grounded_answer`` for visual

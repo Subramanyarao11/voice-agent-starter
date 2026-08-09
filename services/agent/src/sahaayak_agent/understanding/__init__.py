@@ -10,6 +10,7 @@ from __future__ import annotations
 
 from pydantic import BaseModel, Field
 
+from sahaayak_agent.scope import assess_scope
 from sahaayak_agent.understanding import rules
 from sahaayak_common import get_logger, settings
 from sahaayak_contracts import Intent, SlotName, SlotValue
@@ -22,6 +23,7 @@ class UnderstandingResult(BaseModel):
     slots: dict[SlotName, SlotValue] = Field(default_factory=dict)
     confidence: float = 1.0
     source: str = "rules"  # rules | llm | hybrid
+    scope_blocked: bool = False
 
 
 class Understanding:
@@ -98,6 +100,19 @@ class Understanding:
 
         intent = rules.detect_intent(transcript)
         confidence = 1.0 if (slots or intent is not Intent.UNKNOWN) else 0.0
+        scope = assess_scope(
+            transcript,
+            pending_slot=pending_slot,
+            has_structured_slots=bool(slots),
+            known_intent=intent if intent is not Intent.UNKNOWN else None,
+        )
+        if not scope.allowed:
+            return UnderstandingResult(
+                intent=Intent.UNKNOWN,
+                confidence=0.0,
+                source="rules",
+                scope_blocked=True,
+            )
         return UnderstandingResult(
             intent=intent, slots=slots, confidence=confidence, source="rules"
         )

@@ -10,6 +10,7 @@ import json
 from functools import lru_cache
 from pathlib import Path
 
+from pydantic import field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -44,7 +45,7 @@ class Settings(BaseSettings):
     openai_realtime_stt_enabled: bool = False
     openai_realtime_transcription_model: str = "gpt-4o-transcribe"
     # The data pipeline defaults to a conservative $10 lifetime ledger. The
-    # code-level guard refuses any ceiling above $15 and persists reservations
+    # code-level guard refuses any ceiling above $10 and persists reservations
     # across reruns, so a test command cannot reset the budget.
     openai_budget_usd: float = 10.0
     openai_budget_ledger_path: str = "data/usage/openai-budget.json"
@@ -71,6 +72,13 @@ class Settings(BaseSettings):
     # silently create a large remote storage bill.
     openai_rag_max_source_bytes: int = 900_000_000
     sarvam_api_key: str = ""
+    # Sarvam does not currently expose a stable application-side USD meter in
+    # the voice contract, so adapters use conservative reservations. The hard
+    # code ceiling is $10; choose $5 for a stricter live deployment.
+    sarvam_budget_usd: float = 10.0
+    sarvam_budget_ledger_path: str = "data/usage/sarvam-budget.json"
+    sarvam_stt_request_reservation_usd: float = 0.10
+    sarvam_tts_reservation_usd_per_1000_characters: float = 0.10
 
     # Authorized National Career Service access is optional and deliberately
     # kept separate from the public website adapter. The admin readiness view
@@ -157,6 +165,7 @@ class Settings(BaseSettings):
     rate_limit_rag_per_session: int = 10
     rate_limit_rag_per_ip: int = 30
     rate_limit_session_create_per_ip: int = 10
+    rate_limit_session_create_per_ip_per_day: int = 30
     rate_limit_application_create_per_session: int = 10
     rate_limit_application_create_per_ip: int = 30
     rate_limit_application_status_per_session: int = 20
@@ -272,6 +281,27 @@ class Settings(BaseSettings):
     rate_limit_contact_verify_per_ip: int = 20
     rate_limit_feedback_per_session: int = 5
     rate_limit_feedback_per_ip: int = 20
+    rate_limit_text_per_session_per_day: int = 100
+    rate_limit_text_per_ip_per_day: int = 300
+    rate_limit_voice_per_session_per_day: int = 20
+    rate_limit_voice_per_ip_per_day: int = 60
+    rate_limit_rag_per_session_per_day: int = 30
+    rate_limit_rag_per_ip_per_day: int = 90
+    rate_limit_whatsapp_inbound_per_sender: int = 12
+    rate_limit_whatsapp_inbound_per_sender_per_day: int = 60
+    rate_limit_telephony_inbound_per_caller: int = 12
+    rate_limit_telephony_inbound_per_caller_per_day: int = 60
+    rate_limit_auth_exchange_per_ip: int = 10
+    rate_limit_auth_exchange_per_ip_per_day: int = 30
+    rate_limit_voice_socket_per_ip: int = 10
+    rate_limit_voice_socket_window_seconds: int = 60
+    # Only enable this when the reverse proxy overwrites this header and the
+    # API is not directly reachable by the public internet.
+    trust_proxy_client_ip: bool = False
+    proxy_client_ip_header: str = "X-Sahaayak-Client-IP"
+    voice_stream_idle_timeout_seconds: int = 180
+    voice_stream_max_seconds: int = 300
+    voice_stream_max_turns_per_socket: int = 10
 
     # --- Telephony seam ----------------------------------------------------
     # The generic signed webhook is disabled until a telephony provider and
@@ -293,6 +323,13 @@ class Settings(BaseSettings):
     escalation_confidence_threshold: float = 0.7
     escalation_sla_hours: int = 24
 
+    @field_validator("openai_budget_usd", "sarvam_budget_usd")
+    @classmethod
+    def _bounded_provider_budget(cls, value: float) -> float:
+        if value <= 0 or value > 10:
+            raise ValueError("provider budget must be greater than 0 and at most 10 USD")
+        return value
+
     @property
     def resolved_database_url(self) -> str:
         if self.database_url:
@@ -302,6 +339,11 @@ class Settings(BaseSettings):
     @property
     def resolved_openai_budget_ledger_path(self) -> Path:
         path = Path(self.openai_budget_ledger_path)
+        return path if path.is_absolute() else REPO_ROOT / path
+
+    @property
+    def resolved_sarvam_budget_ledger_path(self) -> Path:
+        path = Path(self.sarvam_budget_ledger_path)
         return path if path.is_absolute() else REPO_ROOT / path
 
     @property
@@ -331,6 +373,10 @@ class Settings(BaseSettings):
     @property
     def is_development(self) -> bool:
         return self.env == "development"
+
+    @property
+    def is_production(self) -> bool:
+        return self.env == "production"
 
     @property
     def is_test(self) -> bool:

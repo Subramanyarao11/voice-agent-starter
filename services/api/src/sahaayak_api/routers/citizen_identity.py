@@ -11,9 +11,11 @@ from sqlmodel import Session
 from sahaayak_api.citizen_auth import (
     _OIDCRejected,
     _OIDCUnavailable,
+    _require_bff_origin,
     exchange_oidc_code,
     revoke_bff_session,
 )
+from sahaayak_api.rate_limit import apply_rate_limit_headers, enforce_request_limits
 from sahaayak_common import get_session, settings
 
 router = APIRouter(prefix="/api/citizen/auth", tags=["citizen identity"])
@@ -33,10 +35,14 @@ class CitizenBffSessionOut(BaseModel):
 @router.post("/exchange", response_model=CitizenBffSessionOut)
 async def exchange(
     payload: CitizenCodeExchange,
+    request: Request,
     response: Response,
     db: Session = Depends(get_session),
 ) -> CitizenBffSessionOut:
+    decision = await enforce_request_limits(request, session_id=None, bucket="auth_exchange")
+    apply_rate_limit_headers(response, decision)
     try:
+        _require_bff_origin(request)
         row, session_capability = await exchange_oidc_code(
             db,
             code=payload.code,

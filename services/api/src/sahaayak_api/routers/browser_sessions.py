@@ -9,7 +9,7 @@ from pydantic import BaseModel, Field
 from sqlmodel import Session, select
 
 from sahaayak_api.browser_auth import new_access_token, token_digest
-from sahaayak_api.rate_limit import apply_rate_limit_headers, enforce_rate_limit
+from sahaayak_api.rate_limit import apply_rate_limit_headers, enforce_request_limits
 from sahaayak_common import (
     Language,
     State,
@@ -44,7 +44,7 @@ async def create_browser_session(
     response: Response,
     db: Session = Depends(get_session),
 ) -> BrowserSessionOut:
-    decision = await enforce_rate_limit(request, session_id=None, bucket="session_create")
+    decision = await enforce_request_limits(request, session_id=None, bucket="session_create")
     apply_rate_limit_headers(response, decision)
 
     # A fresh opaque cohort key makes percentage rollout deterministic for the

@@ -10,7 +10,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from sahaayak_agent.bootstrap import ensure_reference_data
 from sahaayak_agent.tracing import configure_observability, shutdown_observability
 from sahaayak_api.deployment import record_current_deployment
-from sahaayak_api.middleware import RequestContextMiddleware
+from sahaayak_api.middleware import RequestContextMiddleware, SecurityHeadersMiddleware
 from sahaayak_api.observability import (
     configure_library_instrumentation,
     shutdown_library_instrumentation,
@@ -77,15 +77,21 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
+app.add_middleware(SecurityHeadersMiddleware)
 app.add_middleware(RequestContextMiddleware)
+
+_allowed_origins = [settings.web_base_url.rstrip("/")]
+if settings.is_development or settings.is_test:
+    _allowed_origins.extend(["http://localhost:5173", "http://127.0.0.1:5173"])
 app.add_middleware(
     CORSMiddleware,
-    # The browser demo is served from a different origin in development. In a
-    # real deployment this narrows to the deployed web origin.
-    allow_origins=[settings.web_base_url, "http://localhost:5173", "http://127.0.0.1:5173"],
+    # Production accepts only the configured browser origin. Localhost is
+    # added only for development/test so a deployed API cannot be called from
+    # arbitrary origins with citizen cookies.
+    allow_origins=sorted({origin for origin in _allowed_origins if origin}),
     allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+    allow_headers=["Authorization", "Content-Type", "X-Admin-Token", "X-Request-ID"],
     expose_headers=["X-Request-ID"],
 )
 

@@ -34,7 +34,9 @@ except ImportError:  # pragma: no cover - keeps the module importable on Windows
     fcntl = None
 
 
-MAX_CONFIGURED_BUDGET_USD = Decimal("15.00")
+# This is an application-level ceiling. A deployment can choose $5 or $10,
+# but cannot accidentally turn a public endpoint into an uncapped account.
+MAX_CONFIGURED_BUDGET_USD = Decimal("10.00")
 DEFAULT_SAFETY_MULTIPLIER = Decimal("2.00")
 TOKENS_PER_MILLION = Decimal("1000000")
 
@@ -130,7 +132,7 @@ def _usage_counts(response: object) -> dict[str, int] | None:
 class OpenAIBudgetLedger:
     """Reserve and account for OpenAI requests across process restarts.
 
-    ``budget_usd`` is intentionally limited to ``$15``. The first ledger run
+    ``budget_usd`` is intentionally limited to ``$10``. The first ledger run
     stores the configured ceiling; later runs use the lower of the stored and
     current configuration so an accidental environment change cannot enlarge
     an existing test allowance.

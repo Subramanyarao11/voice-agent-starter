@@ -38,8 +38,17 @@ services:
       LOG_JSON: "true"
       DATABASE_URL: postgresql+psycopg://sahaayak:${POSTGRES_PASSWORD}@postgres:5432/sahaayak
       REDIS_URL: redis://redis:6379/0
+      RATE_LIMIT_ENABLED: "true"
       RATE_LIMIT_FAIL_CLOSED: "true"
       RATE_LIMIT_KEY_SALT: ${RATE_LIMIT_KEY_SALT:?set RATE_LIMIT_KEY_SALT in .env}
+      TRUST_PROXY_CLIENT_IP: "true"
+      PROXY_CLIENT_IP_HEADER: X-Sahaayak-Client-IP
+      ADMIN_STATIC_TOKENS_ENABLED: "false"
+      ADMIN_OIDC_ENABLED: ${ADMIN_OIDC_ENABLED:-true}
+      OPENAI_BUDGET_USD: ${OPENAI_BUDGET_USD:-5.0}
+      OPENAI_BUDGET_LEDGER_PATH: /var/lib/sahaayak-usage/openai-budget.json
+      SARVAM_BUDGET_USD: ${SARVAM_BUDGET_USD:-5.0}
+      SARVAM_BUDGET_LEDGER_PATH: /var/lib/sahaayak-usage/sarvam-budget.json
       WEB_BASE_URL: ${WEB_BASE_URL:-http://localhost:5173}
     expose:
       - "8000"
@@ -56,6 +65,8 @@ services:
       timeout: 4s
       retries: 10
       start_period: 30s
+    volumes:
+      - budgetdata:/var/lib/sahaayak-usage
 
   web:
     build:
@@ -147,6 +158,7 @@ services:
 volumes:
   pgdata:
   redisdata:
+  budgetdata:
   prometheusdata:
   alertmanagerdata:
   pgbackups:

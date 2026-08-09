@@ -40,7 +40,11 @@ async def understand(state: AgentState, deps: GraphDeps) -> dict:
 
     return {
         "intent": result.intent,
-        "domain": rules.infer_domain(result.intent, state.domain),
+        "domain": (
+            state.domain
+            if result.scope_blocked
+            else rules.infer_domain(result.intent, state.domain)
+        ),
         "slots": slots,
         "newly_filled": newly_filled,
         # Cleared here and re-decided downstream, so a question is never left
@@ -48,6 +52,7 @@ async def understand(state: AgentState, deps: GraphDeps) -> dict:
         "pending_slot": None,
         "answered_pending_slot": answered_pending_slot,
         "consecutive_misunderstandings": misunderstandings,
+        "scope_blocked": result.scope_blocked,
         "history": [*state.history, ConversationTurn(role="caller", text=state.transcript)],
         "turn_index": state.turn_index + 1,
     }
