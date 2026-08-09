@@ -167,6 +167,10 @@ class Settings(BaseSettings):
     rate_limit_assistance_per_ip: int = 30
     rate_limit_radar_per_session: int = 6
     rate_limit_radar_per_ip: int = 18
+    rate_limit_life_event_per_session: int = 20
+    rate_limit_life_event_per_ip: int = 40
+    rate_limit_migration_per_session: int = 5
+    rate_limit_migration_per_ip: int = 15
     rate_limit_window_seconds: int = 60
     rate_limit_key_salt: str = ""
     rate_limit_enabled: bool = True

@@ -29,6 +29,8 @@ from sahaayak_api.routers import (
     escalations,
     health,
     households,
+    life_events,
+    migrations,
     radar,
     rag,
     saved_benefits,
@@ -100,6 +102,8 @@ app.include_router(benefit_feedback.router)
 app.include_router(contact_points.router)
 app.include_router(browser_sessions.router)
 app.include_router(households.router)
+app.include_router(life_events.router)
+app.include_router(migrations.router)
 app.include_router(sessions.router)
 app.include_router(telephony.router)
 app.include_router(webhooks_infobip.router)

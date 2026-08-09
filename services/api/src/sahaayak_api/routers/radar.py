@@ -150,6 +150,29 @@ async def refresh_radar(
     decision = await enforce_rate_limit(request, session_id=account.id, bucket="radar")
     apply_rate_limit_headers(response, decision)
 
+    return recalculate_radar_snapshot(
+        db,
+        household,
+        payload,
+        trigger_type="manual_refresh",
+        trigger_reference_hash="",
+    )
+
+
+def recalculate_radar_snapshot(
+    db: Session,
+    household: Household,
+    payload: RadarRefreshRequest,
+    *,
+    trigger_type: str,
+    trigger_reference_hash: str,
+) -> RadarRefreshOut:
+    """Recompute one bounded snapshot for an authenticated household.
+
+    The public endpoint applies the rate limit; lifecycle events call this
+    helper after the event is committed so the same deterministic matcher is
+    used for manual and event-triggered refreshes.
+    """
     members = _members(db, household, member_id=payload.member_id)
     candidates = _reviewed_candidates(
         db,
@@ -174,6 +197,8 @@ async def refresh_radar(
                 result=result,
                 profile=profile,
                 generated_at=generated_at,
+                trigger_type=trigger_type,
+                trigger_reference_hash=trigger_reference_hash,
             )
             all_recommendations.append(recommendation)
             verdict_counts[result.verdict.value] = verdict_counts.get(result.verdict.value, 0) + 1
@@ -503,6 +528,8 @@ def _upsert_recommendation(
     result: EligibilityMatchResult,
     profile: _ProfileSnapshot,
     generated_at: datetime,
+    trigger_type: str = "manual_refresh",
+    trigger_reference_hash: str = "",
 ) -> MemberRecommendation:
     row = db.exec(
         select(MemberRecommendation).where(
@@ -528,8 +555,9 @@ def _upsert_recommendation(
             reason_codes=reason_codes,
             criterion_evidence=criterion_evidence,
             fact_use_evidence=list(profile.fact_use_evidence),
-            trigger_type="manual_refresh",
-            trigger_reference_hash=_safe_hash(
+            trigger_type=trigger_type,
+            trigger_reference_hash=trigger_reference_hash
+            or _safe_hash(
                 {"member": member.id, "benefit": benefit.id, "generated": generated_at.isoformat()}
             ),
             first_generated_at=generated_at,
@@ -546,6 +574,8 @@ def _upsert_recommendation(
         row.reason_codes = reason_codes
         row.criterion_evidence = criterion_evidence
         row.fact_use_evidence = list(profile.fact_use_evidence)
+        row.trigger_type = trigger_type
+        row.trigger_reference_hash = trigger_reference_hash or row.trigger_reference_hash
         row.last_generated_at = generated_at
         row.source_deadline = benefit.valid_until
         row.source_last_verified_date = benefit.last_verified_date

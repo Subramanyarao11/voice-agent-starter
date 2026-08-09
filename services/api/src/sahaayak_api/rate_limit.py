@@ -197,6 +197,14 @@ async def enforce_rate_limit(
             settings.rate_limit_radar_per_session,
             settings.rate_limit_radar_per_ip,
         ),
+        "life_event": (
+            settings.rate_limit_life_event_per_session,
+            settings.rate_limit_life_event_per_ip,
+        ),
+        "migration": (
+            settings.rate_limit_migration_per_session,
+            settings.rate_limit_migration_per_ip,
+        ),
         # Contact verification gets its own budget rather than sharing the
         # text bucket. Each challenge sends a real charged message, and the
         # attempt limit is an anti-guessing control as much as an abuse one.
