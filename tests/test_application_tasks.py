@@ -2,7 +2,13 @@
 
 from sqlmodel import select
 
-from sahaayak_common import ApplicationTask, EscalationTicket, SavedBenefit, UserSession, session_scope
+from sahaayak_common import (
+    ApplicationTask,
+    EscalationTicket,
+    SavedBenefit,
+    UserSession,
+    session_scope,
+)
 
 
 def test_saving_a_benefit_materializes_idempotent_tasks(client, guest_session):
