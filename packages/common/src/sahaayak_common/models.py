@@ -284,6 +284,32 @@ class CitizenAccount(SQLModel, table=True):
     deletion_requested_at: datetime | None = None
 
 
+class CitizenAuthSession(SQLModel, table=True):
+    """Opaque browser session for the citizen OIDC/BFF.
+
+    Provider access and refresh tokens are encrypted at rest and are never
+    returned to the browser. The browser only receives the random session
+    capability whose digest is persisted here.
+    """
+
+    __tablename__ = "citizen_auth_session"
+    __table_args__ = (
+        Index("ix_citizen_auth_session_account_active", "citizen_account_id", "revoked_at"),
+        Index("ix_citizen_auth_session_expiry", "access_token_expires_at", "revoked_at"),
+    )
+
+    id: str = Field(primary_key=True)
+    citizen_account_id: str = Field(foreign_key="citizen_account.id", index=True)
+    session_token_hash: str = Field(index=True, unique=True)
+    access_token_ciphertext: str
+    refresh_token_ciphertext: str | None = None
+    access_token_expires_at: datetime = Field(index=True)
+    refresh_token_expires_at: datetime | None = None
+    created_at: datetime = Field(default_factory=_utcnow, index=True)
+    last_used_at: datetime = Field(default_factory=_utcnow, index=True)
+    revoked_at: datetime | None = Field(default=None, index=True)
+
+
 class Household(SQLModel, table=True):
     """Minimal, account-owned household container."""
 

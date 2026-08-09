@@ -24,6 +24,7 @@ from sahaayak_api.routers import (
     benefit_feedback,
     browser_sessions,
     catalog,
+    citizen_identity,
     contact_points,
     escalations,
     health,
@@ -88,6 +89,7 @@ app.add_middleware(
 
 app.include_router(health.router)
 app.include_router(catalog.router)
+app.include_router(citizen_identity.router)
 app.include_router(turns.router)
 app.include_router(voice_stream.router)
 app.include_router(rag.router)

@@ -125,6 +125,15 @@ class Settings(BaseSettings):
     citizen_oidc_required_amr: str = ""
     citizen_oidc_required_acr: str = ""
     citizen_oidc_require_email_verified: bool = False
+    citizen_oidc_bff_enabled: bool = False
+    citizen_oidc_client_id: str = ""
+    citizen_oidc_client_secret: str = ""
+    citizen_oidc_token_url: str = ""
+    citizen_oidc_redirect_uri: str = ""
+    citizen_oidc_cookie_name: str = "sahaayak_citizen_session"
+    citizen_oidc_cookie_secure: bool = True
+    citizen_auth_encryption_key: str = ""
+    citizen_auth_session_ttl_days: int = 30
     citizen_household_dependants_enabled: bool = False
     citizen_household_max_members: int = 8
     citizen_household_retention_days: int = 730

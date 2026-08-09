@@ -28,6 +28,7 @@ os.environ["APPLICATION_DATA_ENCRYPTION_KEY"] = "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
 os.environ["PROFILE_DATA_ENCRYPTION_KEY"] = "BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB="
 os.environ["PROFILE_HASH_KEY"] = "test-profile-hash-key"
 os.environ["CITIZEN_IDENTITY_HASH_KEY"] = "test-citizen-identity-key"
+os.environ["CITIZEN_AUTH_ENCRYPTION_KEY"] = "CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC="
 os.environ["ENV"] = "test"
 
 # Pinned off regardless of the developer's .env. Without this the suite reads

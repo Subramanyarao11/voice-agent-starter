@@ -20,6 +20,12 @@ from sahaayak_common.benefit_governance import (
     record_benefit_version,
 )
 from sahaayak_common.cache import Cache, InMemoryCache, RedisCache, get_cache, reset_cache
+from sahaayak_common.citizen_auth_crypto import (
+    CitizenAuthEncryptionUnavailable,
+    decrypt_provider_token,
+    encrypt_provider_token,
+    reset_citizen_auth_encryption_cache,
+)
 from sahaayak_common.contact_crypto import (
     ContactEncryptionUnavailable,
     channel_identity_hash,
@@ -75,6 +81,7 @@ from sahaayak_common.models import (
     BenefitVersion,
     CallSession,
     CitizenAccount,
+    CitizenAuthSession,
     ConsentEvent,
     ContactPoint,
     ConversationTurnLog,
@@ -159,6 +166,8 @@ __all__ = [
     "benefit_snapshot",
     "CallSession",
     "CitizenAccount",
+    "CitizenAuthEncryptionUnavailable",
+    "CitizenAuthSession",
     "ConsentEvent",
     "ContactEncryptionUnavailable",
     "ContactPoint",
@@ -204,12 +213,14 @@ __all__ = [
     "channel_identity_hash",
     "citizen_subject_hash",
     "decrypt_profile_value",
+    "decrypt_provider_token",
     "configure_logging",
     "decrypt_destination",
     "destination_hash",
     "directory_snapshot",
     "encrypt_destination",
     "encrypt_profile_value",
+    "encrypt_provider_token",
     "engine",
     "ensure_benefit_baseline",
     "ensure_benefit_baselines",
@@ -242,6 +253,7 @@ __all__ = [
     "apply_directory_snapshot",
     "reset_cache",
     "reset_application_encryption_cache",
+    "reset_citizen_auth_encryption_cache",
     "reset_encryption_cache",
     "encrypt_reference",
     "encrypt_application_value",
