@@ -78,10 +78,15 @@ services:
         VITE_ADMIN_OIDC_CLIENT_ID: ${VITE_ADMIN_OIDC_CLIENT_ID:-sahaayak-admin}
         VITE_ADMIN_OIDC_REDIRECT_URI: ${VITE_ADMIN_OIDC_REDIRECT_URI:-http://localhost:5173/admin/callback}
         VITE_ADMIN_OIDC_SCOPE: ${VITE_ADMIN_OIDC_SCOPE:-openid profile email}
-        VITE_ADMIN_ALLOW_MANUAL_TOKEN: ${VITE_ADMIN_ALLOW_MANUAL_TOKEN:-false}
+        VITE_ADMIN_MANUAL_ENTRY_ENABLED: ${VITE_ADMIN_ALLOW_MANUAL_TOKEN:-false}
+        VITE_CITIZEN_OIDC_ISSUER: ${VITE_CITIZEN_OIDC_ISSUER:-}
+        VITE_CITIZEN_OIDC_CLIENT_ID: ${VITE_CITIZEN_OIDC_CLIENT_ID:-sahaayak-citizen-web}
+        VITE_CITIZEN_OIDC_REDIRECT_URI: ${VITE_CITIZEN_OIDC_REDIRECT_URI:-http://localhost:5173/account/callback}
+        VITE_CITIZEN_OIDC_SCOPE: ${VITE_CITIZEN_OIDC_SCOPE:-openid profile email}
+        VITE_CITIZEN_OIDC_BFF_ENABLED: ${VITE_CITIZEN_OIDC_BFF_ENABLED:-false}
     restart: unless-stopped
     ports:
-      - "${WEB_PORT:-5173}:80"
+      - "${WEB_BIND_ADDRESS:-0.0.0.0}:${WEB_PORT:-5173}:80"
     depends_on:
       api:
         condition: service_healthy
@@ -95,7 +100,7 @@ services:
     image: prom/prometheus:v2.55.1
     restart: unless-stopped
     ports:
-      - "${PROMETHEUS_PORT:-9090}:9090"
+      - "${PROMETHEUS_BIND_ADDRESS:-127.0.0.1}:${PROMETHEUS_PORT:-9090}:9090"
     volumes:
       - ./infra/monitor/prometheus.yml:/etc/prometheus/prometheus.yml:ro
       - ./infra/monitor/alert.rules.yml:/etc/prometheus/alert.rules.yml:ro
@@ -112,7 +117,7 @@ services:
     image: prom/alertmanager:v0.27.0
     restart: unless-stopped
     ports:
-      - "${ALERTMANAGER_PORT:-9093}:9093"
+      - "${ALERTMANAGER_BIND_ADDRESS:-127.0.0.1}:${ALERTMANAGER_PORT:-9093}:9093"
     volumes:
       - ./infra/monitor/alertmanager.yml:/etc/alertmanager/alertmanager.yml:ro
       - alertmanagerdata:/alertmanager
@@ -153,6 +158,42 @@ services:
     command: ["sh", "-c", "while true; do python scripts/11_retention.py --execute; sleep ${RETENTION_INTERVAL_SECONDS:-3600}; done"]
     depends_on:
       postgres:
+        condition: service_healthy
+
+  notification-worker:
+    build:
+      context: .
+      dockerfile: infra/python/Dockerfile
+    profiles: ["workers"]
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      ENV: production
+      DATABASE_URL: postgresql+psycopg://sahaayak:${POSTGRES_PASSWORD}@postgres:5432/sahaayak
+      REDIS_URL: redis://redis:6379/0
+    command: ["python", "scripts/14_run_notification_worker.py", "--forever"]
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  freshness-worker:
+    build:
+      context: .
+      dockerfile: infra/python/Dockerfile
+    profiles: ["workers"]
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      ENV: production
+      DATABASE_URL: postgresql+psycopg://sahaayak:${POSTGRES_PASSWORD}@postgres:5432/sahaayak
+      REDIS_URL: redis://redis:6379/0
+    command: ["python", "scripts/20_run_freshness_worker.py", "--forever"]
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
         condition: service_healthy
 
 volumes:

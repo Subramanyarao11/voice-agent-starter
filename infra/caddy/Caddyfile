@@ -1,0 +1,13 @@
+{
+	email {$ACME_EMAIL}
+}
+
+{$SAHAAYAK_DOMAIN} {
+	encode zstd gzip
+	reverse_proxy web:80
+}
+
+{$AUTH_DOMAIN} {
+	encode zstd gzip
+	reverse_proxy keycloak:8080
+}

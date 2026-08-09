@@ -1,0 +1,47 @@
+name: sahaayak
+
+# Public single-host overlay for one persistent Docker host, including an Oracle Cloud
+# Always Free Ampere VM. Use together with docker-compose.production.yml and
+# docker-compose.auth.yml; it is not a replacement for either file.
+services:
+  caddy:
+    image: caddy:2.10-alpine
+    restart: unless-stopped
+    environment:
+      SAHAAYAK_DOMAIN: ${SAHAAYAK_DOMAIN:?set SAHAAYAK_DOMAIN in .env}
+      AUTH_DOMAIN: ${AUTH_DOMAIN:?set AUTH_DOMAIN in .env}
+      ACME_EMAIL: ${ACME_EMAIL:?set ACME_EMAIL in .env}
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    volumes:
+      - ./infra/caddy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      web:
+        condition: service_healthy
+      keycloak:
+        condition: service_started
+
+  keycloak:
+    # TLS terminates at Caddy. Keycloak still runs in production mode, trusts
+    # only the Compose network path, and publishes the HTTPS issuer hostname.
+    command:
+      - start
+      - --import-realm
+      - --http-enabled=true
+      - --proxy-headers=xforwarded
+      - --hostname=https://${AUTH_DOMAIN:?set AUTH_DOMAIN in .env}
+    environment:
+      KC_HOSTNAME: https://${AUTH_DOMAIN:?set AUTH_DOMAIN in .env}
+      KC_HOSTNAME_STRICT: "true"
+      KC_HTTP_ENABLED: "true"
+      KC_PROXY_HEADERS: xforwarded
+      KC_HEALTH_ENABLED: "true"
+      KC_METRICS_ENABLED: "true"
+
+volumes:
+  caddy_data:
+  caddy_config:

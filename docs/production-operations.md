@@ -1,6 +1,6 @@
 # Production operations
 
-This document describes the deployment foundation added after the local demo.
+This document describes the deployment and operations foundation.
 It is intentionally explicit about which pieces are ready to run and which
 still require deployment-owned credentials or policies.
 
@@ -35,13 +35,17 @@ passwords, or `sslRequired: NONE` for an internet-facing deployment.
 ## Production Compose
 
 The production file removes API source bind mounts and reload mode, runs
-multiple API workers, serves the built web app behind Nginx, keeps Postgres and
-Redis on private Compose networking, and exposes only the web, Prometheus, and
-Alertmanager entry points.
+multiple API workers, serves the built web app behind Nginx, and keeps Postgres
+and Redis on private Compose networking. The web bind address is configurable;
+Prometheus and Alertmanager bind to loopback by default so they are not public
+administrative surfaces.
 
 ```bash
 docker compose -f docker-compose.production.yml up -d --build
-docker compose -f docker-compose.production.yml --profile ops up -d postgres-backup retention
+docker compose -f docker-compose.production.yml --profile workers up -d \
+  notification-worker freshness-worker
+docker compose -f docker-compose.production.yml --profile ops up -d \
+  postgres-backup retention
 ```
 
 Required production variables include `POSTGRES_PASSWORD`,
@@ -57,7 +61,9 @@ includes OIDC redirect/MFA login, Infobip sender/template/webhook delivery,
 NCS authorization, Langfuse/OTel trace receipt, real microphone QA, and
 authoritative directory approval.
 
-Run the scheduled `freshness-worker` alongside the API and notification worker.
+The `workers` profile now defines the long-running `freshness-worker` and
+`notification-worker`; both use the same immutable Python image as the API.
+Run the scheduled freshness process alongside the API and notification worker.
 Set `FRESHNESS_STALE_DAYS` and `FRESHNESS_SCAN_INTERVAL_SECONDS` explicitly in
 the deployment environment. It writes only redacted source-freshness alerts;
 reviewers still decide whether a source is refreshed or a benefit is
@@ -72,6 +78,26 @@ docker compose \
   -f docker-compose.auth.yml \
   up -d --build
 ```
+
+For a public single-host deployment, `docker-compose.oracle.yml` adds Caddy automatic
+HTTPS and overrides Keycloak with a production, reverse-proxy-aware start
+command. It must be merged after both files above:
+
+```bash
+docker compose \
+  -f docker-compose.production.yml \
+  -f docker-compose.auth.yml \
+  -f docker-compose.oracle.yml \
+  --profile workers \
+  --profile ops \
+  up -d --build
+```
+
+Set `WEB_BIND_ADDRESS`, `KEYCLOAK_BIND_ADDRESS`,
+`PROMETHEUS_BIND_ADDRESS`, and `ALERTMANAGER_BIND_ADDRESS` to `127.0.0.1`
+for this topology. Only Caddy ports 80/443 should be internet-accessible. See
+[free-deployment-guide.md](free-deployment-guide.md) for DNS, Keycloak client,
+restore, smoke-test, backup, and rollback steps.
 
 ## Backups and restore
 

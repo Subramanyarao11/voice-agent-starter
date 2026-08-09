@@ -31,7 +31,7 @@ services:
       KC_HOSTNAME_STRICT: "false"
       KC_HTTP_ENABLED: "true"
     ports:
-      - "8080:8080"
+      - "${KEYCLOAK_BIND_ADDRESS:-0.0.0.0}:${KEYCLOAK_PORT:-8080}:8080"
     volumes:
       - ./infra/keycloak/realm:/opt/keycloak/data/import:ro
     depends_on:
