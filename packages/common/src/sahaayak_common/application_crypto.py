@@ -63,10 +63,42 @@ def reference_hash(value: str) -> str:
     ).hexdigest()
 
 
+def normalize_application_value(value: str) -> str:
+    """Normalize a confirmed field value without changing its meaning."""
+    normalized = " ".join(value.replace("\x00", "").split())
+    if not normalized or len(normalized) > 2_000:
+        raise ValueError("Application field value must be 1–2,000 characters")
+    return normalized
+
+
+def encrypt_application_value(value: str) -> str:
+    return _fernet().encrypt(normalize_application_value(value).encode("utf-8")).decode("ascii")
+
+
+def application_value_hash(value: str) -> str:
+    """Return a keyed hash for field deduplication without exposing its value."""
+    key = settings.application_data_encryption_key.strip()
+    if not key:
+        raise ApplicationDataEncryptionUnavailable(
+            "APPLICATION_DATA_ENCRYPTION_KEY is not configured"
+        )
+    return hmac.new(
+        key.encode("utf-8"),
+        normalize_application_value(value).encode("utf-8"),
+        hashlib.sha256,
+    ).hexdigest()
+
+
+def mask_application_value(value: str) -> str:
+    normalized = normalize_application_value(value)
+    if len(normalized) <= 4:
+        return "••••"
+    return f"••••{normalized[-4:]}"
+
+
 def mask_reference(value: str) -> str:
     """A short display value safe for the citizen UI and operator console."""
     candidate = normalize_reference(value)
     suffix_match = re.findall(r"[A-Za-z0-9]+", candidate)
     suffix = (suffix_match[-1] if suffix_match else candidate)[-4:]
     return f"••••{suffix}"
-

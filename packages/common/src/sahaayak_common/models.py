@@ -320,8 +320,10 @@ class ApplicationCase(SQLModel, table=True):
     # contact data.
     benefit_revision: int = 0
     benefit_snapshot: dict = Field(default_factory=dict, sa_column=json_dict())
+    attempt_number: int = 1
 
     application_channel: str = "official_portal"
+    provider_key: str | None = None
     status: str = Field(default="draft", index=True)
     status_provenance: str = "system_derived"
     # system_derived | citizen_reported | provider_verified
@@ -342,6 +344,7 @@ class ApplicationCase(SQLModel, table=True):
     submission_date: date | None = None
 
     revision: int = 1
+    retention_expires_at: datetime | None = None
     created_at: datetime = Field(default_factory=_utcnow, index=True)
     updated_at: datetime = Field(default_factory=_utcnow, index=True)
     closed_at: datetime | None = None
@@ -405,6 +408,7 @@ class ApplicationTask(SQLModel, table=True):
     application_case_id: str | None = Field(
         default=None, foreign_key="application_case.id", index=True
     )
+    requirement_key: str | None = Field(default=None, index=True)
     kind: str = Field(index=True)  # document | application_step
     title: str
     description: str = ""
@@ -413,6 +417,138 @@ class ApplicationTask(SQLModel, table=True):
     due_at: datetime | None = Field(default=None, index=True)
     completed_at: datetime | None = None
     source_revision: int = 0
+    created_at: datetime = Field(default_factory=_utcnow, index=True)
+    updated_at: datetime = Field(default_factory=_utcnow)
+
+
+class ApplicationFieldDefinition(SQLModel, table=True):
+    """Reviewed, versioned application field metadata for a benefit.
+
+    Labels and help are localized JSON maps, while validation and handoff
+    destinations remain data-driven. A definition is not visible to citizens
+    until a reviewer marks it approved; this prevents an extracted field from
+    silently becoming an instruction to share sensitive information.
+    """
+
+    __tablename__ = "application_field_definition"
+    __table_args__ = (
+        Index(
+            "ix_application_field_definition_benefit_key_revision",
+            "benefit_id",
+            "field_key",
+            "revision",
+            unique=True,
+        ),
+        Index(
+            "ix_application_field_definition_benefit_review",
+            "benefit_id",
+            "review_status",
+        ),
+    )
+
+    id: str = Field(primary_key=True)
+    benefit_id: str = Field(foreign_key="benefit.id", index=True)
+    field_key: str = Field(index=True)
+    revision: int = 1
+    label: dict = Field(default_factory=dict, sa_column=json_dict())
+    help_text: dict = Field(default_factory=dict, sa_column=json_dict())
+    data_type: str = "text"  # text | date | integer | decimal | boolean | select
+    validation: dict = Field(default_factory=dict, sa_column=json_dict())
+    required: bool = False
+    sensitivity: str = "internal"  # public | internal | confidential | restricted
+    source_excerpt: str = ""
+    source_url: str = ""
+    profile_slot: str | None = None
+    handoff_destinations: list[str] = Field(default_factory=list, sa_column=json_list())
+    review_status: str = Field(default="pending", index=True)  # pending | approved | rejected
+    reviewed_by: str | None = None
+    reviewed_at: datetime | None = None
+    valid_from: date | None = None
+    valid_until: date | None = None
+    created_at: datetime = Field(default_factory=_utcnow, index=True)
+    updated_at: datetime = Field(default_factory=_utcnow)
+
+
+class ApplicationFieldValue(SQLModel, table=True):
+    """A citizen-confirmed application value, encrypted at rest."""
+
+    __tablename__ = "application_field_value"
+    __table_args__ = (
+        Index(
+            "ix_application_field_value_case_key",
+            "application_case_id",
+            "field_key",
+            unique=True,
+        ),
+        Index("ix_application_field_value_case_updated", "application_case_id", "updated_at"),
+    )
+
+    id: str = Field(primary_key=True)
+    application_case_id: str = Field(foreign_key="application_case.id", index=True)
+    field_key: str = Field(index=True)
+    definition_revision: int = 1
+    value_ciphertext: str
+    value_hash: str = Field(index=True)
+    masked_value: str = ""
+    value_source: str = (
+        "citizen_entered"
+    )  # profile_suggestion | citizen_entered | digilocker | provider
+    confirmed_by_citizen_at: datetime = Field(default_factory=_utcnow)
+    expires_at: datetime | None = None
+    revision: int = 1
+    updated_at: datetime = Field(default_factory=_utcnow)
+
+
+class ApplicationRequirement(SQLModel, table=True):
+    """Case-scoped snapshot of one document or application action."""
+
+    __tablename__ = "application_requirement"
+    __table_args__ = (
+        Index(
+            "ix_application_requirement_case_key",
+            "application_case_id",
+            "requirement_key",
+            unique=True,
+        ),
+        Index("ix_application_requirement_case_status", "application_case_id", "status"),
+    )
+
+    id: str = Field(primary_key=True)
+    application_case_id: str = Field(foreign_key="application_case.id", index=True)
+    requirement_key: str = Field(index=True)
+    requirement_type: str = "document"  # document | application_step | other
+    title: str
+    description: str = ""
+    required: bool = True
+    source_revision: int = 0
+    source_excerpt: str = ""
+    source_url: str = ""
+    status: str = Field(
+        default="missing", index=True
+    )  # missing | ready | not_applicable | submitted | needs_update
+    task_id: str | None = Field(default=None, foreign_key="application_task.id", index=True)
+    expiry_date: date | None = None
+    created_at: datetime = Field(default_factory=_utcnow, index=True)
+    updated_at: datetime = Field(default_factory=_utcnow)
+
+
+class ApplicationOutcomeFeedback(SQLModel, table=True):
+    """Citizen-reported outcome, kept separate from official status."""
+
+    __tablename__ = "application_outcome_feedback"
+    __table_args__ = (
+        Index("ix_application_outcome_feedback_case", "application_case_id", unique=True),
+    )
+
+    id: str = Field(primary_key=True)
+    application_case_id: str = Field(foreign_key="application_case.id", index=True)
+    outcome: str = Field(index=True)  # received | not_received | partially_received | unknown
+    confirmed_at: datetime = Field(default_factory=_utcnow)
+    reason_code: str = ""
+    free_text_ciphertext: str | None = None
+    satisfaction_score: int | None = None
+    consent_for_evaluation: bool = False
+    revision: int = 1
     created_at: datetime = Field(default_factory=_utcnow, index=True)
     updated_at: datetime = Field(default_factory=_utcnow)
 

@@ -353,6 +353,93 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/sessions/{session_id}/applications/{application_id}/fields": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Application Fields */
+        get: operations["list_application_fields_api_sessions__session_id__applications__application_id__fields_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/sessions/{session_id}/applications/{application_id}/fields/{field_key}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Update Application Field */
+        put: operations["update_application_field_api_sessions__session_id__applications__application_id__fields__field_key__put"];
+        post?: never;
+        /** Delete Application Field */
+        delete: operations["delete_application_field_api_sessions__session_id__applications__application_id__fields__field_key__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/sessions/{session_id}/applications/{application_id}/requirements": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Application Requirements */
+        get: operations["list_application_requirements_api_sessions__session_id__applications__application_id__requirements_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/sessions/{session_id}/applications/{application_id}/requirements/{requirement_key}/status": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Update Application Requirement */
+        post: operations["update_application_requirement_api_sessions__session_id__applications__application_id__requirements__requirement_key__status_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/sessions/{session_id}/applications/{application_id}/outcome": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Application Outcome */
+        get: operations["get_application_outcome_api_sessions__session_id__applications__application_id__outcome_get"];
+        put?: never;
+        /** Record Application Outcome */
+        post: operations["record_application_outcome_api_sessions__session_id__applications__application_id__outcome_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/sessions/{session_id}/applications/{application_id}/packs/preview": {
         parameters: {
             query?: never;
@@ -915,6 +1002,41 @@ export interface paths {
          */
         put: operations["edit_benefit_api_admin_benefits__benefit_id__put"];
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/admin/benefits/{benefit_id}/application-fields": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Application Field Definitions */
+        get: operations["list_application_field_definitions_api_admin_benefits__benefit_id__application_fields_get"];
+        put?: never;
+        /** Create Application Field Definition */
+        post: operations["create_application_field_definition_api_admin_benefits__benefit_id__application_fields_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/admin/benefits/{benefit_id}/application-fields/{field_key}/review": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Review Application Field Definition */
+        post: operations["review_application_field_definition_api_admin_benefits__benefit_id__application_fields__field_key__review_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1620,6 +1742,237 @@ export interface components {
             /** Data Fresh At */
             data_fresh_at: string | null;
         };
+        /** ApplicationFieldDefinitionAdminOut */
+        ApplicationFieldDefinitionAdminOut: {
+            /** Id */
+            id: string;
+            /** Benefit Id */
+            benefit_id: string;
+            /** Field Key */
+            field_key: string;
+            /** Revision */
+            revision: number;
+            /** Label */
+            label: {
+                [key: string]: string;
+            };
+            /** Help Text */
+            help_text: {
+                [key: string]: string;
+            };
+            /** Data Type */
+            data_type: string;
+            /** Validation */
+            validation: {
+                [key: string]: unknown;
+            };
+            /** Required */
+            required: boolean;
+            /** Sensitivity */
+            sensitivity: string;
+            /** Source Excerpt */
+            source_excerpt: string;
+            /** Source Url */
+            source_url: string;
+            /** Profile Slot */
+            profile_slot: string | null;
+            /** Handoff Destinations */
+            handoff_destinations: string[];
+            /** Review Status */
+            review_status: string;
+            /** Reviewed By */
+            reviewed_by: string | null;
+            /** Reviewed At */
+            reviewed_at: string | null;
+            /** Valid From */
+            valid_from: string | null;
+            /** Valid Until */
+            valid_until: string | null;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /**
+             * Updated At
+             * Format: date-time
+             */
+            updated_at: string;
+        };
+        /** ApplicationFieldDefinitionCreate */
+        ApplicationFieldDefinitionCreate: {
+            /** Field Key */
+            field_key: string;
+            /** Label */
+            label: {
+                [key: string]: string;
+            };
+            /** Help Text */
+            help_text?: {
+                [key: string]: string;
+            };
+            /**
+             * Data Type
+             * @default text
+             * @enum {string}
+             */
+            data_type: "text" | "date" | "integer" | "decimal" | "boolean" | "select";
+            /** Validation */
+            validation?: {
+                [key: string]: unknown;
+            };
+            /**
+             * Required
+             * @default false
+             */
+            required: boolean;
+            /**
+             * Sensitivity
+             * @default internal
+             * @enum {string}
+             */
+            sensitivity: "public" | "internal" | "confidential" | "restricted";
+            /** Source Excerpt */
+            source_excerpt: string;
+            /** Source Url */
+            source_url: string;
+            /** Profile Slot */
+            profile_slot?: string | null;
+            /** Handoff Destinations */
+            handoff_destinations?: string[];
+            /** Valid From */
+            valid_from?: string | null;
+            /** Valid Until */
+            valid_until?: string | null;
+            /** Reason */
+            reason: string;
+        };
+        /** ApplicationFieldDefinitionOut */
+        ApplicationFieldDefinitionOut: {
+            /** Field Key */
+            field_key: string;
+            /** Revision */
+            revision: number;
+            /** Label */
+            label: {
+                [key: string]: string;
+            };
+            /** Help Text */
+            help_text: {
+                [key: string]: string;
+            };
+            /** Data Type */
+            data_type: string;
+            /** Validation */
+            validation: {
+                [key: string]: unknown;
+            };
+            /** Required */
+            required: boolean;
+            /** Sensitivity */
+            sensitivity: string;
+            /** Source Excerpt */
+            source_excerpt: string;
+            /** Source Url */
+            source_url: string;
+            /** Profile Slot */
+            profile_slot: string | null;
+            /** Handoff Destinations */
+            handoff_destinations: string[];
+            value: components["schemas"]["ApplicationFieldValueOut"] | null;
+        };
+        /** ApplicationFieldDefinitionReview */
+        ApplicationFieldDefinitionReview: {
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "approved" | "rejected";
+            /** Reason */
+            reason: string;
+        };
+        /** ApplicationFieldUpdate */
+        ApplicationFieldUpdate: {
+            /** Value */
+            value: string;
+            /** Expected Revision */
+            expected_revision?: number | null;
+        };
+        /** ApplicationFieldValueOut */
+        ApplicationFieldValueOut: {
+            /** Field Key */
+            field_key: string;
+            /** Definition Revision */
+            definition_revision: number;
+            /** Masked Value */
+            masked_value: string;
+            /** Value Source */
+            value_source: string;
+            /**
+             * Confirmed By Citizen At
+             * Format: date-time
+             */
+            confirmed_by_citizen_at: string;
+            /** Expires At */
+            expires_at: string | null;
+            /** Revision */
+            revision: number;
+        };
+        /** ApplicationOutcomeFeedbackCreate */
+        ApplicationOutcomeFeedbackCreate: {
+            /**
+             * Outcome
+             * @enum {string}
+             */
+            outcome: "received" | "not_received" | "partially_received" | "unknown";
+            /** Reason Code */
+            reason_code?: string | null;
+            /** Free Text */
+            free_text?: string | null;
+            /** Satisfaction Score */
+            satisfaction_score?: number | null;
+            /**
+             * Consent For Evaluation
+             * @default false
+             */
+            consent_for_evaluation: boolean;
+            /** Expected Case Revision */
+            expected_case_revision?: number | null;
+        };
+        /** ApplicationOutcomeFeedbackOut */
+        ApplicationOutcomeFeedbackOut: {
+            /** Id */
+            id: string;
+            /** Application Case Id */
+            application_case_id: string;
+            /** Outcome */
+            outcome: string;
+            /**
+             * Confirmed At
+             * Format: date-time
+             */
+            confirmed_at: string;
+            /** Reason Code */
+            reason_code: string;
+            /** Has Comment */
+            has_comment: boolean;
+            /** Satisfaction Score */
+            satisfaction_score: number | null;
+            /** Consent For Evaluation */
+            consent_for_evaluation: boolean;
+            /** Revision */
+            revision: number;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /**
+             * Updated At
+             * Format: date-time
+             */
+            updated_at: string;
+        };
         /** ApplicationPackPreviewOut */
         ApplicationPackPreviewOut: {
             /** Html */
@@ -1636,6 +1989,55 @@ export interface components {
             expires_at: string;
             /** Content Sha256 */
             content_sha256: string;
+        };
+        /** ApplicationRequirementOut */
+        ApplicationRequirementOut: {
+            /** Id */
+            id: string;
+            /** Requirement Key */
+            requirement_key: string;
+            /** Requirement Type */
+            requirement_type: string;
+            /** Title */
+            title: string;
+            /** Description */
+            description: string;
+            /** Required */
+            required: boolean;
+            /** Source Revision */
+            source_revision: number;
+            /** Source Excerpt */
+            source_excerpt: string;
+            /** Source Url */
+            source_url: string;
+            /** Status */
+            status: string;
+            /** Task Id */
+            task_id: string | null;
+            /** Expiry Date */
+            expiry_date: string | null;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /**
+             * Updated At
+             * Format: date-time
+             */
+            updated_at: string;
+        };
+        /** ApplicationRequirementStatusUpdate */
+        ApplicationRequirementStatusUpdate: {
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "missing" | "ready" | "not_applicable" | "submitted" | "needs_update";
+            /** Reason */
+            reason?: string | null;
+            /** Expected Case Revision */
+            expected_case_revision?: number | null;
         };
         /** ApplicationStatusEventCreate */
         ApplicationStatusEventCreate: {
@@ -1694,6 +2096,8 @@ export interface components {
             title: string;
             /** Description */
             description: string;
+            /** Requirement Key */
+            requirement_key: string | null;
             /** Position */
             position: number;
             /** Status */
@@ -4700,6 +5104,247 @@ export interface operations {
             };
         };
     };
+    list_application_fields_api_sessions__session_id__applications__application_id__fields_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                session_id: string;
+                application_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApplicationFieldDefinitionOut"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    update_application_field_api_sessions__session_id__applications__application_id__fields__field_key__put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                session_id: string;
+                application_id: string;
+                field_key: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ApplicationFieldUpdate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApplicationFieldDefinitionOut"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    delete_application_field_api_sessions__session_id__applications__application_id__fields__field_key__delete: {
+        parameters: {
+            query?: {
+                expected_revision?: number | null;
+            };
+            header?: never;
+            path: {
+                session_id: string;
+                application_id: string;
+                field_key: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApplicationFieldDefinitionOut"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_application_requirements_api_sessions__session_id__applications__application_id__requirements_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                session_id: string;
+                application_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApplicationRequirementOut"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    update_application_requirement_api_sessions__session_id__applications__application_id__requirements__requirement_key__status_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                session_id: string;
+                application_id: string;
+                requirement_key: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ApplicationRequirementStatusUpdate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApplicationRequirementOut"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_application_outcome_api_sessions__session_id__applications__application_id__outcome_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                session_id: string;
+                application_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApplicationOutcomeFeedbackOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    record_application_outcome_api_sessions__session_id__applications__application_id__outcome_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                session_id: string;
+                application_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ApplicationOutcomeFeedbackCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApplicationOutcomeFeedbackOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     preview_application_pack_api_sessions__session_id__applications__application_id__packs_preview_post: {
         parameters: {
             query?: never;
@@ -5657,6 +6302,108 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["BenefitReviewOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_application_field_definitions_api_admin_benefits__benefit_id__application_fields_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                benefit_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApplicationFieldDefinitionAdminOut"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    create_application_field_definition_api_admin_benefits__benefit_id__application_fields_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                benefit_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ApplicationFieldDefinitionCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApplicationFieldDefinitionAdminOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    review_application_field_definition_api_admin_benefits__benefit_id__application_fields__field_key__review_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                benefit_id: string;
+                field_key: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ApplicationFieldDefinitionReview"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApplicationFieldDefinitionAdminOut"];
                 };
             };
             /** @description Validation Error */

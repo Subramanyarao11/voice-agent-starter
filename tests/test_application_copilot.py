@@ -1,6 +1,14 @@
 """Application Completion and Status Copilot API contract tests."""
 
-from sahaayak_common import ApplicationCase, Benefit, session_scope
+from sqlmodel import select
+
+from sahaayak_common import (
+    ApplicationCase,
+    ApplicationFieldValue,
+    ApplicationOutcomeFeedback,
+    Benefit,
+    session_scope,
+)
 from sahaayak_contracts import VerificationStatus
 
 
@@ -159,3 +167,141 @@ def test_application_snapshot_surfaces_current_benefit_changes(client, guest_ses
     assert changed["benefit_change_state"] == "action_required"
     assert "Required documents changed." in changed["benefit_change_items"]
     assert changed["current_benefit_revision"] == changed["benefit_revision"] + 1
+
+
+def test_reviewed_application_fields_are_confirmed_encrypted_and_versioned(client, guest_session):
+    _set_review_status("demo-csss-cus", VerificationStatus.HUMAN_VERIFIED)
+    session = guest_session(language_code="en", state_code="KA")
+    created = client.post(
+        f"/api/sessions/{session['session_id']}/applications",
+        json={"benefit_id": "demo-csss-cus"},
+        headers=session["headers"],
+    )
+    assert created.status_code == 201
+    application_id = created.json()["id"]
+
+    definition = client.post(
+        "/api/admin/benefits/demo-csss-cus/application-fields",
+        json={
+            "field_key": "annual_income",
+            "label": {"en": "Annual family income"},
+            "help_text": {"en": "Use the latest verified amount."},
+            "data_type": "integer",
+            "validation": {"min_length": 1},
+            "required": True,
+            "sensitivity": "confidential",
+            "source_excerpt": "Applicant must provide annual family income.",
+            "source_url": "https://scholarships.gov.in/official-notice",
+            "reason": "Add the published income field for the application workspace.",
+        },
+    )
+    assert definition.status_code == 201
+    assert definition.json()["review_status"] == "pending"
+    reviewed = client.post(
+        "/api/admin/benefits/demo-csss-cus/application-fields/annual_income/review",
+        json={"status": "approved", "reason": "Source and terminology checked."},
+    )
+    assert reviewed.status_code == 200
+    assert reviewed.json()["revision"] == 2
+
+    fields = client.get(
+        f"/api/sessions/{session['session_id']}/applications/{application_id}/fields",
+        headers=session["headers"],
+    )
+    assert fields.status_code == 200
+    assert fields.json()[0]["value"] is None
+
+    saved = client.put(
+        f"/api/sessions/{session['session_id']}/applications/{application_id}/fields/annual_income",
+        json={"value": "250000"},
+        headers=session["headers"],
+    )
+    assert saved.status_code == 200
+    field_value = saved.json()[0]["value"]
+    assert field_value["masked_value"] == "••••0000"
+    assert field_value["revision"] == 1
+
+    updated = client.put(
+        f"/api/sessions/{session['session_id']}/applications/{application_id}/fields/annual_income",
+        json={"value": "300000", "expected_revision": 1},
+        headers=session["headers"],
+    )
+    assert updated.status_code == 200
+    assert updated.json()[0]["value"]["revision"] == 2
+
+    stale = client.put(
+        f"/api/sessions/{session['session_id']}/applications/{application_id}/fields/annual_income",
+        json={"value": "350000", "expected_revision": 1},
+        headers=session["headers"],
+    )
+    assert stale.status_code == 409
+
+    with session_scope() as db:
+        value = db.exec(
+            select(ApplicationFieldValue).where(
+                ApplicationFieldValue.application_case_id == application_id
+            )
+        ).one()
+        assert "250000" not in value.value_ciphertext
+        assert "250000" not in value.masked_value
+
+
+def test_application_requirements_and_terminal_outcome_are_separate_from_status(
+    client, guest_session
+):
+    _set_review_status("demo-csss-cus", VerificationStatus.HUMAN_VERIFIED)
+    session = guest_session(language_code="en", state_code="KA")
+    created = client.post(
+        f"/api/sessions/{session['session_id']}/applications",
+        json={"benefit_id": "demo-csss-cus"},
+        headers=session["headers"],
+    )
+    assert created.status_code == 201
+    application_id = created.json()["id"]
+
+    requirements = client.get(
+        f"/api/sessions/{session['session_id']}/applications/{application_id}/requirements",
+        headers=session["headers"],
+    )
+    assert requirements.status_code == 200
+    requirement = requirements.json()[0]
+    assert requirement["requirement_key"]
+    assert requirement["status"] == "missing"
+
+    not_applicable = client.post(
+        f"/api/sessions/{session['session_id']}/applications/{application_id}/requirements/{requirement['requirement_key']}/status",
+        json={"status": "not_applicable"},
+        headers=session["headers"],
+    )
+    assert not_applicable.status_code == 400
+
+    for next_status in ("submitted", "approved", "delivered"):
+        status_response = client.post(
+            f"/api/sessions/{session['session_id']}/applications/{application_id}/status-events",
+            json={"status": next_status},
+            headers=session["headers"],
+        )
+        assert status_response.status_code == 200
+
+    outcome = client.post(
+        f"/api/sessions/{session['session_id']}/applications/{application_id}/outcome",
+        json={
+            "outcome": "received",
+            "reason_code": "confirmed_by_citizen",
+            "free_text": "The scholarship was received in the bank account.",
+            "satisfaction_score": 5,
+            "consent_for_evaluation": True,
+        },
+        headers=session["headers"],
+    )
+    assert outcome.status_code == 200
+    assert outcome.json()["outcome"] == "received"
+    assert outcome.json()["has_comment"] is True
+
+    with session_scope() as db:
+        feedback = db.exec(
+            select(ApplicationOutcomeFeedback).where(
+                ApplicationOutcomeFeedback.application_case_id == application_id
+            )
+        ).one()
+        assert "scholarship was received" not in (feedback.free_text_ciphertext or "")

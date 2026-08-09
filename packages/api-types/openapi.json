@@ -907,6 +907,452 @@
         }
       }
     },
+    "/api/sessions/{session_id}/applications/{application_id}/fields": {
+      "get": {
+        "tags": [
+          "applications"
+        ],
+        "summary": "List Application Fields",
+        "operationId": "list_application_fields_api_sessions__session_id__applications__application_id__fields_get",
+        "parameters": [
+          {
+            "name": "session_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Session Id"
+            }
+          },
+          {
+            "name": "application_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Application Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ApplicationFieldDefinitionOut"
+                  },
+                  "title": "Response List Application Fields Api Sessions  Session Id  Applications  Application Id  Fields Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/sessions/{session_id}/applications/{application_id}/fields/{field_key}": {
+      "put": {
+        "tags": [
+          "applications"
+        ],
+        "summary": "Update Application Field",
+        "operationId": "update_application_field_api_sessions__session_id__applications__application_id__fields__field_key__put",
+        "parameters": [
+          {
+            "name": "session_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Session Id"
+            }
+          },
+          {
+            "name": "application_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Application Id"
+            }
+          },
+          {
+            "name": "field_key",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Field Key"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApplicationFieldUpdate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ApplicationFieldDefinitionOut"
+                  },
+                  "title": "Response Update Application Field Api Sessions  Session Id  Applications  Application Id  Fields  Field Key  Put"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "applications"
+        ],
+        "summary": "Delete Application Field",
+        "operationId": "delete_application_field_api_sessions__session_id__applications__application_id__fields__field_key__delete",
+        "parameters": [
+          {
+            "name": "session_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Session Id"
+            }
+          },
+          {
+            "name": "application_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Application Id"
+            }
+          },
+          {
+            "name": "field_key",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Field Key"
+            }
+          },
+          {
+            "name": "expected_revision",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Expected Revision"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ApplicationFieldDefinitionOut"
+                  },
+                  "title": "Response Delete Application Field Api Sessions  Session Id  Applications  Application Id  Fields  Field Key  Delete"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/sessions/{session_id}/applications/{application_id}/requirements": {
+      "get": {
+        "tags": [
+          "applications"
+        ],
+        "summary": "List Application Requirements",
+        "operationId": "list_application_requirements_api_sessions__session_id__applications__application_id__requirements_get",
+        "parameters": [
+          {
+            "name": "session_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Session Id"
+            }
+          },
+          {
+            "name": "application_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Application Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ApplicationRequirementOut"
+                  },
+                  "title": "Response List Application Requirements Api Sessions  Session Id  Applications  Application Id  Requirements Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/sessions/{session_id}/applications/{application_id}/requirements/{requirement_key}/status": {
+      "post": {
+        "tags": [
+          "applications"
+        ],
+        "summary": "Update Application Requirement",
+        "operationId": "update_application_requirement_api_sessions__session_id__applications__application_id__requirements__requirement_key__status_post",
+        "parameters": [
+          {
+            "name": "session_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Session Id"
+            }
+          },
+          {
+            "name": "application_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Application Id"
+            }
+          },
+          {
+            "name": "requirement_key",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Requirement Key"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApplicationRequirementStatusUpdate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ApplicationRequirementOut"
+                  },
+                  "title": "Response Update Application Requirement Api Sessions  Session Id  Applications  Application Id  Requirements  Requirement Key  Status Post"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/sessions/{session_id}/applications/{application_id}/outcome": {
+      "get": {
+        "tags": [
+          "applications"
+        ],
+        "summary": "Get Application Outcome",
+        "operationId": "get_application_outcome_api_sessions__session_id__applications__application_id__outcome_get",
+        "parameters": [
+          {
+            "name": "session_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Session Id"
+            }
+          },
+          {
+            "name": "application_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Application Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApplicationOutcomeFeedbackOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "applications"
+        ],
+        "summary": "Record Application Outcome",
+        "operationId": "record_application_outcome_api_sessions__session_id__applications__application_id__outcome_post",
+        "parameters": [
+          {
+            "name": "session_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Session Id"
+            }
+          },
+          {
+            "name": "application_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Application Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApplicationOutcomeFeedbackCreate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApplicationOutcomeFeedbackOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/sessions/{session_id}/applications/{application_id}/packs/preview": {
       "post": {
         "tags": [
@@ -2434,6 +2880,163 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/BenefitReviewOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/admin/benefits/{benefit_id}/application-fields": {
+      "get": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "List Application Field Definitions",
+        "operationId": "list_application_field_definitions_api_admin_benefits__benefit_id__application_fields_get",
+        "parameters": [
+          {
+            "name": "benefit_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Benefit Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ApplicationFieldDefinitionAdminOut"
+                  },
+                  "title": "Response List Application Field Definitions Api Admin Benefits  Benefit Id  Application Fields Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "Create Application Field Definition",
+        "operationId": "create_application_field_definition_api_admin_benefits__benefit_id__application_fields_post",
+        "parameters": [
+          {
+            "name": "benefit_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Benefit Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApplicationFieldDefinitionCreate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApplicationFieldDefinitionAdminOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/admin/benefits/{benefit_id}/application-fields/{field_key}/review": {
+      "post": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "Review Application Field Definition",
+        "operationId": "review_application_field_definition_api_admin_benefits__benefit_id__application_fields__field_key__review_post",
+        "parameters": [
+          {
+            "name": "benefit_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Benefit Id"
+            }
+          },
+          {
+            "name": "field_key",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Field Key"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApplicationFieldDefinitionReview"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApplicationFieldDefinitionAdminOut"
                 }
               }
             }
@@ -4428,6 +5031,647 @@
         ],
         "title": "ApplicationDashboardOut"
       },
+      "ApplicationFieldDefinitionAdminOut": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "benefit_id": {
+            "type": "string",
+            "title": "Benefit Id"
+          },
+          "field_key": {
+            "type": "string",
+            "title": "Field Key"
+          },
+          "revision": {
+            "type": "integer",
+            "title": "Revision"
+          },
+          "label": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "type": "object",
+            "title": "Label"
+          },
+          "help_text": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "type": "object",
+            "title": "Help Text"
+          },
+          "data_type": {
+            "type": "string",
+            "title": "Data Type"
+          },
+          "validation": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Validation"
+          },
+          "required": {
+            "type": "boolean",
+            "title": "Required"
+          },
+          "sensitivity": {
+            "type": "string",
+            "title": "Sensitivity"
+          },
+          "source_excerpt": {
+            "type": "string",
+            "title": "Source Excerpt"
+          },
+          "source_url": {
+            "type": "string",
+            "title": "Source Url"
+          },
+          "profile_slot": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Profile Slot"
+          },
+          "handoff_destinations": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Handoff Destinations"
+          },
+          "review_status": {
+            "type": "string",
+            "title": "Review Status"
+          },
+          "reviewed_by": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reviewed By"
+          },
+          "reviewed_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reviewed At"
+          },
+          "valid_from": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Valid From"
+          },
+          "valid_until": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Valid Until"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Updated At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "benefit_id",
+          "field_key",
+          "revision",
+          "label",
+          "help_text",
+          "data_type",
+          "validation",
+          "required",
+          "sensitivity",
+          "source_excerpt",
+          "source_url",
+          "profile_slot",
+          "handoff_destinations",
+          "review_status",
+          "reviewed_by",
+          "reviewed_at",
+          "valid_from",
+          "valid_until",
+          "created_at",
+          "updated_at"
+        ],
+        "title": "ApplicationFieldDefinitionAdminOut"
+      },
+      "ApplicationFieldDefinitionCreate": {
+        "properties": {
+          "field_key": {
+            "type": "string",
+            "maxLength": 80,
+            "minLength": 2,
+            "pattern": "^[a-z][a-z0-9_]*$",
+            "title": "Field Key"
+          },
+          "label": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "type": "object",
+            "maxProperties": 20,
+            "minProperties": 1,
+            "title": "Label"
+          },
+          "help_text": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "type": "object",
+            "maxProperties": 20,
+            "title": "Help Text"
+          },
+          "data_type": {
+            "type": "string",
+            "enum": [
+              "text",
+              "date",
+              "integer",
+              "decimal",
+              "boolean",
+              "select"
+            ],
+            "title": "Data Type",
+            "default": "text"
+          },
+          "validation": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Validation"
+          },
+          "required": {
+            "type": "boolean",
+            "title": "Required",
+            "default": false
+          },
+          "sensitivity": {
+            "type": "string",
+            "enum": [
+              "public",
+              "internal",
+              "confidential",
+              "restricted"
+            ],
+            "title": "Sensitivity",
+            "default": "internal"
+          },
+          "source_excerpt": {
+            "type": "string",
+            "maxLength": 2000,
+            "minLength": 3,
+            "title": "Source Excerpt"
+          },
+          "source_url": {
+            "type": "string",
+            "maxLength": 2000,
+            "minLength": 1,
+            "title": "Source Url"
+          },
+          "profile_slot": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 80
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Profile Slot"
+          },
+          "handoff_destinations": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "maxItems": 10,
+            "title": "Handoff Destinations"
+          },
+          "valid_from": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Valid From"
+          },
+          "valid_until": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Valid Until"
+          },
+          "reason": {
+            "type": "string",
+            "maxLength": 500,
+            "minLength": 3,
+            "title": "Reason"
+          }
+        },
+        "type": "object",
+        "required": [
+          "field_key",
+          "label",
+          "source_excerpt",
+          "source_url",
+          "reason"
+        ],
+        "title": "ApplicationFieldDefinitionCreate"
+      },
+      "ApplicationFieldDefinitionOut": {
+        "properties": {
+          "field_key": {
+            "type": "string",
+            "title": "Field Key"
+          },
+          "revision": {
+            "type": "integer",
+            "title": "Revision"
+          },
+          "label": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "type": "object",
+            "title": "Label"
+          },
+          "help_text": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "type": "object",
+            "title": "Help Text"
+          },
+          "data_type": {
+            "type": "string",
+            "title": "Data Type"
+          },
+          "validation": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Validation"
+          },
+          "required": {
+            "type": "boolean",
+            "title": "Required"
+          },
+          "sensitivity": {
+            "type": "string",
+            "title": "Sensitivity"
+          },
+          "source_excerpt": {
+            "type": "string",
+            "title": "Source Excerpt"
+          },
+          "source_url": {
+            "type": "string",
+            "title": "Source Url"
+          },
+          "profile_slot": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Profile Slot"
+          },
+          "handoff_destinations": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Handoff Destinations"
+          },
+          "value": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ApplicationFieldValueOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "type": "object",
+        "required": [
+          "field_key",
+          "revision",
+          "label",
+          "help_text",
+          "data_type",
+          "validation",
+          "required",
+          "sensitivity",
+          "source_excerpt",
+          "source_url",
+          "profile_slot",
+          "handoff_destinations",
+          "value"
+        ],
+        "title": "ApplicationFieldDefinitionOut"
+      },
+      "ApplicationFieldDefinitionReview": {
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "approved",
+              "rejected"
+            ],
+            "title": "Status"
+          },
+          "reason": {
+            "type": "string",
+            "maxLength": 500,
+            "minLength": 3,
+            "title": "Reason"
+          }
+        },
+        "type": "object",
+        "required": [
+          "status",
+          "reason"
+        ],
+        "title": "ApplicationFieldDefinitionReview"
+      },
+      "ApplicationFieldUpdate": {
+        "properties": {
+          "value": {
+            "type": "string",
+            "maxLength": 2000,
+            "minLength": 1,
+            "title": "Value"
+          },
+          "expected_revision": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": 1.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Expected Revision"
+          }
+        },
+        "type": "object",
+        "required": [
+          "value"
+        ],
+        "title": "ApplicationFieldUpdate"
+      },
+      "ApplicationFieldValueOut": {
+        "properties": {
+          "field_key": {
+            "type": "string",
+            "title": "Field Key"
+          },
+          "definition_revision": {
+            "type": "integer",
+            "title": "Definition Revision"
+          },
+          "masked_value": {
+            "type": "string",
+            "title": "Masked Value"
+          },
+          "value_source": {
+            "type": "string",
+            "title": "Value Source"
+          },
+          "confirmed_by_citizen_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Confirmed By Citizen At"
+          },
+          "expires_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Expires At"
+          },
+          "revision": {
+            "type": "integer",
+            "title": "Revision"
+          }
+        },
+        "type": "object",
+        "required": [
+          "field_key",
+          "definition_revision",
+          "masked_value",
+          "value_source",
+          "confirmed_by_citizen_at",
+          "expires_at",
+          "revision"
+        ],
+        "title": "ApplicationFieldValueOut"
+      },
+      "ApplicationOutcomeFeedbackCreate": {
+        "properties": {
+          "outcome": {
+            "type": "string",
+            "enum": [
+              "received",
+              "not_received",
+              "partially_received",
+              "unknown"
+            ],
+            "title": "Outcome"
+          },
+          "reason_code": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 80
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason Code"
+          },
+          "free_text": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 2000
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Free Text"
+          },
+          "satisfaction_score": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "maximum": 5.0,
+                "minimum": 1.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Satisfaction Score"
+          },
+          "consent_for_evaluation": {
+            "type": "boolean",
+            "title": "Consent For Evaluation",
+            "default": false
+          },
+          "expected_case_revision": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": 1.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Expected Case Revision"
+          }
+        },
+        "type": "object",
+        "required": [
+          "outcome"
+        ],
+        "title": "ApplicationOutcomeFeedbackCreate"
+      },
+      "ApplicationOutcomeFeedbackOut": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "application_case_id": {
+            "type": "string",
+            "title": "Application Case Id"
+          },
+          "outcome": {
+            "type": "string",
+            "title": "Outcome"
+          },
+          "confirmed_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Confirmed At"
+          },
+          "reason_code": {
+            "type": "string",
+            "title": "Reason Code"
+          },
+          "has_comment": {
+            "type": "boolean",
+            "title": "Has Comment"
+          },
+          "satisfaction_score": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Satisfaction Score"
+          },
+          "consent_for_evaluation": {
+            "type": "boolean",
+            "title": "Consent For Evaluation"
+          },
+          "revision": {
+            "type": "integer",
+            "title": "Revision"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Updated At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "application_case_id",
+          "outcome",
+          "confirmed_at",
+          "reason_code",
+          "has_comment",
+          "satisfaction_score",
+          "consent_for_evaluation",
+          "revision",
+          "created_at",
+          "updated_at"
+        ],
+        "title": "ApplicationOutcomeFeedbackOut"
+      },
       "ApplicationPackPreviewOut": {
         "properties": {
           "html": {
@@ -4457,6 +5701,145 @@
           "content_sha256"
         ],
         "title": "ApplicationPackPreviewOut"
+      },
+      "ApplicationRequirementOut": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "requirement_key": {
+            "type": "string",
+            "title": "Requirement Key"
+          },
+          "requirement_type": {
+            "type": "string",
+            "title": "Requirement Type"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "description": {
+            "type": "string",
+            "title": "Description"
+          },
+          "required": {
+            "type": "boolean",
+            "title": "Required"
+          },
+          "source_revision": {
+            "type": "integer",
+            "title": "Source Revision"
+          },
+          "source_excerpt": {
+            "type": "string",
+            "title": "Source Excerpt"
+          },
+          "source_url": {
+            "type": "string",
+            "title": "Source Url"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "task_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Task Id"
+          },
+          "expiry_date": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Expiry Date"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Updated At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "requirement_key",
+          "requirement_type",
+          "title",
+          "description",
+          "required",
+          "source_revision",
+          "source_excerpt",
+          "source_url",
+          "status",
+          "task_id",
+          "expiry_date",
+          "created_at",
+          "updated_at"
+        ],
+        "title": "ApplicationRequirementOut"
+      },
+      "ApplicationRequirementStatusUpdate": {
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "missing",
+              "ready",
+              "not_applicable",
+              "submitted",
+              "needs_update"
+            ],
+            "title": "Status"
+          },
+          "reason": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 240
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason"
+          },
+          "expected_case_revision": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": 1.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Expected Case Revision"
+          }
+        },
+        "type": "object",
+        "required": [
+          "status"
+        ],
+        "title": "ApplicationRequirementStatusUpdate"
       },
       "ApplicationStatusEventCreate": {
         "properties": {
@@ -4611,6 +5994,17 @@
             "type": "string",
             "title": "Description"
           },
+          "requirement_key": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Requirement Key"
+          },
           "position": {
             "type": "integer",
             "title": "Position"
@@ -4666,6 +6060,7 @@
           "kind",
           "title",
           "description",
+          "requirement_key",
           "position",
           "status",
           "due_at",

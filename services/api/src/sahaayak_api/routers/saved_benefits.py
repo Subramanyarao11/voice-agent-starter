@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import hashlib
 from datetime import UTC, datetime, timedelta
 from typing import Literal
 
@@ -12,6 +13,8 @@ from sqlmodel import Session, select
 from sahaayak_api.browser_auth import BrowserSessionPrincipal, require_browser_session
 from sahaayak_api.notifications import check_channel
 from sahaayak_common import (
+    ApplicationCase,
+    ApplicationRequirement,
     ApplicationTask,
     Benefit,
     ConsentEvent,
@@ -52,6 +55,7 @@ class ApplicationTaskOut(BaseModel):
     kind: str
     title: str
     description: str
+    requirement_key: str | None
     position: int
     status: str
     due_at: datetime | None
@@ -232,6 +236,26 @@ def update_application_task(
     row.completed_at = datetime.now(UTC) if payload.status == "completed" else None
     row.updated_at = datetime.now(UTC)
     db.add(row)
+    if row.application_case_id:
+        case = db.get(ApplicationCase, row.application_case_id)
+        requirement = db.exec(
+            select(ApplicationRequirement).where(
+                ApplicationRequirement.application_case_id == row.application_case_id,
+                ApplicationRequirement.requirement_key == row.requirement_key,
+            )
+        ).first()
+        if requirement is not None:
+            requirement.status = {
+                "pending": "missing",
+                "completed": "ready",
+                "skipped": "not_applicable",
+            }[payload.status]
+            requirement.updated_at = datetime.now(UTC)
+            db.add(requirement)
+        if case is not None:
+            case.revision += 1
+            case.updated_at = datetime.now(UTC)
+            db.add(case)
     db.commit()
     db.refresh(row)
     return task_out(db, row)
@@ -402,6 +426,7 @@ def ensure_application_tasks(
             )
 
     for position, (kind, title, description) in enumerate(specs):
+        requirement_key = _requirement_key(kind, title)
         existing = db.exec(
             select(ApplicationTask).where(
                 ApplicationTask.session_id == session_id,
@@ -418,6 +443,7 @@ def ensure_application_tasks(
                     benefit_id=benefit.id,
                     kind=kind,
                     title=title,
+                    requirement_key=requirement_key,
                     application_case_id=application_case_id,
                     description=description,
                     position=position,
@@ -428,6 +454,7 @@ def ensure_application_tasks(
             if application_case_id and existing.application_case_id is None:
                 existing.application_case_id = application_case_id
             existing.position = position
+            existing.requirement_key = existing.requirement_key or requirement_key
             existing.source_revision = benefit.content_revision
             if existing.status == "pending":
                 existing.description = description
@@ -444,6 +471,7 @@ def task_out(db: Session, row: ApplicationTask) -> ApplicationTaskOut:
         kind=row.kind,
         title=row.title,
         description=row.description,
+        requirement_key=row.requirement_key,
         position=row.position,
         status=row.status,
         due_at=row.due_at,
@@ -452,6 +480,11 @@ def task_out(db: Session, row: ApplicationTask) -> ApplicationTaskOut:
         created_at=row.created_at,
         updated_at=row.updated_at,
     )
+
+
+def _requirement_key(kind: str, title: str) -> str:
+    digest = hashlib.sha256(f"{kind}:{title.casefold()}".encode()).hexdigest()[:24]
+    return f"{kind}:{digest}"
 
 
 def _reminder_out(

@@ -174,6 +174,7 @@ export const applicationTaskSchema = z.object({
   kind: z.string(),
   title: z.string(),
   description: z.string(),
+  requirement_key: z.string().nullable(),
   position: z.number(),
   status: z.string(),
   due_at: z.string().nullable(),
@@ -232,6 +233,63 @@ export const applicationPackPreviewSchema = z.object({
   generated_at: z.string(),
   expires_at: z.string(),
   content_sha256: z.string(),
+});
+
+export const applicationFieldValueSchema = z.object({
+  field_key: z.string(),
+  definition_revision: z.number(),
+  masked_value: z.string(),
+  value_source: z.string(),
+  confirmed_by_citizen_at: z.string(),
+  expires_at: z.string().nullable(),
+  revision: z.number(),
+});
+
+export const applicationFieldDefinitionSchema = z.object({
+  field_key: z.string(),
+  revision: z.number(),
+  label: z.record(z.string(), z.string()),
+  help_text: z.record(z.string(), z.string()),
+  data_type: z.string(),
+  validation: z.record(z.string(), z.unknown()),
+  required: z.boolean(),
+  sensitivity: z.string(),
+  source_excerpt: z.string(),
+  source_url: z.string(),
+  profile_slot: z.string().nullable(),
+  handoff_destinations: z.array(z.string()),
+  value: applicationFieldValueSchema.nullable(),
+});
+
+export const applicationRequirementSchema = z.object({
+  id: z.string(),
+  requirement_key: z.string(),
+  requirement_type: z.string(),
+  title: z.string(),
+  description: z.string(),
+  required: z.boolean(),
+  source_revision: z.number(),
+  source_excerpt: z.string(),
+  source_url: z.string(),
+  status: z.string(),
+  task_id: z.string().nullable(),
+  expiry_date: z.string().nullable(),
+  created_at: z.string(),
+  updated_at: z.string(),
+});
+
+export const applicationOutcomeSchema = z.object({
+  id: z.string(),
+  application_case_id: z.string(),
+  outcome: z.string(),
+  confirmed_at: z.string(),
+  reason_code: z.string(),
+  has_comment: z.boolean(),
+  satisfaction_score: z.number().nullable(),
+  consent_for_evaluation: z.boolean(),
+  revision: z.number(),
+  created_at: z.string(),
+  updated_at: z.string(),
 });
 
 export const contactPointSchema = z.object({
@@ -298,6 +356,9 @@ export type ApplicationTask = z.infer<typeof applicationTaskSchema>;
 export type ApplicationStatusEvent = z.infer<typeof applicationStatusEventSchema>;
 export type ApplicationCase = z.infer<typeof applicationCaseSchema>;
 export type ApplicationPackPreview = z.infer<typeof applicationPackPreviewSchema>;
+export type ApplicationFieldDefinition = z.infer<typeof applicationFieldDefinitionSchema>;
+export type ApplicationRequirement = z.infer<typeof applicationRequirementSchema>;
+export type ApplicationOutcome = z.infer<typeof applicationOutcomeSchema>;
 export type ContactPoint = z.infer<typeof contactPointSchema>;
 export type ChannelStatus = z.infer<typeof channelStatusSchema>;
 
@@ -583,6 +644,106 @@ export function recordApplicationStatus(
       method: "POST",
       body: JSON.stringify(payload),
       headers: { Authorization: "Bearer " + accessToken },
+    },
+  );
+}
+
+export function getApplicationFields(
+  sessionId: string,
+  applicationId: string,
+  accessToken: string,
+): Promise<ApplicationFieldDefinition[]> {
+  return request(
+    `/api/sessions/${encodeURIComponent(sessionId)}/applications/${encodeURIComponent(applicationId)}/fields`,
+    z.array(applicationFieldDefinitionSchema),
+    { headers: { Authorization: `Bearer ${accessToken}` } },
+  );
+}
+
+export function updateApplicationField(
+  sessionId: string,
+  applicationId: string,
+  fieldKey: string,
+  payload: { value: string; expected_revision?: number },
+  accessToken: string,
+): Promise<ApplicationFieldDefinition[]> {
+  return request(
+    `/api/sessions/${encodeURIComponent(sessionId)}/applications/${encodeURIComponent(applicationId)}/fields/${encodeURIComponent(fieldKey)}`,
+    z.array(applicationFieldDefinitionSchema),
+    {
+      method: "PUT",
+      body: JSON.stringify(payload),
+      headers: { Authorization: `Bearer ${accessToken}` },
+    },
+  );
+}
+
+export function getApplicationRequirements(
+  sessionId: string,
+  applicationId: string,
+  accessToken: string,
+): Promise<ApplicationRequirement[]> {
+  return request(
+    `/api/sessions/${encodeURIComponent(sessionId)}/applications/${encodeURIComponent(applicationId)}/requirements`,
+    z.array(applicationRequirementSchema),
+    { headers: { Authorization: `Bearer ${accessToken}` } },
+  );
+}
+
+export function updateApplicationRequirement(
+  sessionId: string,
+  applicationId: string,
+  requirementKey: string,
+  payload: {
+    status: "missing" | "ready" | "not_applicable" | "submitted" | "needs_update";
+    reason?: string;
+    expected_case_revision?: number;
+  },
+  accessToken: string,
+): Promise<ApplicationRequirement[]> {
+  return request(
+    `/api/sessions/${encodeURIComponent(sessionId)}/applications/${encodeURIComponent(applicationId)}/requirements/${encodeURIComponent(requirementKey)}/status`,
+    z.array(applicationRequirementSchema),
+    {
+      method: "POST",
+      body: JSON.stringify(payload),
+      headers: { Authorization: `Bearer ${accessToken}` },
+    },
+  );
+}
+
+export function getApplicationOutcome(
+  sessionId: string,
+  applicationId: string,
+  accessToken: string,
+): Promise<ApplicationOutcome> {
+  return request(
+    `/api/sessions/${encodeURIComponent(sessionId)}/applications/${encodeURIComponent(applicationId)}/outcome`,
+    applicationOutcomeSchema,
+    { headers: { Authorization: `Bearer ${accessToken}` } },
+  );
+}
+
+export function recordApplicationOutcome(
+  sessionId: string,
+  applicationId: string,
+  payload: {
+    outcome: "received" | "not_received" | "partially_received" | "unknown";
+    reason_code?: string;
+    free_text?: string;
+    satisfaction_score?: number;
+    consent_for_evaluation?: boolean;
+    expected_case_revision?: number;
+  },
+  accessToken: string,
+): Promise<ApplicationOutcome> {
+  return request(
+    `/api/sessions/${encodeURIComponent(sessionId)}/applications/${encodeURIComponent(applicationId)}/outcome`,
+    applicationOutcomeSchema,
+    {
+      method: "POST",
+      body: JSON.stringify(payload),
+      headers: { Authorization: `Bearer ${accessToken}` },
     },
   );
 }

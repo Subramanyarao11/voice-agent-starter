@@ -32,6 +32,7 @@ from sahaayak_common import (
     CORE_LANGUAGE_CODES,
     DEFAULT_PROVIDER_POLICIES,
     ApplicationCase,
+    ApplicationFieldDefinition,
     ApplicationStatusEvent,
     AuditEvent,
     Benefit,
@@ -354,6 +355,52 @@ class BenefitVersionListOut(BaseModel):
 
 class BenefitRollbackRequest(BaseModel):
     version: int = Field(ge=1)
+    reason: str = Field(min_length=3, max_length=500)
+
+
+class ApplicationFieldDefinitionAdminOut(BaseModel):
+    id: str
+    benefit_id: str
+    field_key: str
+    revision: int
+    label: dict[str, str]
+    help_text: dict[str, str]
+    data_type: str
+    validation: dict
+    required: bool
+    sensitivity: str
+    source_excerpt: str
+    source_url: str
+    profile_slot: str | None
+    handoff_destinations: list[str]
+    review_status: str
+    reviewed_by: str | None
+    reviewed_at: datetime | None
+    valid_from: date | None
+    valid_until: date | None
+    created_at: datetime
+    updated_at: datetime
+
+
+class ApplicationFieldDefinitionCreate(BaseModel):
+    field_key: str = Field(min_length=2, max_length=80, pattern=r"^[a-z][a-z0-9_]*$")
+    label: dict[str, str] = Field(min_length=1, max_length=20)
+    help_text: dict[str, str] = Field(default_factory=dict, max_length=20)
+    data_type: Literal["text", "date", "integer", "decimal", "boolean", "select"] = "text"
+    validation: dict[str, Any] = Field(default_factory=dict)
+    required: bool = False
+    sensitivity: Literal["public", "internal", "confidential", "restricted"] = "internal"
+    source_excerpt: str = Field(min_length=3, max_length=2_000)
+    source_url: str = Field(min_length=1, max_length=2_000)
+    profile_slot: str | None = Field(default=None, max_length=80)
+    handoff_destinations: list[str] = Field(default_factory=list, max_length=10)
+    valid_from: date | None = None
+    valid_until: date | None = None
+    reason: str = Field(min_length=3, max_length=500)
+
+
+class ApplicationFieldDefinitionReview(BaseModel):
+    status: Literal["approved", "rejected"]
     reason: str = Field(min_length=3, max_length=500)
 
 
@@ -1138,6 +1185,167 @@ def edit_benefit(
     db.commit()
     db.refresh(row)
     return _benefit_review_out(row)
+
+
+@router.get(
+    "/benefits/{benefit_id}/application-fields",
+    response_model=list[ApplicationFieldDefinitionAdminOut],
+)
+def list_application_field_definitions(
+    benefit_id: str,
+    db: Session = Depends(get_session),
+    _principal: AdminPrincipal = Depends(require_admin_role(*READ_ROLES)),
+) -> list[ApplicationFieldDefinitionAdminOut]:
+    if db.get(Benefit, benefit_id) is None:
+        raise HTTPException(status_code=404, detail="Benefit not found")
+    rows = db.exec(
+        select(ApplicationFieldDefinition)
+        .where(ApplicationFieldDefinition.benefit_id == benefit_id)
+        .order_by(ApplicationFieldDefinition.field_key, ApplicationFieldDefinition.revision.desc())
+        .limit(500)
+    ).all()
+    return [_application_field_definition_admin_out(row) for row in rows]
+
+
+@router.post(
+    "/benefits/{benefit_id}/application-fields",
+    response_model=ApplicationFieldDefinitionAdminOut,
+    status_code=201,
+)
+def create_application_field_definition(
+    benefit_id: str,
+    payload: ApplicationFieldDefinitionCreate,
+    db: Session = Depends(get_session),
+    principal: AdminPrincipal = Depends(require_admin_role("reviewer", "admin")),
+) -> ApplicationFieldDefinitionAdminOut:
+    benefit = db.get(Benefit, benefit_id)
+    if benefit is None:
+        raise HTTPException(status_code=404, detail="Benefit not found")
+    if payload.valid_from and payload.valid_until and payload.valid_until < payload.valid_from:
+        raise HTTPException(status_code=400, detail="valid_until cannot be before valid_from")
+    latest = db.exec(
+        select(ApplicationFieldDefinition)
+        .where(
+            ApplicationFieldDefinition.benefit_id == benefit_id,
+            ApplicationFieldDefinition.field_key == payload.field_key,
+        )
+        .order_by(ApplicationFieldDefinition.revision.desc())
+    ).first()
+    revision = latest.revision + 1 if latest else 1
+    now = datetime.now(UTC)
+    row = ApplicationFieldDefinition(
+        id=f"app-field-{benefit_id}-{payload.field_key}-{revision}",
+        benefit_id=benefit_id,
+        field_key=payload.field_key,
+        revision=revision,
+        label={key.strip().lower(): value.strip() for key, value in payload.label.items()},
+        help_text={key.strip().lower(): value.strip() for key, value in payload.help_text.items()},
+        data_type=payload.data_type,
+        validation=dict(payload.validation),
+        required=payload.required,
+        sensitivity=payload.sensitivity,
+        source_excerpt=payload.source_excerpt.strip(),
+        source_url=payload.source_url.strip(),
+        profile_slot=payload.profile_slot.strip() if payload.profile_slot else None,
+        handoff_destinations=[
+            item.strip() for item in payload.handoff_destinations if item.strip()
+        ],
+        review_status="pending",
+        valid_from=payload.valid_from,
+        valid_until=payload.valid_until,
+        created_at=now,
+        updated_at=now,
+    )
+    db.add(row)
+    db.add(
+        make_audit_event(
+            principal=principal,
+            action="application_field.create",
+            target_type="application_field_definition",
+            target_id=row.id,
+            reason=payload.reason,
+            safe_after={
+                "benefit_id": benefit_id,
+                "field_key": row.field_key,
+                "revision": row.revision,
+                "review_status": row.review_status,
+                "sensitivity": row.sensitivity,
+            },
+        )
+    )
+    db.commit()
+    db.refresh(row)
+    return _application_field_definition_admin_out(row)
+
+
+@router.post(
+    "/benefits/{benefit_id}/application-fields/{field_key}/review",
+    response_model=ApplicationFieldDefinitionAdminOut,
+)
+def review_application_field_definition(
+    benefit_id: str,
+    field_key: str,
+    payload: ApplicationFieldDefinitionReview,
+    db: Session = Depends(get_session),
+    principal: AdminPrincipal = Depends(require_admin_role("reviewer", "admin")),
+) -> ApplicationFieldDefinitionAdminOut:
+    benefit = db.get(Benefit, benefit_id)
+    if benefit is None:
+        raise HTTPException(status_code=404, detail="Benefit not found")
+    current = db.exec(
+        select(ApplicationFieldDefinition)
+        .where(
+            ApplicationFieldDefinition.benefit_id == benefit_id,
+            ApplicationFieldDefinition.field_key == field_key,
+        )
+        .order_by(ApplicationFieldDefinition.revision.desc())
+    ).first()
+    if current is None:
+        raise HTTPException(status_code=404, detail="Application field definition not found")
+    if payload.status == "approved" and (not current.source_url or not current.source_excerpt):
+        raise HTTPException(
+            status_code=409,
+            detail="An application field needs an official source URL and excerpt before approval.",
+        )
+    now = datetime.now(UTC)
+    reviewed = ApplicationFieldDefinition(
+        id=f"app-field-{benefit_id}-{field_key}-{current.revision + 1}",
+        benefit_id=current.benefit_id,
+        field_key=current.field_key,
+        revision=current.revision + 1,
+        label=dict(current.label or {}),
+        help_text=dict(current.help_text or {}),
+        data_type=current.data_type,
+        validation=dict(current.validation or {}),
+        required=current.required,
+        sensitivity=current.sensitivity,
+        source_excerpt=current.source_excerpt,
+        source_url=current.source_url,
+        profile_slot=current.profile_slot,
+        handoff_destinations=list(current.handoff_destinations or []),
+        review_status=payload.status,
+        reviewed_by=principal.actor_id,
+        reviewed_at=now,
+        valid_from=current.valid_from,
+        valid_until=current.valid_until,
+        created_at=now,
+        updated_at=now,
+    )
+    db.add(reviewed)
+    db.add(
+        make_audit_event(
+            principal=principal,
+            action="application_field.review",
+            target_type="application_field_definition",
+            target_id=reviewed.id,
+            reason=payload.reason,
+            safe_before={"revision": current.revision, "review_status": current.review_status},
+            safe_after={"revision": reviewed.revision, "review_status": reviewed.review_status},
+        )
+    )
+    db.commit()
+    db.refresh(reviewed)
+    return _application_field_definition_admin_out(reviewed)
 
 
 @router.get("/benefits/{benefit_id}/versions", response_model=BenefitVersionListOut)
@@ -2792,6 +3000,34 @@ def _verification_counts(db: Session, *, include_inactive: bool = False) -> dict
         .group_by(Benefit.verification_status)
     ).all()
     return {_wire(status): int(count) for status, count in rows}
+
+
+def _application_field_definition_admin_out(
+    row: ApplicationFieldDefinition,
+) -> ApplicationFieldDefinitionAdminOut:
+    return ApplicationFieldDefinitionAdminOut(
+        id=row.id,
+        benefit_id=row.benefit_id,
+        field_key=row.field_key,
+        revision=row.revision,
+        label={str(key): str(value) for key, value in (row.label or {}).items()},
+        help_text={str(key): str(value) for key, value in (row.help_text or {}).items()},
+        data_type=row.data_type,
+        validation=dict(row.validation or {}),
+        required=row.required,
+        sensitivity=row.sensitivity,
+        source_excerpt=row.source_excerpt,
+        source_url=row.source_url,
+        profile_slot=row.profile_slot,
+        handoff_destinations=list(row.handoff_destinations or []),
+        review_status=row.review_status,
+        reviewed_by=row.reviewed_by,
+        reviewed_at=row.reviewed_at,
+        valid_from=row.valid_from,
+        valid_until=row.valid_until,
+        created_at=row.created_at,
+        updated_at=row.updated_at,
+    )
 
 
 def _benefit_review_out(row: Benefit) -> BenefitReviewOut:

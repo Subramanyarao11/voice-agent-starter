@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import hashlib
 import html
+import re
 from datetime import UTC, date, datetime, time, timedelta
 from typing import Literal
 from urllib.parse import urlparse
@@ -23,16 +24,24 @@ from sahaayak_api.routers.saved_benefits import (
 from sahaayak_common import (
     ApplicationCase,
     ApplicationDataEncryptionUnavailable,
+    ApplicationFieldDefinition,
+    ApplicationFieldValue,
+    ApplicationOutcomeFeedback,
+    ApplicationRequirement,
     ApplicationStatusEvent,
     ApplicationTask,
     Benefit,
     Reminder,
+    application_value_hash,
     benefit_snapshot,
+    encrypt_application_value,
     encrypt_reference,
     feature_flag_enabled,
     get_session,
+    mask_application_value,
     mask_reference,
     new_id,
+    normalize_application_value,
     normalize_reference,
     reference_hash,
     settings,
@@ -51,6 +60,15 @@ ApplicationStatus = Literal[
     "delivered",
     "rejected",
     "withdrawn",
+]
+
+ApplicationOutcome = Literal["received", "not_received", "partially_received", "unknown"]
+ApplicationRequirementStatus = Literal[
+    "missing",
+    "ready",
+    "not_applicable",
+    "submitted",
+    "needs_update",
 ]
 
 _TERMINAL_STATUSES = {"delivered", "rejected", "withdrawn"}
@@ -140,6 +158,83 @@ class ApplicationCaseOut(BaseModel):
     status_events: list[ApplicationStatusEventOut]
 
 
+class ApplicationFieldValueOut(BaseModel):
+    field_key: str
+    definition_revision: int
+    masked_value: str
+    value_source: str
+    confirmed_by_citizen_at: datetime
+    expires_at: datetime | None
+    revision: int
+
+
+class ApplicationFieldDefinitionOut(BaseModel):
+    field_key: str
+    revision: int
+    label: dict[str, str]
+    help_text: dict[str, str]
+    data_type: str
+    validation: dict
+    required: bool
+    sensitivity: str
+    source_excerpt: str
+    source_url: str
+    profile_slot: str | None
+    handoff_destinations: list[str]
+    value: ApplicationFieldValueOut | None
+
+
+class ApplicationFieldUpdate(BaseModel):
+    value: str = Field(min_length=1, max_length=2_000)
+    expected_revision: int | None = Field(default=None, ge=1)
+
+
+class ApplicationRequirementOut(BaseModel):
+    id: str
+    requirement_key: str
+    requirement_type: str
+    title: str
+    description: str
+    required: bool
+    source_revision: int
+    source_excerpt: str
+    source_url: str
+    status: str
+    task_id: str | None
+    expiry_date: date | None
+    created_at: datetime
+    updated_at: datetime
+
+
+class ApplicationRequirementStatusUpdate(BaseModel):
+    status: ApplicationRequirementStatus
+    reason: str | None = Field(default=None, max_length=240)
+    expected_case_revision: int | None = Field(default=None, ge=1)
+
+
+class ApplicationOutcomeFeedbackCreate(BaseModel):
+    outcome: ApplicationOutcome
+    reason_code: str | None = Field(default=None, max_length=80)
+    free_text: str | None = Field(default=None, max_length=2_000)
+    satisfaction_score: int | None = Field(default=None, ge=1, le=5)
+    consent_for_evaluation: bool = False
+    expected_case_revision: int | None = Field(default=None, ge=1)
+
+
+class ApplicationOutcomeFeedbackOut(BaseModel):
+    id: str
+    application_case_id: str
+    outcome: str
+    confirmed_at: datetime
+    reason_code: str
+    has_comment: bool
+    satisfaction_score: int | None
+    consent_for_evaluation: bool
+    revision: int
+    created_at: datetime
+    updated_at: datetime
+
+
 class ApplicationPackPreviewOut(BaseModel):
     html: str
     generated_at: datetime
@@ -227,6 +322,7 @@ async def create_application(
         benefit,
         application_case_id=case.id,
     )
+    _sync_case_requirements(db, case)
     _schedule_deadline_reminder(db, case, snapshot, now=now)
     db.add(
         ApplicationStatusEvent(
@@ -258,6 +354,342 @@ def get_application(
     _require_application_copilot(principal)
     case = _case_for_session(db, principal.session_id, application_id)
     return _case_out(db, case)
+
+
+@router.get(
+    "/{session_id}/applications/{application_id}/fields",
+    response_model=list[ApplicationFieldDefinitionOut],
+)
+def list_application_fields(
+    session_id: str,
+    application_id: str,
+    db: Session = Depends(get_session),
+    principal: BrowserSessionPrincipal = Depends(require_browser_session),
+) -> list[ApplicationFieldDefinitionOut]:
+    _require_own_session(session_id, principal)
+    _require_application_copilot(principal)
+    case = _case_for_session(db, principal.session_id, application_id)
+    definitions = _approved_field_definitions(db, case.benefit_id)
+    values = {
+        row.field_key: row
+        for row in db.exec(
+            select(ApplicationFieldValue).where(
+                ApplicationFieldValue.application_case_id == case.id
+            )
+        ).all()
+    }
+    return [
+        _field_definition_out(definition, values.get(definition.field_key))
+        for definition in definitions
+    ]
+
+
+@router.put(
+    "/{session_id}/applications/{application_id}/fields/{field_key}",
+    response_model=list[ApplicationFieldDefinitionOut],
+)
+async def update_application_field(
+    session_id: str,
+    application_id: str,
+    field_key: str,
+    payload: ApplicationFieldUpdate,
+    request: Request,
+    http_response: Response,
+    db: Session = Depends(get_session),
+    principal: BrowserSessionPrincipal = Depends(require_browser_session),
+) -> list[ApplicationFieldDefinitionOut]:
+    _require_own_session(session_id, principal)
+    _require_application_copilot(principal)
+    decision = await enforce_rate_limit(
+        request, session_id=principal.session_id, bucket="application_status"
+    )
+    apply_rate_limit_headers(http_response, decision)
+    case = _case_for_session(db, principal.session_id, application_id)
+    definition = _approved_field_definition(db, case.benefit_id, field_key)
+    if definition is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Application field not found",
+        )
+    existing = db.exec(
+        select(ApplicationFieldValue).where(
+            ApplicationFieldValue.application_case_id == case.id,
+            ApplicationFieldValue.field_key == definition.field_key,
+        )
+    ).first()
+    if existing is not None and payload.expected_revision != existing.revision:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Application field changed since it was loaded; reload before saving.",
+        )
+    normalized = _validate_field_value(definition, payload.value)
+    try:
+        encrypted = encrypt_application_value(normalized)
+        value_digest = application_value_hash(normalized)
+        masked = mask_application_value(normalized)
+    except ApplicationDataEncryptionUnavailable as exc:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Application field capture is not configured on this deployment.",
+        ) from exc
+    now = datetime.now(UTC)
+    if existing is None:
+        existing = ApplicationFieldValue(
+            id=new_id("application-field"),
+            application_case_id=case.id,
+            field_key=definition.field_key,
+            definition_revision=definition.revision,
+            value_ciphertext=encrypted,
+            value_hash=value_digest,
+            masked_value=masked,
+            value_source="citizen_entered",
+            confirmed_by_citizen_at=now,
+            revision=1,
+            updated_at=now,
+        )
+    else:
+        existing.definition_revision = definition.revision
+        existing.value_ciphertext = encrypted
+        existing.value_hash = value_digest
+        existing.masked_value = masked
+        existing.value_source = "citizen_entered"
+        existing.confirmed_by_citizen_at = now
+        existing.revision += 1
+        existing.updated_at = now
+    case.revision += 1
+    case.updated_at = now
+    db.add(existing)
+    db.add(case)
+    db.commit()
+    return list_application_fields(session_id, application_id, db, principal)
+
+
+@router.delete(
+    "/{session_id}/applications/{application_id}/fields/{field_key}",
+    response_model=list[ApplicationFieldDefinitionOut],
+)
+def delete_application_field(
+    session_id: str,
+    application_id: str,
+    field_key: str,
+    expected_revision: int | None = None,
+    db: Session = Depends(get_session),
+    principal: BrowserSessionPrincipal = Depends(require_browser_session),
+) -> list[ApplicationFieldDefinitionOut]:
+    _require_own_session(session_id, principal)
+    _require_application_copilot(principal)
+    case = _case_for_session(db, principal.session_id, application_id)
+    value = db.exec(
+        select(ApplicationFieldValue).where(
+            ApplicationFieldValue.application_case_id == case.id,
+            ApplicationFieldValue.field_key == field_key,
+        )
+    ).first()
+    if value is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Application field value not found",
+        )
+    if expected_revision != value.revision:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Application field changed since it was loaded; reload before deleting.",
+        )
+    db.delete(value)
+    case.revision += 1
+    case.updated_at = datetime.now(UTC)
+    db.add(case)
+    db.commit()
+    return list_application_fields(session_id, application_id, db, principal)
+
+
+@router.get(
+    "/{session_id}/applications/{application_id}/requirements",
+    response_model=list[ApplicationRequirementOut],
+)
+def list_application_requirements(
+    session_id: str,
+    application_id: str,
+    db: Session = Depends(get_session),
+    principal: BrowserSessionPrincipal = Depends(require_browser_session),
+) -> list[ApplicationRequirementOut]:
+    _require_own_session(session_id, principal)
+    _require_application_copilot(principal)
+    case = _case_for_session(db, principal.session_id, application_id)
+    _sync_case_requirements(db, case)
+    db.commit()
+    rows = db.exec(
+        select(ApplicationRequirement)
+        .where(ApplicationRequirement.application_case_id == case.id)
+        .order_by(ApplicationRequirement.requirement_type, ApplicationRequirement.created_at)
+    ).all()
+    return [_requirement_out(row) for row in rows]
+
+
+@router.post(
+    "/{session_id}/applications/{application_id}/requirements/{requirement_key}/status",
+    response_model=list[ApplicationRequirementOut],
+)
+def update_application_requirement(
+    session_id: str,
+    application_id: str,
+    requirement_key: str,
+    payload: ApplicationRequirementStatusUpdate,
+    db: Session = Depends(get_session),
+    principal: BrowserSessionPrincipal = Depends(require_browser_session),
+) -> list[ApplicationRequirementOut]:
+    _require_own_session(session_id, principal)
+    _require_application_copilot(principal)
+    case = _case_for_session(db, principal.session_id, application_id)
+    if (
+        payload.expected_case_revision is not None
+        and payload.expected_case_revision != case.revision
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=(
+                "Application changed since it was loaded; reload before updating the requirement."
+            ),
+        )
+    _sync_case_requirements(db, case)
+    requirement = db.exec(
+        select(ApplicationRequirement).where(
+            ApplicationRequirement.application_case_id == case.id,
+            ApplicationRequirement.requirement_key == requirement_key,
+        )
+    ).first()
+    if requirement is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Application requirement not found",
+        )
+    if payload.status == "not_applicable" and not (payload.reason or "").strip():
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="A reason is required when a requirement is marked not applicable.",
+        )
+    requirement.status = payload.status
+    requirement.updated_at = datetime.now(UTC)
+    task = db.get(ApplicationTask, requirement.task_id) if requirement.task_id else None
+    if task is not None:
+        task.status = {
+            "missing": "pending",
+            "needs_update": "pending",
+            "ready": "completed",
+            "submitted": "completed",
+            "not_applicable": "skipped",
+        }[payload.status]
+        task.completed_at = datetime.now(UTC) if task.status == "completed" else None
+        task.updated_at = datetime.now(UTC)
+        db.add(task)
+    case.revision += 1
+    case.updated_at = datetime.now(UTC)
+    db.add(requirement)
+    db.add(case)
+    db.commit()
+    return list_application_requirements(session_id, application_id, db, principal)
+
+
+@router.get(
+    "/{session_id}/applications/{application_id}/outcome",
+    response_model=ApplicationOutcomeFeedbackOut,
+)
+def get_application_outcome(
+    session_id: str,
+    application_id: str,
+    db: Session = Depends(get_session),
+    principal: BrowserSessionPrincipal = Depends(require_browser_session),
+) -> ApplicationOutcomeFeedbackOut:
+    _require_own_session(session_id, principal)
+    _require_application_copilot(principal)
+    case = _case_for_session(db, principal.session_id, application_id)
+    feedback = db.exec(
+        select(ApplicationOutcomeFeedback).where(
+            ApplicationOutcomeFeedback.application_case_id == case.id
+        )
+    ).first()
+    if feedback is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Application outcome not recorded",
+        )
+    return _outcome_out(feedback)
+
+
+@router.post(
+    "/{session_id}/applications/{application_id}/outcome",
+    response_model=ApplicationOutcomeFeedbackOut,
+)
+def record_application_outcome(
+    session_id: str,
+    application_id: str,
+    payload: ApplicationOutcomeFeedbackCreate,
+    db: Session = Depends(get_session),
+    principal: BrowserSessionPrincipal = Depends(require_browser_session),
+) -> ApplicationOutcomeFeedbackOut:
+    _require_own_session(session_id, principal)
+    _require_application_copilot(principal)
+    case = _case_for_session(db, principal.session_id, application_id)
+    if case.status not in _TERMINAL_STATUSES:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Record an outcome after the application reaches a terminal status.",
+        )
+    if (
+        payload.expected_case_revision is not None
+        and payload.expected_case_revision != case.revision
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Application changed since it was loaded; reload before recording the outcome.",
+        )
+    existing = db.exec(
+        select(ApplicationOutcomeFeedback).where(
+            ApplicationOutcomeFeedback.application_case_id == case.id
+        )
+    ).first()
+    encrypted_comment = None
+    if payload.free_text:
+        try:
+            encrypted_comment = encrypt_application_value(payload.free_text)
+        except ApplicationDataEncryptionUnavailable as exc:
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail="Application outcome comments are not configured on this deployment.",
+            ) from exc
+        except ValueError as exc:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
+    now = datetime.now(UTC)
+    if existing is None:
+        existing = ApplicationOutcomeFeedback(
+            id=new_id("application-outcome"),
+            application_case_id=case.id,
+            outcome=payload.outcome,
+            confirmed_at=now,
+            reason_code=(payload.reason_code or "").strip(),
+            free_text_ciphertext=encrypted_comment,
+            satisfaction_score=payload.satisfaction_score,
+            consent_for_evaluation=payload.consent_for_evaluation,
+            revision=1,
+            created_at=now,
+            updated_at=now,
+        )
+    else:
+        existing.outcome = payload.outcome
+        existing.confirmed_at = now
+        existing.reason_code = (payload.reason_code or "").strip()
+        existing.free_text_ciphertext = encrypted_comment
+        existing.satisfaction_score = payload.satisfaction_score
+        existing.consent_for_evaluation = payload.consent_for_evaluation
+        existing.revision += 1
+        existing.updated_at = now
+    case.revision += 1
+    case.updated_at = now
+    db.add(existing)
+    db.add(case)
+    db.commit()
+    db.refresh(existing)
+    return _outcome_out(existing)
 
 
 @router.post(
@@ -457,6 +889,257 @@ def _case_for_session(db: Session, session_id: str, application_id: str) -> Appl
     if case is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Application not found")
     return case
+
+
+def _approved_field_definitions(
+    db: Session, benefit_id: str
+) -> list[ApplicationFieldDefinition]:
+    rows = db.exec(
+        select(ApplicationFieldDefinition)
+        .where(
+            ApplicationFieldDefinition.benefit_id == benefit_id,
+            ApplicationFieldDefinition.review_status == "approved",
+        )
+        .order_by(
+            ApplicationFieldDefinition.field_key,
+            ApplicationFieldDefinition.revision.desc(),
+        )
+    ).all()
+    today = date.today()
+    latest: dict[str, ApplicationFieldDefinition] = {}
+    for row in rows:
+        if row.valid_from and row.valid_from > today:
+            continue
+        if row.valid_until and row.valid_until < today:
+            continue
+        latest.setdefault(row.field_key, row)
+    return list(latest.values())
+
+
+def _approved_field_definition(
+    db: Session, benefit_id: str, field_key: str
+) -> ApplicationFieldDefinition | None:
+    return next(
+        (
+            row
+            for row in _approved_field_definitions(db, benefit_id)
+            if row.field_key == field_key
+        ),
+        None,
+    )
+
+
+def _field_definition_out(
+    definition: ApplicationFieldDefinition,
+    value: ApplicationFieldValue | None,
+) -> ApplicationFieldDefinitionOut:
+    value_out = (
+        ApplicationFieldValueOut(
+            field_key=value.field_key,
+            definition_revision=value.definition_revision,
+            masked_value=value.masked_value,
+            value_source=value.value_source,
+            confirmed_by_citizen_at=value.confirmed_by_citizen_at,
+            expires_at=value.expires_at,
+            revision=value.revision,
+        )
+        if value is not None
+        else None
+    )
+    return ApplicationFieldDefinitionOut(
+        field_key=definition.field_key,
+        revision=definition.revision,
+        label={str(key): str(item) for key, item in (definition.label or {}).items()},
+        help_text={str(key): str(item) for key, item in (definition.help_text or {}).items()},
+        data_type=definition.data_type,
+        validation=dict(definition.validation or {}),
+        required=definition.required,
+        sensitivity=definition.sensitivity,
+        source_excerpt=definition.source_excerpt,
+        source_url=definition.source_url,
+        profile_slot=definition.profile_slot,
+        handoff_destinations=list(definition.handoff_destinations or []),
+        value=value_out,
+    )
+
+
+def _validate_field_value(definition: ApplicationFieldDefinition, value: str) -> str:
+    try:
+        candidate = normalize_application_value(value)
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=str(exc),
+        ) from exc
+    rules = dict(definition.validation or {})
+    if definition.required and not candidate:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="This application field is required.",
+        )
+    minimum = rules.get("min_length")
+    maximum = rules.get("max_length")
+    if isinstance(minimum, int) and len(candidate) < minimum:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="Application field value is shorter than the published minimum.",
+        )
+    if isinstance(maximum, int) and len(candidate) > maximum:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="Application field value is longer than the published maximum.",
+        )
+    if definition.data_type == "integer":
+        try:
+            int(candidate)
+        except ValueError as exc:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail="Enter a whole number for this application field.",
+            ) from exc
+    elif definition.data_type == "decimal":
+        try:
+            float(candidate)
+        except ValueError as exc:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail="Enter a number for this application field.",
+            ) from exc
+    elif definition.data_type == "date":
+        try:
+            date.fromisoformat(candidate)
+        except ValueError as exc:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail="Enter a date in YYYY-MM-DD format.",
+            ) from exc
+    elif definition.data_type == "boolean" and candidate.casefold() not in {
+        "true",
+        "false",
+        "yes",
+        "no",
+        "1",
+        "0",
+    }:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="Enter yes or no for this application field.",
+        )
+    choices = rules.get("choices")
+    if isinstance(choices, list) and choices and candidate not in {str(item) for item in choices}:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="Choose one of the published options for this application field.",
+        )
+    pattern = rules.get("pattern")
+    if isinstance(pattern, str) and pattern:
+        try:
+            matches = re.fullmatch(pattern, candidate)
+        except re.error as exc:
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="This application field has an invalid validation rule.",
+            ) from exc
+        if matches is None:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail="Application field value does not match the published format.",
+            )
+    return candidate
+
+
+def _sync_case_requirements(db: Session, case: ApplicationCase) -> None:
+    benefit = db.get(Benefit, case.benefit_id)
+    if benefit is not None:
+        ensure_application_tasks(
+            db,
+            case.session_id,
+            benefit,
+            application_case_id=case.id,
+        )
+    db.flush()
+    snapshot = dict(case.benefit_snapshot or {})
+    source_url = str(snapshot.get("source_document_url") or snapshot.get("source_url") or "")
+    tasks = db.exec(
+        select(ApplicationTask)
+        .where(ApplicationTask.application_case_id == case.id)
+        .order_by(ApplicationTask.position, ApplicationTask.created_at)
+    ).all()
+    status_by_task = {
+        "pending": "missing",
+        "completed": "ready",
+        "skipped": "not_applicable",
+    }
+    for task in tasks:
+        if not task.requirement_key:
+            task.requirement_key = f"{task.kind}:{task.id}"
+            db.add(task)
+        requirement = db.exec(
+            select(ApplicationRequirement).where(
+                ApplicationRequirement.application_case_id == case.id,
+                ApplicationRequirement.requirement_key == task.requirement_key,
+            )
+        ).first()
+        if requirement is None:
+            requirement = ApplicationRequirement(
+                id=new_id("application-requirement"),
+                application_case_id=case.id,
+                requirement_key=task.requirement_key,
+                requirement_type=task.kind,
+                title=task.title,
+                description=task.description,
+                required=True,
+                source_revision=case.benefit_revision,
+                source_excerpt=task.description,
+                source_url=source_url,
+                status=status_by_task.get(task.status, "missing"),
+                task_id=task.id,
+            )
+        else:
+            requirement.title = task.title
+            requirement.description = task.description
+            requirement.source_excerpt = task.description
+            requirement.source_url = source_url
+            requirement.task_id = task.id
+            if requirement.status != "submitted":
+                requirement.status = status_by_task.get(task.status, "missing")
+            requirement.updated_at = datetime.now(UTC)
+        db.add(requirement)
+
+
+def _requirement_out(row: ApplicationRequirement) -> ApplicationRequirementOut:
+    return ApplicationRequirementOut(
+        id=row.id,
+        requirement_key=row.requirement_key,
+        requirement_type=row.requirement_type,
+        title=row.title,
+        description=row.description,
+        required=row.required,
+        source_revision=row.source_revision,
+        source_excerpt=row.source_excerpt,
+        source_url=row.source_url,
+        status=row.status,
+        task_id=row.task_id,
+        expiry_date=row.expiry_date,
+        created_at=row.created_at,
+        updated_at=row.updated_at,
+    )
+
+
+def _outcome_out(row: ApplicationOutcomeFeedback) -> ApplicationOutcomeFeedbackOut:
+    return ApplicationOutcomeFeedbackOut(
+        id=row.id,
+        application_case_id=row.application_case_id,
+        outcome=row.outcome,
+        confirmed_at=row.confirmed_at,
+        reason_code=row.reason_code,
+        has_comment=bool(row.free_text_ciphertext),
+        satisfaction_score=row.satisfaction_score,
+        consent_for_evaluation=row.consent_for_evaluation,
+        revision=row.revision,
+        created_at=row.created_at,
+        updated_at=row.updated_at,
+    )
 
 
 def _case_out(db: Session, case: ApplicationCase) -> ApplicationCaseOut:

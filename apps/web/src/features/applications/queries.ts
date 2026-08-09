@@ -2,10 +2,16 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import {
   createApplication,
+  getApplicationFields,
+  getApplicationOutcome,
+  getApplicationRequirements,
   getApplication,
   getApplications,
   previewApplicationPack,
+  recordApplicationOutcome,
   recordApplicationStatus,
+  updateApplicationField,
+  updateApplicationRequirement,
 } from "@/lib/api";
 
 export function applicationsQueryKey(sessionId: string) {
@@ -80,5 +86,117 @@ export function useApplicationPackPreviewQuery(
     queryFn: () => previewApplicationPack(sessionId, applicationId, accessToken),
     enabled: Boolean(sessionId && applicationId && accessToken),
     staleTime: 10 * 60 * 1000,
+  });
+}
+
+export function useApplicationFieldsQuery(
+  sessionId: string,
+  applicationId: string,
+  accessToken: string,
+) {
+  return useQuery({
+    queryKey: ["application-fields", sessionId, applicationId],
+    queryFn: () => getApplicationFields(sessionId, applicationId, accessToken),
+    enabled: Boolean(sessionId && applicationId && accessToken),
+  });
+}
+
+export function useApplicationRequirementsQuery(
+  sessionId: string,
+  applicationId: string,
+  accessToken: string,
+) {
+  return useQuery({
+    queryKey: ["application-requirements", sessionId, applicationId],
+    queryFn: () => getApplicationRequirements(sessionId, applicationId, accessToken),
+    enabled: Boolean(sessionId && applicationId && accessToken),
+  });
+}
+
+export function useUpdateApplicationFieldMutation(
+  sessionId: string,
+  applicationId: string,
+  accessToken: string,
+) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (input: { fieldKey: string; value: string; expectedRevision?: number }) =>
+      updateApplicationField(
+        sessionId,
+        applicationId,
+        input.fieldKey,
+        { value: input.value, expected_revision: input.expectedRevision },
+        accessToken,
+      ),
+    onSuccess: (fields) => {
+      queryClient.setQueryData(["application-fields", sessionId, applicationId], fields);
+      void queryClient.invalidateQueries({ queryKey: applicationQueryKey(sessionId, applicationId) });
+    },
+  });
+}
+
+export function useUpdateApplicationRequirementMutation(
+  sessionId: string,
+  applicationId: string,
+  accessToken: string,
+) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (input: {
+      requirementKey: string;
+      status: "missing" | "ready" | "not_applicable" | "submitted" | "needs_update";
+      reason?: string;
+      expectedCaseRevision?: number;
+    }) =>
+      updateApplicationRequirement(
+        sessionId,
+        applicationId,
+        input.requirementKey,
+        {
+          status: input.status,
+          reason: input.reason,
+          expected_case_revision: input.expectedCaseRevision,
+        },
+        accessToken,
+      ),
+    onSuccess: (requirements) => {
+      queryClient.setQueryData(["application-requirements", sessionId, applicationId], requirements);
+      void queryClient.invalidateQueries({ queryKey: applicationQueryKey(sessionId, applicationId) });
+    },
+  });
+}
+
+export function useApplicationOutcomeQuery(
+  sessionId: string,
+  applicationId: string,
+  accessToken: string,
+) {
+  return useQuery({
+    queryKey: ["application-outcome", sessionId, applicationId],
+    queryFn: () => getApplicationOutcome(sessionId, applicationId, accessToken),
+    enabled: Boolean(sessionId && applicationId && accessToken),
+    retry: (failureCount, error) => error instanceof Error && "status" in error && (error as { status: number }).status !== 404 && failureCount < 2,
+  });
+}
+
+export function useRecordApplicationOutcomeMutation(
+  sessionId: string,
+  applicationId: string,
+  accessToken: string,
+) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (payload: {
+      outcome: "received" | "not_received" | "partially_received" | "unknown";
+      reason_code?: string;
+      free_text?: string;
+      satisfaction_score?: number;
+      consent_for_evaluation?: boolean;
+      expected_case_revision?: number;
+    }) => recordApplicationOutcome(sessionId, applicationId, payload, accessToken),
+    onSuccess: (outcome) => {
+      queryClient.setQueryData(["application-outcome", sessionId, applicationId], outcome);
+      void queryClient.invalidateQueries({ queryKey: applicationQueryKey(sessionId, applicationId) });
+    },
   });
 }

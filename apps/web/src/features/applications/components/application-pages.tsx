@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 
 import { Link, useNavigate, useParams } from "@tanstack/react-router";
 import {
@@ -20,12 +20,23 @@ import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import {
   useApplicationQuery,
   useApplicationPackPreviewQuery,
+  useApplicationFieldsQuery,
+  useApplicationOutcomeQuery,
+  useApplicationRequirementsQuery,
   useApplicationsQuery,
+  useRecordApplicationOutcomeMutation,
   useRecordApplicationStatusMutation,
+  useUpdateApplicationFieldMutation,
+  useUpdateApplicationRequirementMutation,
 } from "@/features/applications/queries";
 import { useGuestSessionStore } from "@/features/session/store";
 import { useUpdateApplicationTaskMutation } from "@/features/saved/queries";
-import type { ApplicationCase, ApplicationTask } from "@/lib/api";
+import type {
+  ApplicationCase,
+  ApplicationFieldDefinition,
+  ApplicationRequirement,
+  ApplicationTask,
+} from "@/lib/api";
 import { toUserMessage } from "@/lib/api";
 
 const STATUS_OPTIONS = [
@@ -63,6 +74,10 @@ function readinessLabel(value: string): string {
   if (value === "ready") return "Ready to submit";
   if (value === "ready_with_warnings") return "Ready with checks";
   return "Checklist incomplete";
+}
+
+function isTerminalStatus(value: string): boolean {
+  return ["delivered", "rejected", "withdrawn"].includes(value);
 }
 
 function GuestSessionNotice() {
@@ -193,6 +208,24 @@ export function ApplicationDetailPage() {
     accessToken,
     applicationId,
   );
+  const fieldsQuery = useApplicationFieldsQuery(sessionId, applicationId, accessToken);
+  const requirementsQuery = useApplicationRequirementsQuery(sessionId, applicationId, accessToken);
+  const outcomeQuery = useApplicationOutcomeQuery(sessionId, applicationId, accessToken);
+  const updateFieldMutation = useUpdateApplicationFieldMutation(
+    sessionId,
+    applicationId,
+    accessToken,
+  );
+  const updateRequirementMutation = useUpdateApplicationRequirementMutation(
+    sessionId,
+    applicationId,
+    accessToken,
+  );
+  const recordOutcomeMutation = useRecordApplicationOutcomeMutation(
+    sessionId,
+    applicationId,
+    accessToken,
+  );
   const [status, setStatus] = useState("submitted");
   const [reference, setReference] = useState("");
   const [submissionDate, setSubmissionDate] = useState("");
@@ -305,6 +338,31 @@ export function ApplicationDetailPage() {
                 <SourceCard application={application} />
               </div>
 
+              <ApplicationRequirementsCard
+                requirements={requirementsQuery.data ?? []}
+                loading={requirementsQuery.isPending}
+                pending={updateRequirementMutation.isPending}
+                onStatusChange={(requirement, nextStatus) =>
+                  updateRequirementMutation.mutate({
+                    requirementKey: requirement.requirement_key,
+                    status: nextStatus,
+                    expectedCaseRevision: application.revision,
+                  })
+                }
+              />
+              <ApplicationFieldsCard
+                fields={fieldsQuery.data ?? []}
+                loading={fieldsQuery.isPending}
+                pending={updateFieldMutation.isPending}
+                onSave={(field, value) =>
+                  updateFieldMutation.mutate({
+                    fieldKey: field.field_key,
+                    value,
+                    expectedRevision: field.value?.revision,
+                  })
+                }
+              />
+
               <Button asChild variant="outline">
                 <Link
                   to="/applications/$applicationId/pack"
@@ -330,6 +388,20 @@ export function ApplicationDetailPage() {
                 notice={notice}
               />
               <Timeline events={application.status_events} />
+              {isTerminalStatus(application.status) && (
+                <ApplicationOutcomeCard
+                  existing={outcomeQuery.data}
+                  pending={recordOutcomeMutation.isPending}
+                  caseRevision={application.revision}
+                  onSubmit={(payload) =>
+                    recordOutcomeMutation.mutate({
+                      ...payload,
+                      expected_case_revision: application.revision,
+                    })
+                  }
+                  notice={recordOutcomeMutation.error ? toUserMessage(recordOutcomeMutation.error) : ""}
+                />
+              )}
               <Button type="button" variant="outline" onClick={() => void navigate({ to: "/applications" })}>
                 Return to applications
               </Button>
@@ -520,6 +592,216 @@ function SourceCard({ application }: { application: ApplicationCase }) {
             {application.source_title || "Open official source"}
             <ExternalLink className="size-4" aria-hidden="true" />
           </a>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
+function ApplicationRequirementsCard({
+  requirements,
+  loading,
+  pending,
+  onStatusChange,
+}: {
+  requirements: ApplicationRequirement[];
+  loading: boolean;
+  pending: boolean;
+  onStatusChange: (requirement: ApplicationRequirement, nextStatus: "ready") => void;
+}) {
+  return (
+    <Card>
+      <CardHeader className="gap-2">
+        <div className="flex items-center gap-2">
+          <ClipboardCheck className="size-5 text-primary" aria-hidden="true" />
+          <h2 className="text-lg font-bold">Requirements and evidence</h2>
+        </div>
+        <p className="text-sm leading-6 text-muted-foreground">
+          These rows preserve what the reviewed benefit requires. Marking a row ready records your progress, not an official document submission.
+        </p>
+      </CardHeader>
+      <CardContent>
+        {loading ? (
+          <p role="status" className="text-sm text-muted-foreground">Loading source requirements…</p>
+        ) : requirements.length === 0 ? (
+          <p className="text-sm text-muted-foreground">No structured requirements were published for this application.</p>
+        ) : (
+          <ul className="space-y-3">
+            {requirements.map((requirement) => (
+              <li key={requirement.requirement_key} className="flex flex-wrap items-start justify-between gap-3 rounded-lg border border-border p-3">
+                <div className="min-w-0">
+                  <p className="font-semibold">{requirement.title}</p>
+                  <p className="mt-1 text-xs leading-5 text-muted-foreground">{requirement.description}</p>
+                  <p className="mt-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                    {requirement.status.replaceAll("_", " ")}
+                  </p>
+                </div>
+                {requirement.status === "missing" || requirement.status === "needs_update" ? (
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    disabled={pending}
+                    onClick={() => onStatusChange(requirement, "ready")}
+                  >
+                    Mark ready
+                  </Button>
+                ) : (
+                  <Badge variant="success">{requirement.status.replaceAll("_", " ")}</Badge>
+                )}
+              </li>
+            ))}
+          </ul>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
+function ApplicationFieldsCard({
+  fields,
+  loading,
+  pending,
+  onSave,
+}: {
+  fields: ApplicationFieldDefinition[];
+  loading: boolean;
+  pending: boolean;
+  onSave: (field: ApplicationFieldDefinition, value: string) => void;
+}) {
+  const [values, setValues] = useState<Record<string, string>>({});
+  useEffect(() => {
+    setValues((current) => {
+      const next = { ...current };
+      for (const field of fields) next[field.field_key] ??= "";
+      return next;
+    });
+  }, [fields]);
+
+  if (!loading && fields.length === 0) return null;
+  return (
+    <Card>
+      <CardHeader className="gap-2">
+        <h2 className="text-lg font-bold">Application information</h2>
+        <p className="text-sm leading-6 text-muted-foreground">
+          Only reviewed fields appear here. Values are encrypted after you confirm them; Sahaayak never shows the stored value again.
+        </p>
+      </CardHeader>
+      <CardContent>
+        {loading ? (
+          <p role="status" className="text-sm text-muted-foreground">Loading reviewed application fields…</p>
+        ) : (
+          <div className="grid gap-4 md:grid-cols-2">
+            {fields.map((field) => {
+              const label = field.label.en ?? Object.values(field.label)[0] ?? field.field_key;
+              const help = field.help_text.en ?? Object.values(field.help_text)[0];
+              return (
+                <div key={field.field_key} className="grid gap-2">
+                  <label htmlFor={`application-field-${field.field_key}`} className="text-sm font-semibold">
+                    {label}{field.required ? " *" : ""}
+                  </label>
+                  {help && <p className="text-xs leading-5 text-muted-foreground">{help}</p>}
+                  {field.value && (
+                    <p className="text-xs text-muted-foreground">Stored value: {field.value.masked_value}</p>
+                  )}
+                  <div className="flex gap-2">
+                    <input
+                      id={`application-field-${field.field_key}`}
+                      type={field.data_type === "date" ? "date" : "text"}
+                      value={values[field.field_key] ?? ""}
+                      onChange={(event) => setValues((current) => ({ ...current, [field.field_key]: event.target.value }))}
+                      placeholder={field.value ? "Enter a replacement value" : "Enter value"}
+                      className="min-h-11 min-w-0 flex-1 rounded-lg border border-border bg-background px-3 text-sm"
+                    />
+                    <Button
+                      type="button"
+                      variant="outline"
+                      disabled={pending || !(values[field.field_key] ?? "").trim()}
+                      onClick={() => onSave(field, values[field.field_key] ?? "")}
+                    >
+                      Save
+                    </Button>
+                  </div>
+                  {field.source_url && (
+                    <a href={field.source_url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-xs font-semibold text-primary underline-offset-4 hover:underline">
+                      Field source <ExternalLink className="size-3" aria-hidden="true" />
+                    </a>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
+function ApplicationOutcomeCard({
+  existing,
+  pending,
+  onSubmit,
+  notice,
+}: {
+  existing: { outcome: string; confirmed_at: string; has_comment: boolean } | undefined;
+  pending: boolean;
+  caseRevision: number;
+  onSubmit: (payload: {
+    outcome: "received" | "not_received" | "partially_received" | "unknown";
+    reason_code?: string;
+    free_text?: string;
+    satisfaction_score?: number;
+    consent_for_evaluation?: boolean;
+  }) => void;
+  notice: string;
+}) {
+  const [outcome, setOutcome] = useState<"received" | "not_received" | "partially_received" | "unknown">("received");
+  const [comment, setComment] = useState("");
+  const [consent, setConsent] = useState(false);
+  return (
+    <Card>
+      <CardHeader className="gap-2">
+        <h2 className="text-lg font-bold">What happened after the application?</h2>
+        <p className="text-sm leading-6 text-muted-foreground">
+          This is optional citizen feedback and is never treated as official department evidence.
+        </p>
+      </CardHeader>
+      <CardContent>
+        {existing ? (
+          <p className="rounded-lg border border-success/30 bg-success/10 p-4 text-sm">
+            You recorded: <strong>{existing.outcome.replaceAll("_", " ")}</strong> · {formatDateTime(existing.confirmed_at)}
+            {existing.has_comment ? " · private note saved" : ""}
+          </p>
+        ) : (
+          <form
+            className="grid gap-4 md:grid-cols-2"
+            onSubmit={(event) => {
+              event.preventDefault();
+              onSubmit({ outcome, free_text: comment.trim() || undefined, consent_for_evaluation: consent });
+            }}
+          >
+            <label className="grid gap-2 text-sm font-semibold">
+              Outcome
+              <select value={outcome} onChange={(event) => setOutcome(event.target.value as typeof outcome)} className="min-h-11 rounded-lg border border-border bg-background px-3 font-normal">
+                <option value="received">Received</option>
+                <option value="partially_received">Partially received</option>
+                <option value="not_received">Not received</option>
+                <option value="unknown">Not sure</option>
+              </select>
+            </label>
+            <label className="grid gap-2 text-sm font-semibold">
+              Private note (optional)
+              <input value={comment} onChange={(event) => setComment(event.target.value)} maxLength={2000} className="min-h-11 rounded-lg border border-border bg-background px-3 font-normal" />
+            </label>
+            <label className="flex items-start gap-2 text-sm md:col-span-2">
+              <input type="checkbox" checked={consent} onChange={(event) => setConsent(event.target.checked)} className="mt-1 size-4 accent-primary" />
+              <span>Allow this outcome to be used in aggregate product evaluation.</span>
+            </label>
+            <div className="flex items-center gap-3 md:col-span-2">
+              <Button type="submit" disabled={pending}>{pending ? "Saving…" : "Save outcome"}</Button>
+              {notice && <p role="alert" className="text-sm text-destructive">{notice}</p>}
+            </div>
+          </form>
         )}
       </CardContent>
     </Card>
