@@ -121,6 +121,10 @@ class Settings(BaseSettings):
     citizen_oidc_allowed_algorithms: str = "RS256"
     citizen_oidc_subject_claim: str = "sub"
     citizen_oidc_clock_skew_seconds: int = 60
+    citizen_oidc_jwks_cache_seconds: int = 3600
+    citizen_oidc_required_amr: str = ""
+    citizen_oidc_required_acr: str = ""
+    citizen_oidc_require_email_verified: bool = False
     citizen_household_dependants_enabled: bool = False
     citizen_household_max_members: int = 8
     citizen_household_retention_days: int = 730
