@@ -54,6 +54,25 @@ const ENGLISH_COPY = {
   utilityLanguage: "Language",
   accessibility: "Accessibility",
   help: "Help",
+  tourLabel: "Getting started tour",
+  tourWelcomeTitle: "Welcome to Sahaayak",
+  tourWelcomeDescription:
+    "This short tour shows you how to find public benefits, scholarships, and government jobs. You can skip it at any time.",
+  tourPreferencesTitle: "Choose your language and state",
+  tourPreferencesDescription:
+    "Start here so Sahaayak can use the right language and show information relevant to your state.",
+  tourConversationTitle: "Ask by voice or text",
+  tourConversationDescription:
+    "Tell Sahaayak what you need by speaking or typing. You can review and edit a voice transcript before sending it.",
+  tourResultsTitle: "Review the answer and sources",
+  tourResultsDescription:
+    "Review why a benefit matched, what is uncertain, the required documents, next steps, and the official source before applying.",
+  tourStep: "Step {current} of {total}",
+  tourNext: "Next",
+  tourBack: "Back",
+  tourSkip: "Skip tour",
+  tourFinish: "Finish tour",
+  tourClose: "Close tour",
   home: "Home",
   findBenefits: "Find benefits and jobs",
   savedWork: "Saved work",
@@ -170,6 +189,25 @@ const DRAFT_COPY: Partial<Record<UiLocale, DraftCopy>> = {
     utilityLanguage: "भाषा",
     accessibility: "सुलभता",
     help: "मदद",
+    tourLabel: "शुरुआती जानकारी",
+    tourWelcomeTitle: "सहायक में आपका स्वागत है",
+    tourWelcomeDescription:
+      "यह छोटा परिचय आपको सार्वजनिक लाभ, छात्रवृत्ति और सरकारी नौकरियाँ खोजने का तरीका दिखाता है। आप इसे कभी भी छोड़ सकते हैं।",
+    tourPreferencesTitle: "अपनी भाषा और राज्य चुनें",
+    tourPreferencesDescription:
+      "यहाँ से शुरू करें, ताकि सहायक सही भाषा में आपके राज्य से जुड़ी जानकारी दिखा सके।",
+    tourConversationTitle: "आवाज़ या टेक्स्ट से पूछें",
+    tourConversationDescription:
+      "अपनी ज़रूरत बोलकर या लिखकर बताइए। भेजने से पहले आवाज़ के ट्रांसक्रिप्ट को जाँच और संपादित कर सकते हैं।",
+    tourResultsTitle: "जवाब और स्रोत जाँचें",
+    tourResultsDescription:
+      "आवेदन से पहले देखें कि लाभ क्यों मिला, क्या अनिश्चित है, कौन से दस्तावेज़ चाहिए, अगले कदम क्या हैं और आधिकारिक स्रोत कौन सा है।",
+    tourStep: "चरण {current} / {total}",
+    tourNext: "आगे",
+    tourBack: "पीछे",
+    tourSkip: "परिचय छोड़ें",
+    tourFinish: "परिचय पूरा करें",
+    tourClose: "परिचय बंद करें",
     home: "होम",
     findBenefits: "लाभ और सरकारी नौकरियाँ खोजें",
     savedWork: "सहेजा हुआ काम",
@@ -259,6 +297,25 @@ const DRAFT_COPY: Partial<Record<UiLocale, DraftCopy>> = {
     utilityLanguage: "ಭಾಷೆ",
     accessibility: "ಸುಲಭ ಪ್ರವೇಶ",
     help: "ಸಹಾಯ",
+    tourLabel: "ಪ್ರಾರಂಭಿಕ ಪರಿಚಯ",
+    tourWelcomeTitle: "ಸಹಾಯಕಕ್ಕೆ ಸ್ವಾಗತ",
+    tourWelcomeDescription:
+      "ಈ ಚಿಕ್ಕ ಪರಿಚಯವು ಸಾರ್ವಜನಿಕ ಸೌಲಭ್ಯಗಳು, ವಿದ್ಯಾರ್ಥಿವೇತನಗಳು ಮತ್ತು ಸರ್ಕಾರಿ ಉದ್ಯೋಗಗಳನ್ನು ಹುಡುಕುವ ವಿಧಾನವನ್ನು ತೋರಿಸುತ್ತದೆ. ನೀವು ಯಾವಾಗ ಬೇಕಾದರೂ ಇದನ್ನು ಬಿಟ್ಟುಬಿಡಬಹುದು.",
+    tourPreferencesTitle: "ನಿಮ್ಮ ಭಾಷೆ ಮತ್ತು ರಾಜ್ಯವನ್ನು ಆಯ್ಕೆಮಾಡಿ",
+    tourPreferencesDescription:
+      "ಇಲ್ಲಿಂದ ಪ್ರಾರಂಭಿಸಿ. ಸಹಾಯಕವು ಸರಿಯಾದ ಭಾಷೆಯಲ್ಲಿ ನಿಮ್ಮ ರಾಜ್ಯಕ್ಕೆ ಸಂಬಂಧಿಸಿದ ಮಾಹಿತಿಯನ್ನು ತೋರಿಸುತ್ತದೆ.",
+    tourConversationTitle: "ಧ್ವನಿ ಅಥವಾ ಪಠ್ಯದಲ್ಲಿ ಕೇಳಿ",
+    tourConversationDescription:
+      "ನಿಮಗೆ ಬೇಕಾದುದನ್ನು ಮಾತನಾಡಿ ಅಥವಾ ಟೈಪ್ ಮಾಡಿ. ಕಳುಹಿಸುವ ಮೊದಲು ಧ್ವನಿ ಟ್ರಾನ್ಸ್‌ಕ್ರಿಪ್ಟ್ ಪರಿಶೀಲಿಸಿ ಮತ್ತು ಬದಲಾಯಿಸಬಹುದು.",
+    tourResultsTitle: "ಉತ್ತರ ಮತ್ತು ಮೂಲಗಳನ್ನು ಪರಿಶೀಲಿಸಿ",
+    tourResultsDescription:
+      "ಅರ್ಜಿ ಸಲ್ಲಿಸುವ ಮೊದಲು ಸೌಲಭ್ಯ ಏಕೆ ಹೊಂದಿಕೆಯಾಯಿತು, ಏನು ಅನಿಶ್ಚಿತವಾಗಿದೆ, ಯಾವ ದಾಖಲೆಗಳು ಬೇಕು, ಮುಂದಿನ ಹಂತಗಳು ಮತ್ತು ಅಧಿಕೃತ ಮೂಲವನ್ನು ಪರಿಶೀಲಿಸಿ.",
+    tourStep: "ಹಂತ {current} / {total}",
+    tourNext: "ಮುಂದೆ",
+    tourBack: "ಹಿಂದೆ",
+    tourSkip: "ಪರಿಚಯ ಬಿಟ್ಟುಬಿಡಿ",
+    tourFinish: "ಪರಿಚಯ ಮುಗಿಸಿ",
+    tourClose: "ಪರಿಚಯ ಮುಚ್ಚಿ",
     home: "ಮುಖಪುಟ",
     findBenefits: "ಸೌಲಭ್ಯಗಳು ಮತ್ತು ಸರ್ಕಾರಿ ಉದ್ಯೋಗಗಳನ್ನು ಹುಡುಕಿ",
     savedWork: "ಉಳಿಸಿದ ಕೆಲಸ",

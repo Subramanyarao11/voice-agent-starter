@@ -93,7 +93,7 @@ export function ConversationPanel({
 }: ConversationPanelProps) {
   const { t } = useUi();
   return (
-    <div className="overflow-hidden rounded-lg border border-border bg-card shadow-sm">
+    <div data-tour="conversation" className="overflow-hidden rounded-lg border border-border bg-card shadow-sm">
       <div className="flex items-start justify-between gap-4 px-5 pb-3 pt-6 sm:px-8">
         <div>
           <span className="text-sm font-semibold text-primary">{t("yourConversation")}</span>

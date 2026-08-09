@@ -27,7 +27,11 @@ export function CatalogControls({
 }: CatalogControlsProps) {
   const { t } = useUi();
   return (
-    <fieldset id="conversation-preferences" className="grid scroll-mt-6 gap-4 rounded-lg border border-border bg-card p-4 shadow-sm sm:grid-cols-[1fr_1fr_auto] sm:items-end">
+    <fieldset
+      id="conversation-preferences"
+      data-tour="preferences"
+      className="grid scroll-mt-6 gap-4 rounded-lg border border-border bg-card p-4 shadow-sm sm:grid-cols-[1fr_1fr_auto] sm:items-end"
+    >
       <legend className="sr-only">{t("conversationPreferences")}</legend>
       <label className="grid gap-1.5">
         <span className="px-1 text-sm font-semibold text-foreground">{t("language")}</span>

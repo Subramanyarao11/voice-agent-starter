@@ -14,6 +14,7 @@ import { useCatalogQuery, useHealthQuery } from "@/features/catalog/queries";
 import { useStreamingVoice } from "@/hooks/use-streaming-voice";
 import { useVoiceRecorder } from "@/hooks/use-voice-recorder";
 import { useUi } from "@/features/i18n/ui-provider";
+import { AppTour } from "@/features/onboarding/components/app-tour";
 import { audioDataUrl, cn } from "@/lib/utils";
 import { ApiError, toUserMessage } from "@/lib/api";
 import { motionTokens } from "@/lib/motion";
@@ -316,7 +317,12 @@ export function HomePage() {
         {showDeferredResults ? (
           <Suspense
             fallback={
-              <section id="results" className="mx-auto min-h-24 max-w-[1200px] px-4 pb-14 sm:px-6 lg:px-8" aria-busy="true">
+                <section
+                  id="results"
+                  data-tour="results"
+                  className="mx-auto min-h-24 max-w-[1200px] px-4 pb-14 sm:px-6 lg:px-8"
+                  aria-busy="true"
+                >
                 <p className="text-sm text-muted-foreground" role="status">Loading your saved work…</p>
               </section>
             }
@@ -332,10 +338,16 @@ export function HomePage() {
             ) : null}
           </Suspense>
         ) : (
-          <section id="results" className="mx-auto min-h-24 max-w-[1200px] px-4 pb-14 sm:px-6 lg:px-8" aria-busy="true" />
+          <section
+            id="results"
+            data-tour="results"
+            className="mx-auto min-h-24 max-w-[1200px] px-4 pb-14 sm:px-6 lg:px-8"
+            aria-busy="true"
+          />
         )}
       </main>
 
+      <AppTour />
       <PublicFooter />
     </div>
   );
