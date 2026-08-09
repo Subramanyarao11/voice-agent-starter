@@ -26,8 +26,10 @@ COPY packages/ packages/
 COPY services/ services/
 COPY scripts/ scripts/
 COPY evals/ evals/
+# Committed demo catalog for Render Free (gitignored pipeline output is excluded).
+COPY data/demo/ data/demo/
 RUN uv sync --frozen --no-dev \
-    && chmod +x /app/scripts/render_api_start.sh
+    && chmod +x /app/scripts/render_api_start.sh /app/scripts/render_demo_bootstrap.py
 
 ENV PATH="/app/.venv/bin:$PATH"
 

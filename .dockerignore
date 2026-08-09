@@ -14,6 +14,7 @@ data/raw_pdfs_hf_cache/
 data/usage/
 data/rag/
 data/structured/
+# Keep data/demo/ in the image for Render Free bootstrap.
 data/jobs/
 data/directory/snapshots/
 media/

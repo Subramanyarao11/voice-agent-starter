@@ -20,19 +20,15 @@ Admin uses a **static token** (`ADMIN_STATIC_TOKENS_ENABLED=true`). Free instanc
 
 Expect **30–60s cold starts** after ~15 minutes idle.
 
-### Why the UI might show 0 benefits / few languages
+### Why benefits/languages looked empty, and what we do about it
 
-A fresh Render Postgres only has migrations. API boot runs
-`scripts/render_demo_bootstrap.py` when `RENDER_DEMO_BOOTSTRAP=true` to:
+| Topic | Why | What the demo deploy does |
+| --- | --- | --- |
+| **0 benefits** | Fresh Postgres has schema only. Pipeline output under `data/structured/` is **gitignored** and excluded from Docker, so it never reaches Render by itself. | Boot runs `scripts/render_demo_bootstrap.py`, which loads committed [`data/demo/benefits.jsonl`](../data/demo/benefits.jsonl) when the catalog is empty. |
+| **Only en/hi/kn** | Product launch set. Other locales stay gated until release evidence + `ten_language_rollout`. | With `RENDER_DEMO_OPEN_CATALOG=true`, bootstrap activates all 11 languages and clears state targeting for the short public demo (not a production attestation). |
+| **Keycloak / workers** | Free Render is ~512 MB and sleeps; Keycloak + workers do not fit the free Blueprint. | Static admin token only; workers omitted. Use Oracle/paid host for the full stack. |
 
-- seed the small **illustrative** demo benefit set if the catalog is empty;
-- optionally open planned languages (`RENDER_DEMO_OPEN_CATALOG=true`) for the
-  short public demo (not a production language-release attestation).
-
-Without that bootstrap, visitors can open the app but cannot get useful
-eligibility matches. Demo benefits are hand-entered scaffolding, not the full
-reviewed corpus (that lives in gitignored `data/structured/` and must be loaded
-separately for a richer catalog).
+Refresh `data/demo/benefits.jsonl` from a reviewed export before a formal evaluation if the corpus grows.
 
 ## Prerequisites
 
