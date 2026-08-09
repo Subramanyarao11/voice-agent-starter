@@ -809,6 +809,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/admin/applications/summary": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Admin Application Summary
+         * @description Return privacy-safe application funnel aggregates, never case rows.
+         */
+        get: operations["admin_application_summary_api_admin_applications_summary_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/admin/conversations": {
         parameters: {
             query?: never;
@@ -1502,6 +1522,14 @@ export interface components {
             benefit_state_code: string | null;
             /** Benefit Revision */
             benefit_revision: number;
+            /** Current Benefit Revision */
+            current_benefit_revision: number | null;
+            /** Benefit Change State */
+            benefit_change_state: string;
+            /** Benefit Change Items */
+            benefit_change_items: string[];
+            /** Source Stale */
+            source_stale: boolean;
             /** Benefit Verification Status */
             benefit_verification_status: string;
             /** Source Title */
@@ -1549,6 +1577,48 @@ export interface components {
             tasks: components["schemas"]["ApplicationTaskOut"][];
             /** Status Events */
             status_events: components["schemas"]["ApplicationStatusEventOut"][];
+        };
+        /** ApplicationDashboardOut */
+        ApplicationDashboardOut: {
+            /**
+             * Generated At
+             * Format: date-time
+             */
+            generated_at: string;
+            /** Window Hours */
+            window_hours: number;
+            /** Total Cases */
+            total_cases: number;
+            /** Cases By Status */
+            cases_by_status: {
+                [key: string]: number;
+            };
+            /** Cases By Provenance */
+            cases_by_provenance: {
+                [key: string]: number;
+            };
+            /** Cases By Readiness */
+            cases_by_readiness: {
+                [key: string]: number;
+            };
+            /** Cases By Domain */
+            cases_by_domain: {
+                [key: string]: number;
+            };
+            /** Terminal Cases */
+            terminal_cases: number;
+            /** Completion Rate */
+            completion_rate: number;
+            /** Action Required Cases */
+            action_required_cases: number;
+            /** Provider Verified Events */
+            provider_verified_events: number;
+            /** Changed Benefit Cases */
+            changed_benefit_cases: number;
+            /** Stale Source Cases */
+            stale_source_cases: number;
+            /** Data Fresh At */
+            data_fresh_at: string | null;
         };
         /** ApplicationPackPreviewOut */
         ApplicationPackPreviewOut: {
@@ -5385,6 +5455,37 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["AdminOverviewOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    admin_application_summary_api_admin_applications_summary_get: {
+        parameters: {
+            query?: {
+                hours?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApplicationDashboardOut"];
                 };
             };
             /** @description Validation Error */

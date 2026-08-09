@@ -31,6 +31,8 @@ from sahaayak_api.telemetry import make_audit_event
 from sahaayak_common import (
     CORE_LANGUAGE_CODES,
     DEFAULT_PROVIDER_POLICIES,
+    ApplicationCase,
+    ApplicationStatusEvent,
     AuditEvent,
     Benefit,
     BenefitIssueReport,
@@ -210,6 +212,23 @@ class AdminOverviewOut(BaseModel):
     quality: QualityOut
     providers: list[ProviderStatusOut]
     recent_errors: list[RecentErrorOut]
+
+
+class ApplicationDashboardOut(BaseModel):
+    generated_at: datetime
+    window_hours: int
+    total_cases: int
+    cases_by_status: dict[str, int]
+    cases_by_provenance: dict[str, int]
+    cases_by_readiness: dict[str, int]
+    cases_by_domain: dict[str, int]
+    terminal_cases: int
+    completion_rate: float
+    action_required_cases: int
+    provider_verified_events: int
+    changed_benefit_cases: int
+    stale_source_cases: int
+    data_fresh_at: datetime | None
 
 
 class ConversationSummaryOut(BaseModel):
@@ -747,6 +766,100 @@ async def admin_overview(
         ),
         providers=providers,
         recent_errors=[RecentErrorOut.model_validate(event.model_dump()) for event in errors[:20]],
+    )
+
+
+@router.get("/applications/summary", response_model=ApplicationDashboardOut)
+def admin_application_summary(
+    hours: int = Query(default=168, ge=1, le=720),
+    db: Session = Depends(get_session),
+    _principal: AdminPrincipal = Depends(require_admin_role(*READ_ROLES)),
+) -> ApplicationDashboardOut:
+    """Return privacy-safe application funnel aggregates, never case rows."""
+    now = datetime.now(UTC)
+    window_start = now - timedelta(hours=hours)
+    filters = [ApplicationCase.created_at >= window_start]
+    total = int(
+        db.exec(select(func.count()).select_from(ApplicationCase).where(*filters)).one() or 0
+    )
+
+    def grouped(column: Any) -> dict[str, int]:
+        rows = db.exec(
+            select(column, func.count())
+            .select_from(ApplicationCase)
+            .where(*filters)
+            .group_by(column)
+        ).all()
+        return {str(key or "unknown"): int(value) for key, value in rows}
+
+    cases_by_status = grouped(ApplicationCase.status)
+    cases_by_provenance = grouped(ApplicationCase.status_provenance)
+    cases_by_readiness = grouped(ApplicationCase.readiness_state)
+    cases = db.exec(
+        select(ApplicationCase)
+        .where(*filters)
+        .order_by(ApplicationCase.created_at.desc())
+        .limit(10_000)
+    ).all()
+    cases_by_domain = Counter(
+        str((case.benefit_snapshot or {}).get("domain") or "unknown") for case in cases
+    )
+    terminal_statuses = {"approved", "delivered", "rejected", "withdrawn", "expired"}
+    terminal_cases = int(
+        db.exec(
+            select(func.count())
+            .select_from(ApplicationCase)
+            .where(*filters, ApplicationCase.status.in_(terminal_statuses))
+        ).one()
+        or 0
+    )
+    changed_benefit_cases = int(
+        db.exec(
+            select(func.count())
+            .select_from(ApplicationCase)
+            .join(Benefit, Benefit.id == ApplicationCase.benefit_id)
+            .where(*filters, ApplicationCase.benefit_revision != Benefit.content_revision)
+        ).one()
+        or 0
+    )
+    stale_benefit_ids = {
+        benefit.id
+        for benefit in db.exec(
+            select(Benefit).where(
+                Benefit.is_active.is_(True),
+                Benefit.last_verified_date
+                < date.today() - timedelta(days=settings.freshness_stale_days),
+            )
+        ).all()
+    }
+    stale_source_cases = sum(case.benefit_id in stale_benefit_ids for case in cases)
+    provider_verified_events = int(
+        db.exec(
+            select(func.count())
+            .select_from(ApplicationStatusEvent)
+            .where(
+                ApplicationStatusEvent.provenance == "provider_verified",
+                ApplicationStatusEvent.recorded_at >= window_start,
+            )
+        ).one()
+        or 0
+    )
+    latest_case = db.exec(select(func.max(ApplicationCase.updated_at)).where(*filters)).one()
+    return ApplicationDashboardOut(
+        generated_at=now,
+        window_hours=hours,
+        total_cases=total,
+        cases_by_status=cases_by_status,
+        cases_by_provenance=cases_by_provenance,
+        cases_by_readiness=cases_by_readiness,
+        cases_by_domain=dict(cases_by_domain),
+        terminal_cases=terminal_cases,
+        completion_rate=(terminal_cases / total) if total else 0.0,
+        action_required_cases=cases_by_status.get("action_required", 0),
+        provider_verified_events=provider_verified_events,
+        changed_benefit_cases=changed_benefit_cases,
+        stale_source_cases=stale_source_cases,
+        data_fresh_at=latest_case,
     )
 
 

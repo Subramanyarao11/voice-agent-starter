@@ -11,6 +11,7 @@ import {
   getAdminLanguages,
   getAdminMe,
   getAdminOverview,
+  getAdminApplicationDashboard,
   getAdminNotifications,
   getAdminFreshness,
   getAdminBenefitVersions,
@@ -58,6 +59,15 @@ export function useAdminOverviewQuery(token: string) {
     queryFn: () => getAdminOverview(token),
     enabled: Boolean(token),
     refetchInterval: 30_000,
+  });
+}
+
+export function useAdminApplicationDashboardQuery(token: string) {
+  return useQuery({
+    queryKey: ["admin", "applications"],
+    queryFn: () => getAdminApplicationDashboard(token),
+    enabled: Boolean(token),
+    refetchInterval: 60_000,
   });
 }
 

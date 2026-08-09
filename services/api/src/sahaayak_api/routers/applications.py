@@ -35,6 +35,7 @@ from sahaayak_common import (
     new_id,
     normalize_reference,
     reference_hash,
+    settings,
 )
 from sahaayak_contracts import VerificationStatus
 
@@ -114,6 +115,10 @@ class ApplicationCaseOut(BaseModel):
     benefit_domain: str
     benefit_state_code: str | None
     benefit_revision: int
+    current_benefit_revision: int | None
+    benefit_change_state: str
+    benefit_change_items: list[str]
+    source_stale: bool
     benefit_verification_status: str
     source_title: str
     source_document_url: str
@@ -456,6 +461,7 @@ def _case_for_session(db: Session, session_id: str, application_id: str) -> Appl
 
 def _case_out(db: Session, case: ApplicationCase) -> ApplicationCaseOut:
     snapshot = dict(case.benefit_snapshot or {})
+    current_benefit = db.get(Benefit, case.benefit_id)
     task_rows = db.exec(
         select(ApplicationTask)
         .where(
@@ -474,6 +480,11 @@ def _case_out(db: Session, case: ApplicationCase) -> ApplicationCaseOut:
         .order_by(ApplicationStatusEvent.occurred_at, ApplicationStatusEvent.recorded_at)
     ).all()
     readiness_state, blockers = _readiness(task_rows)
+    change_state, change_items, source_stale = _benefit_change_state(
+        snapshot,
+        current_benefit,
+        case.benefit_revision,
+    )
     return ApplicationCaseOut(
         id=case.id,
         benefit_id=case.benefit_id,
@@ -482,6 +493,10 @@ def _case_out(db: Session, case: ApplicationCase) -> ApplicationCaseOut:
         benefit_state_code=snapshot.get("state_code"),
         benefit_revision=case.benefit_revision,
         benefit_verification_status=str(snapshot.get("verification_status") or ""),
+        current_benefit_revision=(current_benefit.content_revision if current_benefit else None),
+        benefit_change_state=change_state,
+        benefit_change_items=change_items,
+        source_stale=source_stale,
         source_title=str(snapshot.get("source_title") or ""),
         source_document_url=str(
             snapshot.get("source_document_url") or snapshot.get("source_url") or ""
@@ -518,6 +533,44 @@ def _readiness(tasks: list[ApplicationTask]) -> tuple[str, list[str]]:
     if skipped:
         return "ready_with_warnings", [f"Confirm skipped item: {title}" for title in skipped[:8]]
     return "ready", []
+
+
+def _benefit_change_state(
+    snapshot: dict,
+    current: Benefit | None,
+    starting_revision: int,
+) -> tuple[str, list[str], bool]:
+    """Compare the starting public snapshot with the current governed row."""
+    if current is None or not current.is_active:
+        return "application_invalidated", ["The benefit is no longer published."], True
+
+    verification_value = getattr(current.verification_status, "value", current.verification_status)
+    source_stale = (
+        verification_value != VerificationStatus.HUMAN_VERIFIED.value
+        or current.last_verified_date
+        < date.today() - timedelta(days=settings.freshness_stale_days)
+    )
+    if current.content_revision == starting_revision:
+        return "none", [], source_stale
+
+    items: list[str] = []
+    if list(snapshot.get("documents_required") or []) != list(current.documents_required or []):
+        items.append("Required documents changed.")
+    if str(snapshot.get("application_process") or "") != current.application_process:
+        items.append("Application steps changed.")
+    if str(snapshot.get("source_document_url") or snapshot.get("source_url") or "") != (
+        current.source_document_url or current.source_url
+    ):
+        items.append("Official application source changed.")
+    current_deadline = current.valid_until.isoformat() if current.valid_until else None
+    if snapshot.get("valid_until") != current_deadline:
+        items.append("The published validity or deadline changed.")
+    if dict(snapshot.get("eligibility_initial") or {}) != dict(current.eligibility_initial or {}):
+        items.append("Eligibility criteria changed; ask a person before relying on this case.")
+        return "application_invalidated", items, source_stale
+    if not items:
+        return "informational", ["The source has a newer governed revision."], source_stale
+    return "action_required", items, source_stale
 
 
 def _render_pack_html(

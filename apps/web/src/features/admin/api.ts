@@ -126,6 +126,23 @@ const overviewSchema = z.object({
   ),
 });
 
+const applicationDashboardSchema = z.object({
+  generated_at: z.string(),
+  window_hours: z.number(),
+  total_cases: z.number(),
+  cases_by_status: z.record(z.string(), z.number()),
+  cases_by_provenance: z.record(z.string(), z.number()),
+  cases_by_readiness: z.record(z.string(), z.number()),
+  cases_by_domain: z.record(z.string(), z.number()),
+  terminal_cases: z.number(),
+  completion_rate: z.number(),
+  action_required_cases: z.number(),
+  provider_verified_events: z.number(),
+  changed_benefit_cases: z.number(),
+  stale_source_cases: z.number(),
+  data_fresh_at: z.string().nullable(),
+});
+
 const conversationListSchema = z.object({
   items: z.array(
     z.object({
@@ -587,6 +604,7 @@ const providerFailureSimulationListSchema = z.object({
 
 export type AdminMe = z.infer<typeof adminMeSchema>;
 export type AdminOverview = z.infer<typeof overviewSchema>;
+export type ApplicationDashboard = z.infer<typeof applicationDashboardSchema>;
 export type ConversationList = z.infer<typeof conversationListSchema>;
 export type TelemetryEvent = z.infer<typeof telemetryEventSchema>;
 export type ReviewQueue = z.infer<typeof reviewQueueSchema>;
@@ -629,6 +647,14 @@ export function getAdminMe(token: string): Promise<AdminMe> {
 
 export function getAdminOverview(token: string, hours = 24): Promise<AdminOverview> {
   return request(`/api/admin/overview?hours=${hours}`, overviewSchema, adminInit(token));
+}
+
+export function getAdminApplicationDashboard(token: string, hours = 168): Promise<ApplicationDashboard> {
+  return request(
+    `/api/admin/applications/summary?hours=${hours}`,
+    applicationDashboardSchema,
+    adminInit(token),
+  );
 }
 
 export function getAdminConversations(token: string): Promise<ConversationList> {

@@ -83,6 +83,11 @@ def test_application_case_materializes_checklist_and_records_safe_status(client,
         for reminder in reminders.json()
     )
 
+    dashboard = client.get("/api/admin/applications/summary?hours=168")
+    assert dashboard.status_code == 200
+    assert dashboard.json()["total_cases"] >= 1
+    assert dashboard.json()["cases_by_status"]["action_required"] >= 1
+
     with session_scope() as db:
         case = db.get(ApplicationCase, body["id"])
         assert case is not None
@@ -125,3 +130,32 @@ def test_application_start_requires_human_review_and_is_private(client, guest_se
         headers=second["headers"],
     )
     assert cross_session.status_code == 404
+
+
+def test_application_snapshot_surfaces_current_benefit_changes(client, guest_session):
+    _set_review_status("demo-ka-vidyasiri", VerificationStatus.HUMAN_VERIFIED)
+    session = guest_session(language_code="en", state_code="KA")
+    created = client.post(
+        f"/api/sessions/{session['session_id']}/applications",
+        json={"benefit_id": "demo-ka-vidyasiri"},
+        headers=session["headers"],
+    )
+    assert created.status_code == 201
+    application_id = created.json()["id"]
+
+    with session_scope() as db:
+        benefit = db.get(Benefit, "demo-ka-vidyasiri")
+        assert benefit is not None
+        benefit.documents_required = [*benefit.documents_required, "Updated residence proof"]
+        benefit.content_revision += 1
+        db.add(benefit)
+
+    refreshed = client.get(
+        f"/api/sessions/{session['session_id']}/applications/{application_id}",
+        headers=session["headers"],
+    )
+    assert refreshed.status_code == 200
+    changed = refreshed.json()
+    assert changed["benefit_change_state"] == "action_required"
+    assert "Required documents changed." in changed["benefit_change_items"]
+    assert changed["current_benefit_revision"] == changed["benefit_revision"] + 1

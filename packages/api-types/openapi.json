@@ -2037,6 +2037,52 @@
         }
       }
     },
+    "/api/admin/applications/summary": {
+      "get": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "Admin Application Summary",
+        "description": "Return privacy-safe application funnel aggregates, never case rows.",
+        "operationId": "admin_application_summary_api_admin_applications_summary_get",
+        "parameters": [
+          {
+            "name": "hours",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 720,
+              "minimum": 1,
+              "default": 168,
+              "title": "Hours"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApplicationDashboardOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/admin/conversations": {
       "get": {
         "tags": [
@@ -4111,6 +4157,32 @@
             "type": "integer",
             "title": "Benefit Revision"
           },
+          "current_benefit_revision": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Current Benefit Revision"
+          },
+          "benefit_change_state": {
+            "type": "string",
+            "title": "Benefit Change State"
+          },
+          "benefit_change_items": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Benefit Change Items"
+          },
+          "source_stale": {
+            "type": "boolean",
+            "title": "Source Stale"
+          },
           "benefit_verification_status": {
             "type": "string",
             "title": "Benefit Verification Status"
@@ -4231,6 +4303,10 @@
           "benefit_domain",
           "benefit_state_code",
           "benefit_revision",
+          "current_benefit_revision",
+          "benefit_change_state",
+          "benefit_change_items",
+          "source_stale",
           "benefit_verification_status",
           "source_title",
           "source_document_url",
@@ -4252,6 +4328,105 @@
           "status_events"
         ],
         "title": "ApplicationCaseOut"
+      },
+      "ApplicationDashboardOut": {
+        "properties": {
+          "generated_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Generated At"
+          },
+          "window_hours": {
+            "type": "integer",
+            "title": "Window Hours"
+          },
+          "total_cases": {
+            "type": "integer",
+            "title": "Total Cases"
+          },
+          "cases_by_status": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "type": "object",
+            "title": "Cases By Status"
+          },
+          "cases_by_provenance": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "type": "object",
+            "title": "Cases By Provenance"
+          },
+          "cases_by_readiness": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "type": "object",
+            "title": "Cases By Readiness"
+          },
+          "cases_by_domain": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "type": "object",
+            "title": "Cases By Domain"
+          },
+          "terminal_cases": {
+            "type": "integer",
+            "title": "Terminal Cases"
+          },
+          "completion_rate": {
+            "type": "number",
+            "title": "Completion Rate"
+          },
+          "action_required_cases": {
+            "type": "integer",
+            "title": "Action Required Cases"
+          },
+          "provider_verified_events": {
+            "type": "integer",
+            "title": "Provider Verified Events"
+          },
+          "changed_benefit_cases": {
+            "type": "integer",
+            "title": "Changed Benefit Cases"
+          },
+          "stale_source_cases": {
+            "type": "integer",
+            "title": "Stale Source Cases"
+          },
+          "data_fresh_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Data Fresh At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "generated_at",
+          "window_hours",
+          "total_cases",
+          "cases_by_status",
+          "cases_by_provenance",
+          "cases_by_readiness",
+          "cases_by_domain",
+          "terminal_cases",
+          "completion_rate",
+          "action_required_cases",
+          "provider_verified_events",
+          "changed_benefit_cases",
+          "stale_source_cases",
+          "data_fresh_at"
+        ],
+        "title": "ApplicationDashboardOut"
       },
       "ApplicationPackPreviewOut": {
         "properties": {

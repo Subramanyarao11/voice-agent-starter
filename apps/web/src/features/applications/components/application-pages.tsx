@@ -271,6 +271,31 @@ export function ApplicationDetailPage() {
                 </p>
               </section>
 
+              {(application.source_stale || application.benefit_change_state !== "none") && (
+                <Card className="border-warning/30 bg-warning/10">
+                  <CardContent className="flex items-start gap-3 p-5">
+                    <TriangleAlert className="mt-0.5 size-5 shrink-0 text-warning" aria-hidden="true" />
+                    <div>
+                      <h2 className="font-semibold">
+                        {application.benefit_change_state === "application_invalidated"
+                          ? "Review this application before continuing"
+                          : "The official benefit information has changed"}
+                      </h2>
+                      <p className="mt-1 text-sm leading-6">
+                        {application.source_stale
+                          ? "The current public source needs a fresh human verification."
+                          : "Your case keeps its original revision; these are the changes in the current record."}
+                      </p>
+                      {application.benefit_change_items.length > 0 && (
+                        <ul className="mt-2 list-disc space-y-1 pl-5 text-sm">
+                          {application.benefit_change_items.map((item) => <li key={item}>{item}</li>)}
+                        </ul>
+                      )}
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+
               <div className="grid gap-5 lg:grid-cols-[1.2fr_0.8fr]">
                 <ChecklistCard
                   application={application}

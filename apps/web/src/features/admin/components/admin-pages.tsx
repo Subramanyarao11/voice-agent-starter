@@ -21,6 +21,7 @@ import {
   useAdminFeatureFlagsQuery,
   useAdminMeQuery,
   useAdminOverviewQuery,
+  useAdminApplicationDashboardQuery,
   useAdminBenefitVersionsQuery,
   useAdminDirectoryVersionsQuery,
   useAdminDeploymentComparisonQuery,
@@ -109,6 +110,7 @@ export function AdminPage({ view }: { view: AdminView }) {
 
 function OverviewPage({ token }: { token: string }) {
   const query = useAdminOverviewQuery(token);
+  const applicationDashboard = useAdminApplicationDashboardQuery(token);
   if (query.isPending) return <Loading label="Loading platform overview…" />;
   if (query.isError || !query.data) return <ErrorPanel error={query.error} />;
   const { traffic, quality } = query.data;
@@ -141,6 +143,32 @@ function OverviewPage({ token }: { token: string }) {
           </CardContent>
         </Card>
       </div>
+
+      <Card className="border-paper/10 bg-paper/[0.04] text-paper">
+        <CardHeader className="flex-row items-center justify-between space-y-0">
+          <div>
+            <CardTitle className="text-paper">Application completion funnel</CardTitle>
+            <p className="mt-1 text-xs text-paper/45">Last seven days · aggregate only · status provenance stays separate</p>
+          </div>
+          <Badge variant="outline" className="border-paper/15 text-paper/45">privacy-safe</Badge>
+        </CardHeader>
+        <CardContent>
+          {applicationDashboard.isPending && <p className="text-sm text-paper/55">Loading application metrics…</p>}
+          {applicationDashboard.isError && <p className="text-sm text-orange">Application metrics are temporarily unavailable.</p>}
+          {applicationDashboard.data && (
+            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+              <Stat label="Cases started" value={applicationDashboard.data.total_cases} />
+              <Stat label="Terminal outcomes" value={applicationDashboard.data.terminal_cases} tone="good" />
+              <Stat label="Action required" value={applicationDashboard.data.action_required_cases} tone="warning" />
+              <Stat label="Completion rate" value={formatPercent(applicationDashboard.data.completion_rate)} />
+              <Stat label="Provider-verified events" value={applicationDashboard.data.provider_verified_events} />
+              <Stat label="Benefit changes" value={applicationDashboard.data.changed_benefit_cases} tone={applicationDashboard.data.changed_benefit_cases ? "warning" : "default"} />
+              <Stat label="Stale-source cases" value={applicationDashboard.data.stale_source_cases} tone={applicationDashboard.data.stale_source_cases ? "warning" : "default"} />
+              <Stat label="Citizen-reported" value={applicationDashboard.data.cases_by_provenance.citizen_reported ?? 0} />
+            </div>
+          )}
+        </CardContent>
+      </Card>
 
       <Card className="border-paper/10 bg-paper/[0.04] text-paper">
         <CardHeader className="flex-row items-center justify-between space-y-0"><CardTitle className="text-paper">Recent server errors</CardTitle><Badge variant="outline" className="border-paper/15 text-paper/45">redacted</Badge></CardHeader>
