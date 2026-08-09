@@ -25,6 +25,7 @@ type ConversationPanelProps = {
   recorderError: string | null;
   transcriptDraft: string | null;
   onDraftChange: (draft: string) => void;
+  onSaveDraft: () => void;
   onTranscriptChange: (transcript: string) => void;
   onSubmitTranscript: (transcript: string) => void;
   onCancelTranscript: () => void;
@@ -80,6 +81,7 @@ export function ConversationPanel({
   recorderError,
   transcriptDraft,
   onDraftChange,
+  onSaveDraft,
   onTranscriptChange,
   onSubmitTranscript,
   onCancelTranscript,
@@ -140,6 +142,16 @@ export function ConversationPanel({
         onStartRecording={onStartRecording}
         onStopRecording={onStopRecording}
       />
+      {draft.trim() && (
+        <div className="flex flex-wrap items-center justify-between gap-3 border-t border-border bg-muted/30 px-5 py-3 sm:px-8">
+          <p className="text-sm leading-5 text-muted-foreground">
+            Save this text question on this device for up to 24 hours if the connection is unreliable.
+          </p>
+          <Button type="button" variant="outline" size="sm" onClick={onSaveDraft} disabled={isSending}>
+            Save text draft
+          </Button>
+        </div>
+      )}
     </div>
   );
 }

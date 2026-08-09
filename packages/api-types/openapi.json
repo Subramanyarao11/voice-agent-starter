@@ -189,6 +189,113 @@
         }
       }
     },
+    "/api/public/catalog": {
+      "get": {
+        "tags": [
+          "catalog"
+        ],
+        "summary": "Public Catalog",
+        "description": "Serve a cacheable reviewed-only public projection for the PWA.\n\nThis route intentionally has no session, profile, matcher, or ranking\ncontext. The service worker will cache it only when this marker and the\nreviewed response contract are both present.",
+        "operationId": "public_catalog_api_public_catalog_get",
+        "parameters": [
+          {
+            "name": "state_code",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "minLength": 2,
+                  "maxLength": 16
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "State Code"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 100,
+              "minimum": 1,
+              "default": 40,
+              "title": "Limit"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicCatalogOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/public/benefits/{benefit_id}": {
+      "get": {
+        "tags": [
+          "catalog"
+        ],
+        "summary": "Public Benefit Detail",
+        "description": "Return one reviewed public benefit for safe offline detail caching.",
+        "operationId": "public_benefit_detail_api_public_benefits__benefit_id__get",
+        "parameters": [
+          {
+            "name": "benefit_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Benefit Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BenefitDetailOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/turns": {
       "post": {
         "tags": [
@@ -12065,6 +12172,33 @@
           "failures"
         ],
         "title": "ProviderStatusOut"
+      },
+      "PublicCatalogOut": {
+        "properties": {
+          "benefits": {
+            "items": {
+              "$ref": "#/components/schemas/BenefitDetailOut"
+            },
+            "type": "array",
+            "title": "Benefits"
+          },
+          "generated_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Generated At"
+          },
+          "schema_version": {
+            "type": "string",
+            "title": "Schema Version",
+            "default": "public-reviewed-v1"
+          }
+        },
+        "type": "object",
+        "required": [
+          "benefits",
+          "generated_at"
+        ],
+        "title": "PublicCatalogOut"
       },
       "QualityOut": {
         "properties": {

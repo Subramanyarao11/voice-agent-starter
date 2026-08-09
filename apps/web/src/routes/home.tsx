@@ -17,6 +17,7 @@ import { useUi } from "@/features/i18n/ui-provider";
 import { audioDataUrl, cn } from "@/lib/utils";
 import { ApiError, toUserMessage } from "@/lib/api";
 import { motionTokens } from "@/lib/motion";
+import { saveOfflineDraft } from "@/pwa/offline-store";
 
 const HomeResults = lazy(() => import("@/features/home/components/home-results"));
 
@@ -79,7 +80,7 @@ export function HomePage() {
   });
   const isSending = baseSending || streamingVoice.isBusy;
   const catalogLoading = catalogQuery.isPending;
-  const disabled = catalogLoading || isSending || sessionPending || !accessToken || !languageCode || !stateCode;
+  const disabled = isSending || sessionPending || !languageCode || !stateCode;
   const voiceDisabled = catalogLoading || baseSending || sessionPending || !accessToken || !languageCode || !stateCode;
   const audioSource = audioDataUrl(lastTurn?.audio_base64, lastTurn?.audio_mime_type);
 
@@ -140,6 +141,10 @@ export function HomePage() {
       if (!text || disabled) return;
 
       setFeedback(null);
+      if (!accessToken) {
+        setFeedback({ kind: "notice", text: "There is no live connection yet. Save the question as a text draft, then send it when connected." });
+        return;
+      }
       setDraft("");
       try {
         const response = await textMutation.mutateAsync({
@@ -159,6 +164,17 @@ export function HomePage() {
     },
     [accessToken, appendTurn, clearSession, disabled, draft, languageCode, setDraft, stateCode, textMutation],
   );
+
+  const handleSaveDraft = useCallback(async () => {
+    const text = draft.trim();
+    if (!text) return;
+    try {
+      await saveOfflineDraft(text, languageCode);
+      setFeedback({ kind: "notice", text: "Saved as a text-only draft on this device. It expires after 24 hours." });
+    } catch (error) {
+      setFeedback({ kind: "error", text: error instanceof Error ? error.message : "Could not save the offline draft." });
+    }
+  }, [draft, languageCode]);
 
   const startRecording = useCallback(() => {
     setFeedback(null);
@@ -271,6 +287,7 @@ export function HomePage() {
               recorderError={streamingVoice.supported ? streamingVoice.error : recorder.error}
               transcriptDraft={streamingVoice.transcriptDraft}
               onDraftChange={setDraft}
+              onSaveDraft={() => void handleSaveDraft()}
               onTranscriptChange={streamingVoice.updateTranscript}
               onSubmitTranscript={streamingVoice.submitTranscript}
               onCancelTranscript={streamingVoice.cancelTranscript}

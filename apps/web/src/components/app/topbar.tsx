@@ -102,6 +102,14 @@ export function Topbar({ sessionId, connected, currentLanguage, activeSection = 
             </Link>
           </li>
           <li>
+            <Link
+              to="/settings/data-usage"
+              className="inline-flex min-h-11 items-center gap-2 border-b-4 border-transparent px-3 text-sm font-semibold text-muted-foreground transition-colors hover:text-foreground"
+            >
+              Data use
+            </Link>
+          </li>
+          <li>
             <a className="inline-flex min-h-11 items-center gap-2 border-b-4 border-transparent px-3 text-sm font-semibold text-muted-foreground transition-colors hover:text-foreground" href="/#help-note">
               {t("help")}
             </a>

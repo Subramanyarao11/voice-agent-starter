@@ -1,0 +1,42 @@
+{
+  "id": "/",
+  "name": "Sahaayak · public benefits and jobs",
+  "short_name": "Sahaayak",
+  "description": "Independent, source-backed guidance for public benefits, scholarships, and government jobs in Indian languages.",
+  "lang": "en-IN",
+  "dir": "ltr",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "display_override": ["standalone", "minimal-ui"],
+  "theme_color": "#162f6a",
+  "background_color": "#ffffff",
+  "icons": [
+    {
+      "src": "/icons/sahaayak.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/sahaayak-maskable.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Ask Sahaayak",
+      "short_name": "Ask",
+      "url": "/#conversation",
+      "icons": [{ "src": "/icons/sahaayak.svg", "sizes": "any" }]
+    },
+    {
+      "name": "Browse benefits",
+      "short_name": "Benefits",
+      "url": "/#conversation",
+      "icons": [{ "src": "/icons/sahaayak.svg", "sizes": "any" }]
+    }
+  ]
+}

@@ -2,6 +2,9 @@ import { createRootRoute, createRoute, createRouter, lazyRouteComponent, Outlet 
 
 import { HomePage } from "@/routes/home";
 import { AdminCallbackPage } from "@/routes/admin-callback";
+import { DataUsagePage } from "@/routes/data-usage";
+import { OfflinePage } from "@/routes/offline";
+import { PwaRuntime } from "@/features/pwa/components/pwa-runtime";
 
 const AdminRoutePage = lazyRouteComponent(() => import("@/routes/admin"), "AdminRoutePage");
 const BenefitDetailRoutePage = lazyRouteComponent(
@@ -22,7 +25,11 @@ const ApplicationPackRoutePage = lazyRouteComponent(
 );
 
 function RootLayout() {
-  return <Outlet />;
+  return (
+    <PwaRuntime>
+      <Outlet />
+    </PwaRuntime>
+  );
 }
 
 const rootRoute = createRootRoute({
@@ -44,6 +51,18 @@ const indexRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/",
   component: HomePage,
+});
+
+const offlineRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/offline",
+  component: OfflinePage,
+});
+
+const dataUsageRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/settings/data-usage",
+  component: DataUsagePage,
 });
 
 const benefitDetailRoute = createRoute({
@@ -162,6 +181,8 @@ const adminSystemRoute = createRoute({
 
 const routeTree = rootRoute.addChildren([
   indexRoute,
+  offlineRoute,
+  dataUsageRoute,
   benefitDetailRoute,
   applicationsRoute,
   applicationDetailRoute,

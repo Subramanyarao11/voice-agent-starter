@@ -6,10 +6,12 @@ language stays a data change end to end.
 
 from __future__ import annotations
 
-from datetime import date, datetime
+import hashlib
+import json
+from datetime import UTC, date, datetime
 from typing import Any, cast
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query, Response
 from pydantic import BaseModel
 from sqlmodel import Session, func, select
 
@@ -78,6 +80,12 @@ class BenefitDetailOut(BaseModel):
     valid_from: date | None
     valid_until: date | None
     job_metadata: dict[str, Any] = {}
+
+
+class PublicCatalogOut(BaseModel):
+    benefits: list[BenefitDetailOut]
+    generated_at: datetime
+    schema_version: str = "public-reviewed-v1"
 
 
 @router.get("/languages", response_model=list[LanguageOut])
@@ -172,6 +180,68 @@ def benefit_detail(benefit_id: str, db: Session = Depends(get_session)) -> Benef
     if benefit is None:
         raise HTTPException(status_code=404, detail="Benefit not found")
 
+    return _benefit_detail_out(benefit)
+
+
+@router.get("/public/catalog", response_model=PublicCatalogOut)
+def public_catalog(
+    response: Response,
+    state_code: str | None = Query(default=None, min_length=2, max_length=16),
+    limit: int = Query(default=40, ge=1, le=100),
+    db: Session = Depends(get_session),
+) -> PublicCatalogOut:
+    """Serve a cacheable reviewed-only public projection for the PWA.
+
+    This route intentionally has no session, profile, matcher, or ranking
+    context. The service worker will cache it only when this marker and the
+    reviewed response contract are both present.
+    """
+    normalized_state = state_code.strip().upper() if state_code else None
+    query = select(Benefit).where(
+        cast(Any, Benefit.is_active).is_(True),
+        Benefit.verification_status == VerificationStatus.HUMAN_VERIFIED,
+    )
+    if normalized_state:
+        query = query.where(
+            (Benefit.state_code == normalized_state) | (Benefit.state_code.is_(None))
+        )
+    rows = db.exec(query.order_by(Benefit.last_verified_date.desc(), Benefit.id).limit(limit)).all()
+    payload = PublicCatalogOut(
+        benefits=[_benefit_detail_out(row) for row in rows],
+        generated_at=datetime.now(UTC),
+    )
+    etag_source = json.dumps(payload.model_dump(mode="json"), sort_keys=True).encode("utf-8")
+    response.headers["Cache-Control"] = "public, max-age=300, stale-while-revalidate=86400"
+    response.headers["X-Sahaayak-Cache-Class"] = "public-reviewed-v1"
+    response.headers["ETag"] = f'"{hashlib.sha256(etag_source).hexdigest()}"'
+    return payload
+
+
+@router.get("/public/benefits/{benefit_id}", response_model=BenefitDetailOut)
+def public_benefit_detail(
+    benefit_id: str,
+    response: Response,
+    db: Session = Depends(get_session),
+) -> BenefitDetailOut:
+    """Return one reviewed public benefit for safe offline detail caching."""
+    benefit = db.exec(
+        select(Benefit).where(
+            Benefit.id == benefit_id,
+            cast(Any, Benefit.is_active).is_(True),
+            Benefit.verification_status == VerificationStatus.HUMAN_VERIFIED,
+        )
+    ).first()
+    if benefit is None:
+        raise HTTPException(status_code=404, detail="Benefit not found")
+    result = _benefit_detail_out(benefit)
+    response.headers["Cache-Control"] = "public, max-age=300, stale-while-revalidate=86400"
+    response.headers["X-Sahaayak-Cache-Class"] = "public-reviewed-v1"
+    etag_source = json.dumps(result.model_dump(mode="json"), sort_keys=True).encode("utf-8")
+    response.headers["ETag"] = f'"{hashlib.sha256(etag_source).hexdigest()}"'
+    return result
+
+
+def _benefit_detail_out(benefit: Benefit) -> BenefitDetailOut:
     return BenefitDetailOut(
         id=benefit.id,
         domain=benefit.domain,

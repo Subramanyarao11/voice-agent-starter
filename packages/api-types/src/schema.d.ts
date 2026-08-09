@@ -140,6 +140,50 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/public/catalog": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Public Catalog
+         * @description Serve a cacheable reviewed-only public projection for the PWA.
+         *
+         *     This route intentionally has no session, profile, matcher, or ranking
+         *     context. The service worker will cache it only when this marker and the
+         *     reviewed response contract are both present.
+         */
+        get: operations["public_catalog_api_public_catalog_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/public/benefits/{benefit_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Public Benefit Detail
+         * @description Return one reviewed public benefit for safe offline detail caching.
+         */
+        get: operations["public_benefit_detail_api_public_benefits__benefit_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/turns": {
         parameters: {
             query?: never;
@@ -4333,6 +4377,21 @@ export interface components {
              */
             note: string;
         };
+        /** PublicCatalogOut */
+        PublicCatalogOut: {
+            /** Benefits */
+            benefits: components["schemas"]["BenefitDetailOut"][];
+            /**
+             * Generated At
+             * Format: date-time
+             */
+            generated_at: string;
+            /**
+             * Schema Version
+             * @default public-reviewed-v1
+             */
+            schema_version: string;
+        };
         /** QualityOut */
         QualityOut: {
             /** Escalations */
@@ -5119,6 +5178,69 @@ export interface operations {
         };
     };
     benefit_detail_api_benefits__benefit_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                benefit_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BenefitDetailOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    public_catalog_api_public_catalog_get: {
+        parameters: {
+            query?: {
+                state_code?: string | null;
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PublicCatalogOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    public_benefit_detail_api_public_benefits__benefit_id__get: {
         parameters: {
             query?: never;
             header?: never;

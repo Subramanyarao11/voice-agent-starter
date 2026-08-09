@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-labelledby="title desc">
+  <title id="title">Sahaayak</title>
+  <desc id="desc">A blue square with the letter S.</desc>
+  <rect width="512" height="512" rx="96" fill="#162f6a"/>
+  <circle cx="256" cy="256" r="156" fill="#214aab"/>
+  <text x="256" y="326" text-anchor="middle" font-family="Noto Sans, sans-serif" font-size="220" font-weight="700" fill="#fff">S</text>
+</svg>
