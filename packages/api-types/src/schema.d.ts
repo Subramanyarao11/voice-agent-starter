@@ -258,6 +258,57 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/households/{household_id}/radar/refresh": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Refresh Radar */
+        post: operations["refresh_radar_api_households__household_id__radar_refresh_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/households/{household_id}/radar": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Radar */
+        get: operations["list_radar_api_households__household_id__radar_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/households/{household_id}/radar/{recommendation_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Update Radar Recommendation */
+        post: operations["update_radar_recommendation_api_households__household_id__radar__recommendation_id__post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/sessions/{session_id}/saved-benefits": {
         parameters: {
             query?: never;
@@ -3442,6 +3493,30 @@ export interface components {
             /** Last Data Update */
             last_data_update?: string | null;
         };
+        /** CriterionEvidenceOut */
+        CriterionEvidenceOut: {
+            /** Slot */
+            slot: string;
+            /** Status */
+            status: string;
+            /** Requirement */
+            requirement: string;
+            /**
+             * Fact Key
+             * @default
+             */
+            fact_key: string;
+            /**
+             * Fact State
+             * @default not_collected
+             */
+            fact_state: string;
+            /**
+             * Evidence Source
+             * @default
+             */
+            evidence_source: string;
+        };
         /**
          * CriterionOutcome
          * @description One criterion checked against one caller, kept in human-readable form.
@@ -4855,6 +4930,122 @@ export interface components {
             /** Latest Import At */
             latest_import_at: string | null;
         };
+        /** RadarActionRequest */
+        RadarActionRequest: {
+            /**
+             * Action
+             * @enum {string}
+             */
+            action: "view" | "snooze" | "dismiss";
+            /** Snooze Until */
+            snooze_until?: string | null;
+            /**
+             * Reason Code
+             * @default
+             */
+            reason_code: string;
+        };
+        /** RadarListOut */
+        RadarListOut: {
+            /** Household Id */
+            household_id: string;
+            /**
+             * Generated At
+             * Format: date-time
+             */
+            generated_at: string;
+            /** Recommendations */
+            recommendations: components["schemas"]["RadarRecommendationOut"][];
+            /** Counts By State */
+            counts_by_state: {
+                [key: string]: number;
+            };
+        };
+        /** RadarRecommendationOut */
+        RadarRecommendationOut: {
+            /** Id */
+            id: string;
+            /** Household Member Id */
+            household_member_id: string;
+            /** Member Ordinal */
+            member_ordinal: string;
+            /** Benefit Id */
+            benefit_id: string;
+            /** Benefit Name */
+            benefit_name: string;
+            domain: components["schemas"]["Domain"];
+            /** Verdict */
+            verdict: string;
+            /** Confidence */
+            confidence: number;
+            /** State */
+            state: string;
+            /** Reason Codes */
+            reason_codes: string[];
+            /** Criterion Evidence */
+            criterion_evidence: components["schemas"]["CriterionEvidenceOut"][];
+            /** Fact Use Evidence */
+            fact_use_evidence: {
+                [key: string]: unknown;
+            }[];
+            /** Source Title */
+            source_title: string;
+            /** Source Url */
+            source_url: string;
+            /** Source Last Verified Date */
+            source_last_verified_date: string | null;
+            /** Valid Until */
+            valid_until: string | null;
+            /** Benefit Revision */
+            benefit_revision: number;
+            /** Matcher Rules Version */
+            matcher_rules_version: string;
+            /** Computed Profile Version */
+            computed_profile_version: string;
+            /** Viewed At */
+            viewed_at: string | null;
+            /** Snoozed Until */
+            snoozed_until: string | null;
+            /** Dismissed At */
+            dismissed_at: string | null;
+            /**
+             * Updated At
+             * Format: date-time
+             */
+            updated_at: string;
+        };
+        /** RadarRefreshOut */
+        RadarRefreshOut: {
+            /** Household Id */
+            household_id: string;
+            /**
+             * Generated At
+             * Format: date-time
+             */
+            generated_at: string;
+            /** Profile Version */
+            profile_version: string;
+            /** Recommendation Count */
+            recommendation_count: number;
+            /** Counts By Verdict */
+            counts_by_verdict: {
+                [key: string]: number;
+            };
+            /** Recommendations */
+            recommendations: components["schemas"]["RadarRecommendationOut"][];
+        };
+        /** RadarRefreshRequest */
+        RadarRefreshRequest: {
+            /** Member Id */
+            member_id?: string | null;
+            /** Domains */
+            domains?: components["schemas"]["Domain"][];
+            /**
+             * Limit Per Member
+             * @default 50
+             */
+            limit_per_member: number;
+        };
         /** RagAnswerResponse */
         RagAnswerResponse: {
             /** Query */
@@ -5828,6 +6019,112 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["RagSearchResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    refresh_radar_api_households__household_id__radar_refresh_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                household_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RadarRefreshRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RadarRefreshOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_radar_api_households__household_id__radar_get: {
+        parameters: {
+            query?: {
+                member_id?: string | null;
+                include_dismissed?: boolean;
+                limit?: number;
+            };
+            header?: never;
+            path: {
+                household_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RadarListOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    update_radar_recommendation_api_households__household_id__radar__recommendation_id__post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                household_id: string;
+                recommendation_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RadarActionRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RadarRecommendationOut"];
                 };
             };
             /** @description Validation Error */

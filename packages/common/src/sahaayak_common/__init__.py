@@ -117,6 +117,7 @@ from sahaayak_common.openai_budget import (
 from sahaayak_common.profile_crypto import (
     ProfileDataEncryptionUnavailable,
     citizen_subject_hash,
+    decrypt_profile_value,
     encrypt_profile_value,
     mask_profile_value,
     normalize_profile_value,
@@ -202,6 +203,7 @@ __all__ = [
     "UserSession",
     "channel_identity_hash",
     "citizen_subject_hash",
+    "decrypt_profile_value",
     "configure_logging",
     "decrypt_destination",
     "destination_hash",

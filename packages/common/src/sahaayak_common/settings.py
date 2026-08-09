@@ -152,6 +152,8 @@ class Settings(BaseSettings):
     rate_limit_application_pack_per_ip: int = 30
     rate_limit_assistance_per_session: int = 12
     rate_limit_assistance_per_ip: int = 30
+    rate_limit_radar_per_session: int = 6
+    rate_limit_radar_per_ip: int = 18
     rate_limit_window_seconds: int = 60
     rate_limit_key_salt: str = ""
     rate_limit_enabled: bool = True

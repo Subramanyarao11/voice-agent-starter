@@ -45,6 +45,16 @@ UNCONSTRAINED_CONFIDENCE = 0.4
 # certainty and the condition is read back to the caller as a caveat.
 CAVEATED_CONFIDENCE = 0.85
 
+# Household Radar stores a deliberately coarse age band rather than an exact
+# date of birth. A band can prove a criterion only when it is wholly inside or
+# wholly outside the benefit range; partial overlap remains unknown.
+_AGE_BANDS: dict[str, tuple[int, int]] = {
+    "child": (0, 17),
+    "youth": (18, 25),
+    "adult": (18, 59),
+    "senior": (60, 150),
+}
+
 
 def format_inr(amount: float | int) -> str:
     """Format in the Indian grouping convention, e.g. 450000 -> ₹4,50,000."""
@@ -117,7 +127,21 @@ def _check_age(criteria: EligibilityCriteria, slots: Slots) -> CriterionOutcome 
     else:
         requirement = f"age {criteria.age_max} or below"
 
-    age = _as_int(slots.get(SlotName.AGE))
+    raw_age = slots.get(SlotName.AGE)
+    age = _as_int(raw_age)
+    if age is None and isinstance(raw_age, str):
+        band = _AGE_BANDS.get(raw_age.strip().lower())
+        if band is not None:
+            band_min, band_max = band
+            fails_min = criteria.age_min is not None and band_max < criteria.age_min
+            fails_max = criteria.age_max is not None and band_min > criteria.age_max
+            passes_min = criteria.age_min is None or band_min >= criteria.age_min
+            passes_max = criteria.age_max is None or band_max <= criteria.age_max
+            if fails_min or fails_max:
+                return _decide(SlotName.AGE, requirement, False, raw_age)
+            if passes_min and passes_max:
+                return _decide(SlotName.AGE, requirement, True, raw_age)
+            return _unknown(SlotName.AGE, requirement)
     if age is None:
         return _unknown(SlotName.AGE, requirement)
 

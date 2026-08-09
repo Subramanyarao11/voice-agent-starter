@@ -47,6 +47,14 @@ DEFAULT_FEATURE_FLAGS: dict[str, dict[str, Any]] = {
         "enabled": True,
         "rollout_percentage": 100,
     },
+    "household_radar": {
+        "description": (
+            "Consent-bound household recommendations from confirmed profile facts "
+            "and reviewed benefits."
+        ),
+        "enabled": True,
+        "rollout_percentage": 100,
+    },
     "infobip_reminders": {
         "description": (
             "External SMS, WhatsApp, and email reminders after consent and provider approval."

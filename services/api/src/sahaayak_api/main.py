@@ -28,6 +28,7 @@ from sahaayak_api.routers import (
     escalations,
     health,
     households,
+    radar,
     rag,
     saved_benefits,
     sessions,
@@ -90,6 +91,7 @@ app.include_router(catalog.router)
 app.include_router(turns.router)
 app.include_router(voice_stream.router)
 app.include_router(rag.router)
+app.include_router(radar.router)
 app.include_router(saved_benefits.router)
 app.include_router(applications.router)
 app.include_router(benefit_feedback.router)

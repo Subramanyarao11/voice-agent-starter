@@ -462,6 +462,197 @@
         }
       }
     },
+    "/api/households/{household_id}/radar/refresh": {
+      "post": {
+        "tags": [
+          "household radar"
+        ],
+        "summary": "Refresh Radar",
+        "operationId": "refresh_radar_api_households__household_id__radar_refresh_post",
+        "parameters": [
+          {
+            "name": "household_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Household Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RadarRefreshRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RadarRefreshOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/households/{household_id}/radar": {
+      "get": {
+        "tags": [
+          "household radar"
+        ],
+        "summary": "List Radar",
+        "operationId": "list_radar_api_households__household_id__radar_get",
+        "parameters": [
+          {
+            "name": "household_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Household Id"
+            }
+          },
+          {
+            "name": "member_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Member Id"
+            }
+          },
+          {
+            "name": "include_dismissed",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "default": false,
+              "title": "Include Dismissed"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 100,
+              "title": "Limit"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RadarListOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/households/{household_id}/radar/{recommendation_id}": {
+      "post": {
+        "tags": [
+          "household radar"
+        ],
+        "summary": "Update Radar Recommendation",
+        "operationId": "update_radar_recommendation_api_households__household_id__radar__recommendation_id__post",
+        "parameters": [
+          {
+            "name": "household_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Household Id"
+            }
+          },
+          {
+            "name": "recommendation_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Recommendation Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RadarActionRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RadarRecommendationOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/sessions/{session_id}/saved-benefits": {
       "get": {
         "tags": [
@@ -9829,6 +10020,44 @@
         "title": "CoverageOut",
         "description": "Benefit counts per state and domain.\n\nUseful in the demo for showing honestly how much data is loaded, rather\nthan implying nationwide coverage the pipeline has not produced yet."
       },
+      "CriterionEvidenceOut": {
+        "properties": {
+          "slot": {
+            "type": "string",
+            "title": "Slot"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "requirement": {
+            "type": "string",
+            "title": "Requirement"
+          },
+          "fact_key": {
+            "type": "string",
+            "title": "Fact Key",
+            "default": ""
+          },
+          "fact_state": {
+            "type": "string",
+            "title": "Fact State",
+            "default": "not_collected"
+          },
+          "evidence_source": {
+            "type": "string",
+            "title": "Evidence Source",
+            "default": ""
+          }
+        },
+        "type": "object",
+        "required": [
+          "slot",
+          "status",
+          "requirement"
+        ],
+        "title": "CriterionEvidenceOut"
+      },
       "CriterionOutcome": {
         "properties": {
           "slot": {
@@ -13386,6 +13615,328 @@
           "latest_import_at"
         ],
         "title": "QualityOut"
+      },
+      "RadarActionRequest": {
+        "properties": {
+          "action": {
+            "type": "string",
+            "enum": [
+              "view",
+              "snooze",
+              "dismiss"
+            ],
+            "title": "Action"
+          },
+          "snooze_until": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Snooze Until"
+          },
+          "reason_code": {
+            "type": "string",
+            "maxLength": 80,
+            "title": "Reason Code",
+            "default": ""
+          }
+        },
+        "type": "object",
+        "required": [
+          "action"
+        ],
+        "title": "RadarActionRequest"
+      },
+      "RadarListOut": {
+        "properties": {
+          "household_id": {
+            "type": "string",
+            "title": "Household Id"
+          },
+          "generated_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Generated At"
+          },
+          "recommendations": {
+            "items": {
+              "$ref": "#/components/schemas/RadarRecommendationOut"
+            },
+            "type": "array",
+            "title": "Recommendations"
+          },
+          "counts_by_state": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "type": "object",
+            "title": "Counts By State"
+          }
+        },
+        "type": "object",
+        "required": [
+          "household_id",
+          "generated_at",
+          "recommendations",
+          "counts_by_state"
+        ],
+        "title": "RadarListOut"
+      },
+      "RadarRecommendationOut": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "household_member_id": {
+            "type": "string",
+            "title": "Household Member Id"
+          },
+          "member_ordinal": {
+            "type": "string",
+            "title": "Member Ordinal"
+          },
+          "benefit_id": {
+            "type": "string",
+            "title": "Benefit Id"
+          },
+          "benefit_name": {
+            "type": "string",
+            "title": "Benefit Name"
+          },
+          "domain": {
+            "$ref": "#/components/schemas/Domain"
+          },
+          "verdict": {
+            "type": "string",
+            "title": "Verdict"
+          },
+          "confidence": {
+            "type": "number",
+            "title": "Confidence"
+          },
+          "state": {
+            "type": "string",
+            "title": "State"
+          },
+          "reason_codes": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Reason Codes"
+          },
+          "criterion_evidence": {
+            "items": {
+              "$ref": "#/components/schemas/CriterionEvidenceOut"
+            },
+            "type": "array",
+            "title": "Criterion Evidence"
+          },
+          "fact_use_evidence": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "type": "array",
+            "title": "Fact Use Evidence"
+          },
+          "source_title": {
+            "type": "string",
+            "title": "Source Title"
+          },
+          "source_url": {
+            "type": "string",
+            "title": "Source Url"
+          },
+          "source_last_verified_date": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Last Verified Date"
+          },
+          "valid_until": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Valid Until"
+          },
+          "benefit_revision": {
+            "type": "integer",
+            "title": "Benefit Revision"
+          },
+          "matcher_rules_version": {
+            "type": "string",
+            "title": "Matcher Rules Version"
+          },
+          "computed_profile_version": {
+            "type": "string",
+            "title": "Computed Profile Version"
+          },
+          "viewed_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Viewed At"
+          },
+          "snoozed_until": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Snoozed Until"
+          },
+          "dismissed_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Dismissed At"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Updated At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "household_member_id",
+          "member_ordinal",
+          "benefit_id",
+          "benefit_name",
+          "domain",
+          "verdict",
+          "confidence",
+          "state",
+          "reason_codes",
+          "criterion_evidence",
+          "fact_use_evidence",
+          "source_title",
+          "source_url",
+          "source_last_verified_date",
+          "valid_until",
+          "benefit_revision",
+          "matcher_rules_version",
+          "computed_profile_version",
+          "viewed_at",
+          "snoozed_until",
+          "dismissed_at",
+          "updated_at"
+        ],
+        "title": "RadarRecommendationOut"
+      },
+      "RadarRefreshOut": {
+        "properties": {
+          "household_id": {
+            "type": "string",
+            "title": "Household Id"
+          },
+          "generated_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Generated At"
+          },
+          "profile_version": {
+            "type": "string",
+            "title": "Profile Version"
+          },
+          "recommendation_count": {
+            "type": "integer",
+            "title": "Recommendation Count"
+          },
+          "counts_by_verdict": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "type": "object",
+            "title": "Counts By Verdict"
+          },
+          "recommendations": {
+            "items": {
+              "$ref": "#/components/schemas/RadarRecommendationOut"
+            },
+            "type": "array",
+            "title": "Recommendations"
+          }
+        },
+        "type": "object",
+        "required": [
+          "household_id",
+          "generated_at",
+          "profile_version",
+          "recommendation_count",
+          "counts_by_verdict",
+          "recommendations"
+        ],
+        "title": "RadarRefreshOut"
+      },
+      "RadarRefreshRequest": {
+        "properties": {
+          "member_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 160
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Member Id"
+          },
+          "domains": {
+            "items": {
+              "$ref": "#/components/schemas/Domain"
+            },
+            "type": "array",
+            "maxItems": 3,
+            "title": "Domains"
+          },
+          "limit_per_member": {
+            "type": "integer",
+            "maximum": 100.0,
+            "minimum": 1.0,
+            "title": "Limit Per Member",
+            "default": 50
+          }
+        },
+        "type": "object",
+        "title": "RadarRefreshRequest"
       },
       "RagAnswerResponse": {
         "properties": {

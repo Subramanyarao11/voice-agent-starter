@@ -47,6 +47,20 @@ def encrypt_profile_value(value: str) -> str:
     return _fernet().encrypt(normalize_profile_value(value).encode("utf-8")).decode("ascii")
 
 
+def decrypt_profile_value(ciphertext: str) -> str:
+    """Decrypt a profile fact for an internal, consent-scoped computation.
+
+    Callers must never use this to build an API response. The radar worker is
+    the only current consumer, and it immediately converts the value into
+    matcher slots before persisting redacted evidence.
+    """
+    try:
+        decrypted = _fernet().decrypt(ciphertext.encode("ascii")).decode("utf-8")
+        return normalize_profile_value(decrypted)
+    except Exception as exc:  # Fernet invalid-token/corruption must fail safe.
+        raise ProfileDataEncryptionUnavailable("Profile fact ciphertext is invalid") from exc
+
+
 def profile_value_hash(value: str) -> str:
     key = settings.profile_hash_key.strip()
     if not key:
