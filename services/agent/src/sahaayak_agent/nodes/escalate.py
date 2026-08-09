@@ -42,6 +42,12 @@ def _decide_reason(state: AgentState) -> EscalationReason | None:
     if state.domain is None:
         return None
 
+    # Undecided candidates still need facts (education, residency, …). Treat
+    # that as continued gathering, not "no matches" — otherwise the UI shows
+    # related cards while the voice reply gives up and offers a human.
+    if any(m.verdict is MatchVerdict.INSUFFICIENT_INFO for m in state.matches):
+        return None
+
     threshold = settings.escalation_confidence_threshold
     confident = [
         m

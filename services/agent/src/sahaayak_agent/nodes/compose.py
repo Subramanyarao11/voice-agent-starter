@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import re
 
+from sahaayak_agent import matcher
 from sahaayak_agent.nodes.deps import GraphDeps
 from sahaayak_agent.prompts import get_catalog
 from sahaayak_agent.repository import load_briefs
@@ -74,17 +75,26 @@ async def compose(state: AgentState, deps: GraphDeps) -> dict:
         parts.append(catalog.render("escalation_confirmed"))
         return _finish(state, parts)
 
+    followup_slot: SlotName | None = None
     if state.pending_slot is not None:
         parts.append(_render_question(state, catalog, deps))
     elif state.domain is None:
         parts.append(catalog.render("ask_intent"))
     else:
-        parts.extend(_render_results(state, catalog, deps))
+        result_parts, followup_slot = _render_results(state, catalog, deps)
+        parts.extend(result_parts)
 
-    if state.needs_escalation:
+    # If compose itself recovered a follow-up question, keep gathering instead of
+    # offering a human on the same turn.
+    if state.needs_escalation and followup_slot is None:
         parts.append(catalog.render("escalation_offer"))
 
-    return _finish(state, parts)
+    return _finish(
+        state,
+        parts,
+        pending_slot=followup_slot,
+        clear_escalation=followup_slot is not None,
+    )
 
 
 def _render_question(state: AgentState, catalog, deps: GraphDeps) -> str:
@@ -97,7 +107,7 @@ def _render_question(state: AgentState, catalog, deps: GraphDeps) -> str:
     return catalog.render(spec.prompt_key, **params)
 
 
-def _render_results(state: AgentState, catalog, deps: GraphDeps) -> list[str]:
+def _render_results(state: AgentState, catalog, deps: GraphDeps) -> tuple[list[str], SlotName | None]:
     threshold = settings.escalation_confidence_threshold
     confident = [
         m
@@ -106,12 +116,24 @@ def _render_results(state: AgentState, catalog, deps: GraphDeps) -> list[str]:
     ][:MAX_SPOKEN_RESULTS]
 
     if not confident:
-        # Ranked rows can still be useful even when none is a confident
-        # eligibility match.  Calling that state "nothing found" contradicts
-        # the visual client, which deliberately shows those rows as related
-        # options with criterion-level reasons.
+        # Prefer asking the next deciding fact over a dead-end "none confirmed"
+        # line while the cards still show related options.
+        choice = matcher.most_informative_slot(state.matches)
+        if choice is not None:
+            slot, _ = choice
+            return (
+                [
+                    catalog.render("need_more_details", count=len(state.matches)),
+                    _render_question(
+                        state.model_copy(update={"pending_slot": slot}),
+                        catalog,
+                        deps,
+                    ),
+                ],
+                slot,
+            )
         key = "related_options" if state.matches else "no_matches"
-        return [catalog.render(key, count=len(state.matches))]
+        return [catalog.render(key, count=len(state.matches))], None
 
     with deps.session_factory() as session:
         details = load_briefs(
@@ -148,7 +170,7 @@ def _render_results(state: AgentState, catalog, deps: GraphDeps) -> list[str]:
             catalog.render("documents_needed", documents=", ".join(top.documents_required))
         )
 
-    return parts
+    return parts, None
 
 
 def _state_name(state_code: str, deps: GraphDeps) -> str:
@@ -157,9 +179,21 @@ def _state_name(state_code: str, deps: GraphDeps) -> str:
         return row.name if row else state_code
 
 
-def _finish(state: AgentState, parts: list[str]) -> dict:
+def _finish(
+    state: AgentState,
+    parts: list[str],
+    *,
+    pending_slot: SlotName | None = None,
+    clear_escalation: bool = False,
+) -> dict:
     text = _join(parts)
-    return {
+    payload: dict = {
         "response_text": text,
         "history": [*state.history, ConversationTurn(role="agent", text=text)],
     }
+    if pending_slot is not None:
+        payload["pending_slot"] = pending_slot
+    if clear_escalation:
+        payload["needs_escalation"] = False
+        payload["escalation_reason"] = None
+    return payload

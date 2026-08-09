@@ -44,10 +44,14 @@ PHRASES: dict[str, str] = {
         "I could not find anything matching your details right now. "
         "I can have someone look into this for you."
     ),
+    "need_more_details": (
+        "I found {count} related options. I need a couple more details before I can "
+        "confirm which ones you qualify for."
+    ),
     "related_options": (
-        "I found {count} related options, but none is a confirmed eligibility match "
-        "from the details I have. Review the reasons shown with each option, or I can "
-        "have a person help you check them."
+        "I found {count} related options, but I still cannot confirm eligibility from "
+        "the details I have. Check the reasons shown with each option, or ask me about "
+        "a specific scheme by name."
     ),
     "eligible_item": "{name}. You qualify for this. {summary}",
     "ineligible_item": "{name}. You do not qualify because {reason}.",

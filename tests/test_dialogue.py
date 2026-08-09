@@ -180,3 +180,28 @@ async def test_a_rejection_comes_with_its_grounds(runtime, caller_id):
     rejected = [m for m in state.matches if m.verdict is MatchVerdict.NOT_ELIGIBLE]
     assert rejected
     assert all(match.failed for match in rejected)
+
+
+@pytest.mark.asyncio
+async def test_eligibility_question_keeps_asking_instead_of_dead_ending(runtime, caller_id):
+    """Income + category alone is not enough for a confirmed match — keep asking."""
+    for utterance in [
+        "I need a scholarship",
+        "22",
+        "2 lakh",
+        "degree",
+        "SC",
+    ]:
+        state = await say(runtime, caller_id, utterance)
+
+    assert state.pending_slot is not None
+    assert not state.needs_escalation
+    assert get_catalog("en").render("escalation_offer") not in state.response_text
+
+    state = await say(
+        runtime, caller_id, "am I eligible for the Karnataka Vidyasiri Scholarship"
+    )
+    assert state.knowledge_answer == ""
+    assert state.pending_slot is not None or any(
+        m.verdict is MatchVerdict.ELIGIBLE for m in state.matches
+    )
