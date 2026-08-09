@@ -1,0 +1,93 @@
+# Sahaayak — Render Free 2–3 day demo Blueprint.
+# Local Docker Compose is unchanged; this file is only used by Render.
+#
+# Topology: web + api + Postgres + Key Value (Redis). No Keycloak/workers.
+# Docs: docs/render-demo-deploy.md
+
+services:
+  - type: keyvalue
+    name: sahaayak-redis
+    plan: free
+    ipAllowList: []
+    maxmemoryPolicy: allkeys-lru
+
+  - type: web
+    name: sahaayak-api
+    runtime: docker
+    plan: free
+    dockerfilePath: ./infra/python/Dockerfile
+    dockerContext: .
+    healthCheckPath: /health
+    dockerCommand: sh -c 'uvicorn sahaayak_api.main:app --host 0.0.0.0 --port ${PORT:-8000}'
+    preDeployCommand: sh -c 'alembic upgrade head'
+    envVars:
+      - key: ENV
+        value: production
+      - key: LOG_JSON
+        value: "true"
+      - key: DATABASE_URL
+        fromDatabase:
+          name: sahaayak-postgres
+          property: connectionString
+      - key: REDIS_URL
+        fromService:
+          name: sahaayak-redis
+          type: keyvalue
+          property: connectionString
+      - key: WEB_BASE_URL
+        fromService:
+          name: sahaayak-web
+          type: web
+          envVarKey: RENDER_EXTERNAL_URL
+      - key: RATE_LIMIT_ENABLED
+        value: "true"
+      - key: RATE_LIMIT_FAIL_CLOSED
+        value: "true"
+      - key: RATE_LIMIT_KEY_SALT
+        generateValue: true
+      - key: ADMIN_STATIC_TOKENS_ENABLED
+        value: "true"
+      - key: ADMIN_OIDC_ENABLED
+        value: "false"
+      - key: ADMIN_API_TOKEN
+        sync: false
+      - key: OPENAI_API_KEY
+        sync: false
+      - key: OPENAI_VECTOR_STORE_ID
+        sync: false
+      - key: SARVAM_API_KEY
+        sync: false
+      - key: OPENAI_BUDGET_USD
+        value: "5.0"
+      - key: SARVAM_BUDGET_USD
+        value: "5.0"
+      - key: OPENAI_BUDGET_LEDGER_PATH
+        value: /tmp/sahaayak-usage/openai-budget.json
+      - key: SARVAM_BUDGET_LEDGER_PATH
+        value: /tmp/sahaayak-usage/sarvam-budget.json
+
+  - type: web
+    name: sahaayak-web
+    runtime: docker
+    plan: free
+    dockerfilePath: ./infra/web/Dockerfile.render
+    dockerContext: .
+    healthCheckPath: /health
+    envVars:
+      # Baked into the Vite build; rebuild web after the API public URL exists.
+      - key: VITE_API_BASE_URL
+        fromService:
+          name: sahaayak-api
+          type: web
+          envVarKey: RENDER_EXTERNAL_URL
+      - key: VITE_ADMIN_MANUAL_ENTRY_ENABLED
+        value: "true"
+      - key: VITE_ADMIN_OIDC_CLIENT_ID
+        value: sahaayak-admin
+
+databases:
+  - name: sahaayak-postgres
+    plan: free
+    databaseName: sahaayak
+    user: sahaayak
+    ipAllowList: []

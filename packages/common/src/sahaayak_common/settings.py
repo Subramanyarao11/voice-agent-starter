@@ -26,6 +26,20 @@ def find_repo_root(start: Path | None = None) -> Path:
 REPO_ROOT = find_repo_root()
 
 
+def normalize_database_url(url: str) -> str:
+    """Accept managed Postgres URLs that omit the SQLAlchemy driver suffix.
+
+    Render, Railway, and similar hosts inject ``postgresql://`` (or
+    ``postgres://``) connection strings. This project uses psycopg3, so those
+    schemes are rewritten to ``postgresql+psycopg://`` before create_engine.
+    """
+    if url.startswith("postgres://"):
+        return "postgresql+psycopg://" + url.removeprefix("postgres://")
+    if url.startswith("postgresql://"):
+        return "postgresql+psycopg://" + url.removeprefix("postgresql://")
+    return url
+
+
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(
         env_file=REPO_ROOT / ".env",
@@ -333,7 +347,9 @@ class Settings(BaseSettings):
     @property
     def resolved_database_url(self) -> str:
         if self.database_url:
-            return self.database_url
+            # Local Compose already uses postgresql+psycopg://; managed hosts
+            # often inject bare postgresql:// — normalize only those schemes.
+            return normalize_database_url(self.database_url)
         return f"sqlite:///{REPO_ROOT / 'data' / 'sahaayak.db'}"
 
     @property
