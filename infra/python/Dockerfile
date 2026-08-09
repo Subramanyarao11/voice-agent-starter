@@ -26,7 +26,8 @@ COPY packages/ packages/
 COPY services/ services/
 COPY scripts/ scripts/
 COPY evals/ evals/
-RUN uv sync --frozen --no-dev
+RUN uv sync --frozen --no-dev \
+    && chmod +x /app/scripts/render_api_start.sh
 
 ENV PATH="/app/.venv/bin:$PATH"
 

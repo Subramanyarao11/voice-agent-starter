@@ -18,8 +18,9 @@ services:
     dockerfilePath: ./infra/python/Dockerfile
     dockerContext: .
     healthCheckPath: /health
-    # Free tier rejects preDeployCommand; migrate on boot before uvicorn.
-    dockerCommand: sh -c 'alembic upgrade head && uvicorn sahaayak_api.main:app --host 0.0.0.0 --port ${PORT:-8000}'
+    # Free tier rejects preDeployCommand. Use a script so Render does not mangle
+    # an inline `sh -c '… && …'` start command (status 127 / "not found").
+    dockerCommand: /app/scripts/render_api_start.sh
     envVars:
       - key: ENV
         value: production
