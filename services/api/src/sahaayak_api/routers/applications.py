@@ -1162,11 +1162,27 @@ def _case_out(db: Session, case: ApplicationCase) -> ApplicationCaseOut:
         .where(ApplicationStatusEvent.application_case_id == case.id)
         .order_by(ApplicationStatusEvent.occurred_at, ApplicationStatusEvent.recorded_at)
     ).all()
-    readiness_state, blockers = _readiness(task_rows)
     change_state, change_items, source_stale = _benefit_change_state(
         snapshot,
         current_benefit,
         case.benefit_revision,
+    )
+    field_definitions = _approved_field_definitions(db, case.benefit_id)
+    field_values = {
+        row.field_key: row
+        for row in db.exec(
+            select(ApplicationFieldValue).where(
+                ApplicationFieldValue.application_case_id == case.id
+            )
+        ).all()
+    }
+    readiness_state, blockers = _readiness(
+        task_rows,
+        field_definitions=field_definitions,
+        field_values=field_values,
+        change_state=change_state,
+        source_stale=source_stale,
+        deadline=snapshot.get("valid_until"),
     )
     return ApplicationCaseOut(
         id=case.id,
@@ -1203,19 +1219,51 @@ def _case_out(db: Session, case: ApplicationCase) -> ApplicationCaseOut:
     )
 
 
-def _readiness(tasks: list[ApplicationTask]) -> tuple[str, list[str]]:
+def _readiness(
+    tasks: list[ApplicationTask],
+    *,
+    field_definitions: list[ApplicationFieldDefinition] | None = None,
+    field_values: dict[str, ApplicationFieldValue] | None = None,
+    change_state: str = "none",
+    source_stale: bool = False,
+    deadline: object = None,
+) -> tuple[str, list[str]]:
+    if change_state == "application_invalidated":
+        return "unavailable", ["Review the current benefit before continuing this application."]
+    if isinstance(deadline, str) and deadline:
+        try:
+            if date.fromisoformat(deadline) < date.today():
+                return "expired", ["The published application deadline has passed."]
+        except ValueError:
+            pass
+    blockers: list[str] = []
     if not tasks:
-        return (
-            "ready_with_warnings",
-            ["No structured checklist was available; confirm the official instructions."],
-        )
+        blockers.append("No structured checklist was available; confirm the official instructions.")
     pending = [task.title for task in tasks if task.status == "pending"]
     skipped = [task.title for task in tasks if task.status == "skipped"]
-    if pending:
-        return "not_ready", [f"Complete: {title}" for title in pending[:8]]
+    blockers.extend(f"Complete: {title}" for title in pending[:8])
+    values = field_values or {}
+    for definition in field_definitions or []:
+        value = values.get(definition.field_key)
+        if definition.required and value is None:
+            label = (
+                definition.label.get("en")
+                or next(iter(definition.label.values()), None)
+                or definition.field_key
+            )
+            blockers.append(f"Provide: {label}")
+        elif value is not None and value.expires_at and value.expires_at.date() < date.today():
+            blockers.append(f"Update: {definition.field_key}")
+    if blockers:
+        return "not_ready", blockers[:8]
+    warnings: list[str] = []
     if skipped:
-        return "ready_with_warnings", [f"Confirm skipped item: {title}" for title in skipped[:8]]
-    return "ready", []
+        warnings.extend(f"Confirm skipped item: {title}" for title in skipped[:8])
+    if source_stale:
+        warnings.append("The current source needs fresh human verification.")
+    if change_state in {"action_required", "informational"}:
+        warnings.append("Review the latest benefit revision before submitting.")
+    return ("ready_with_warnings", warnings) if warnings else ("ready", [])
 
 
 def _benefit_change_state(
