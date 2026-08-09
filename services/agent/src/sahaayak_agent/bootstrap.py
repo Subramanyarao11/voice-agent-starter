@@ -8,8 +8,13 @@ and inventing them would undercut the whole point of using real myScheme data.
 
 from __future__ import annotations
 
+from datetime import UTC, datetime
+
+from sqlmodel import select
+
 from sahaayak_agent.languages import ALL_PROFILES, DEFAULT_CATALOG, DEFAULT_STATES, PLANNED_PROFILES
 from sahaayak_common import (
+    FeatureFlag,
     Language,
     LanguageReadinessReview,
     State,
@@ -22,6 +27,67 @@ from sahaayak_common import (
 )
 
 log = get_logger(__name__)
+
+
+def open_demo_language_catalog() -> None:
+    """Temporarily activate all registered languages for a short public demo.
+
+    Approves readiness rows and enables ten_language_rollout. Not a production
+    language-release attestation — use only behind RENDER_DEMO_OPEN_CATALOG.
+    """
+    now = datetime.now(UTC)
+    planned_codes = {profile.code for profile in PLANNED_PROFILES}
+    review_fields = (
+        "native_speaker_status",
+        "interface_status",
+        "prompt_status",
+        "content_status",
+        "understanding_status",
+        "voice_status",
+        "accessibility_status",
+    )
+    with session_scope() as db:
+        for profile in ALL_PROFILES:
+            language = db.get(Language, profile.code)
+            if language is None:
+                continue
+            language.is_active = True
+            db.add(language)
+
+            review = db.get(LanguageReadinessReview, profile.code)
+            if review is None:
+                review = LanguageReadinessReview(language_code=profile.code)
+                db.add(review)
+            needs_demo_attestation = profile.code in planned_codes or not all(
+                getattr(review, field) == "approved" for field in review_fields
+            )
+            if needs_demo_attestation:
+                for field in review_fields:
+                    setattr(review, field, "approved")
+                review.review_notes = (
+                    "Demo catalog open — temporary activation for short public "
+                    "validation, not a production release attestation."
+                )
+                review.reviewed_by = "render-demo-bootstrap"
+                review.reviewed_at = review.reviewed_at or now
+                review.activated_at = review.activated_at or now
+                db.add(review)
+
+        ten = db.exec(select(FeatureFlag).where(FeatureFlag.key == "ten_language_rollout")).first()
+        if ten is not None:
+            ten.enabled = True
+            ten.rollout_percentage = 100
+            ten.target_languages = []
+            db.add(ten)
+
+        states = db.exec(select(FeatureFlag).where(FeatureFlag.key == "state_rollout")).first()
+        if states is not None:
+            states.enabled = True
+            states.rollout_percentage = 100
+            states.target_states = []
+            db.add(states)
+
+    log.info("demo_language_catalog_opened", languages=len(ALL_PROFILES))
 
 
 def ensure_reference_data() -> None:
@@ -46,6 +112,9 @@ def ensure_reference_data() -> None:
             )
 
         for profile in PLANNED_PROFILES:
+            # Do not downgrade a language an operator (or demo bootstrap) already
+            # activated; restart would otherwise undo rollout every boot.
+            existing = db.get(Language, profile.code)
             db.merge(
                 Language(
                     code=profile.code,
@@ -56,7 +125,7 @@ def ensure_reference_data() -> None:
                     tts_provider=profile.tts_provider,
                     tts_locale=profile.resolved_tts_locale(),
                     tts_voice_id=profile.tts_voice_id,
-                    is_active=False,
+                    is_active=existing.is_active if existing is not None else False,
                 )
             )
 

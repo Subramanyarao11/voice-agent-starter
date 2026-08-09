@@ -6,12 +6,12 @@ until release evidence is approved.
 
 When RENDER_DEMO_BOOTSTRAP=true (set in render.yaml), this script:
 
-1. Seeds ``data/demo/benefits.jsonl`` (committed demo catalog) if no active
-   benefits exist; falls back to ``scripts/seed_demo.py`` rows.
-2. Opens all planned languages + clears state_rollout targeting for the short
-   demo when RENDER_DEMO_OPEN_CATALOG=true.
+1. Seeds ``data/demo/benefits.jsonl`` (committed demo catalog) if present.
+2. Opens all planned languages via ``open_demo_language_catalog`` when
+   RENDER_DEMO_OPEN_CATALOG=true.
 
-Demo scaffolding only — not a substitute for a production reviewed release.
+The API lifespan also re-applies language open after ``ensure_reference_data``,
+because that merge used to reset planned locales to inactive on every boot.
 """
 
 from __future__ import annotations
@@ -19,20 +19,16 @@ from __future__ import annotations
 import json
 import os
 import sys
-from datetime import UTC, date, datetime
+from datetime import date
 from pathlib import Path
 
 from pydantic import ValidationError
 from sqlmodel import func, select
 
-from sahaayak_agent.bootstrap import ensure_reference_data
-from sahaayak_agent.languages import ALL_PROFILES, PLANNED_PROFILES
+from sahaayak_agent.bootstrap import ensure_reference_data, open_demo_language_catalog
 from sahaayak_common import (
     REPO_ROOT,
     Benefit,
-    FeatureFlag,
-    Language,
-    LanguageReadinessReview,
     init_db,
     session_scope,
 )
@@ -81,7 +77,6 @@ def _seed_from_demo_jsonl(path: Path) -> tuple[int, int]:
                 continue
             try:
                 row = json.loads(line)
-                # Demo hosts need matcher-visible rows.
                 row["is_active"] = True
                 benefit = module.build_benefit(row)
                 benefit.is_active = True
@@ -110,61 +105,6 @@ def _seed_demo_benefits_fallback() -> int:
     return len(DEMO_BENEFITS)
 
 
-def _open_demo_catalog() -> None:
-    """Activate all catalog languages and widen state rollout for the short demo."""
-    now = datetime.now(UTC)
-    planned_codes = {profile.code for profile in PLANNED_PROFILES}
-    review_fields = (
-        "native_speaker_status",
-        "interface_status",
-        "prompt_status",
-        "content_status",
-        "understanding_status",
-        "voice_status",
-        "accessibility_status",
-    )
-    with session_scope() as db:
-        for profile in ALL_PROFILES:
-            language = db.get(Language, profile.code)
-            if language is None:
-                continue
-            language.is_active = True
-            db.add(language)
-
-            review = db.get(LanguageReadinessReview, profile.code)
-            if review is None:
-                review = LanguageReadinessReview(language_code=profile.code)
-                db.add(review)
-            needs_demo_attestation = profile.code in planned_codes or not all(
-                getattr(review, field) == "approved" for field in review_fields
-            )
-            if needs_demo_attestation:
-                for field in review_fields:
-                    setattr(review, field, "approved")
-                review.review_notes = (
-                    "Render Free demo bootstrap — temporary activation for a "
-                    "2–3 day public validation, not a production release attestation."
-                )
-                review.reviewed_by = "render-demo-bootstrap"
-                review.reviewed_at = review.reviewed_at or now
-                review.activated_at = review.activated_at or now
-                db.add(review)
-
-        ten = db.exec(select(FeatureFlag).where(FeatureFlag.key == "ten_language_rollout")).first()
-        if ten is not None:
-            ten.enabled = True
-            ten.rollout_percentage = 100
-            ten.target_languages = []
-            db.add(ten)
-
-        states = db.exec(select(FeatureFlag).where(FeatureFlag.key == "state_rollout")).first()
-        if states is not None:
-            states.enabled = True
-            states.rollout_percentage = 100
-            states.target_states = []
-            db.add(states)
-
-
 def main() -> None:
     if not _truthy("RENDER_DEMO_BOOTSTRAP", "false"):
         print("RENDER_DEMO_BOOTSTRAP disabled; skipping demo bootstrap.")
@@ -174,8 +114,6 @@ def main() -> None:
     ensure_reference_data()
 
     before = _active_benefit_count()
-    # Always merge the committed demo catalog so redeploys can enrich an empty
-    # or previously thin Render database (import is idempotent).
     if DEMO_BENEFITS_FILE.exists():
         seeded, skipped = _seed_from_demo_jsonl(DEMO_BENEFITS_FILE)
         print(
@@ -189,7 +127,7 @@ def main() -> None:
         print(f"Active benefits already present ({before}); no demo file in image.")
 
     if _truthy("RENDER_DEMO_OPEN_CATALOG", "true"):
-        _open_demo_catalog()
+        open_demo_language_catalog()
         print(
             "Opened demo catalog: all languages activated, "
             "ten_language_rollout on, state_rollout unrestricted."

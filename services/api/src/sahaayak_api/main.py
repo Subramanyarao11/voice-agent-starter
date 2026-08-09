@@ -2,12 +2,13 @@
 
 from __future__ import annotations
 
+import os
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from sahaayak_agent.bootstrap import ensure_reference_data
+from sahaayak_agent.bootstrap import ensure_reference_data, open_demo_language_catalog
 from sahaayak_agent.tracing import configure_observability, shutdown_observability
 from sahaayak_api.deployment import record_current_deployment
 from sahaayak_api.middleware import RequestContextMiddleware, SecurityHeadersMiddleware
@@ -46,12 +47,25 @@ configure_logging()
 log = get_logger(__name__)
 
 
+def _demo_open_catalog_enabled() -> bool:
+    return os.environ.get("RENDER_DEMO_OPEN_CATALOG", "").strip().lower() in {
+        "1",
+        "true",
+        "yes",
+        "on",
+    }
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     configure_observability()
     configure_library_instrumentation()
     init_db()
     ensure_reference_data()
+    # Re-apply after reference-data merge so planned languages stay available
+    # for the short public demo (ensure_reference_data used to force them off).
+    if _demo_open_catalog_enabled():
+        open_demo_language_catalog()
     record_current_deployment()
     log.info(
         "api_started",
