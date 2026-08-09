@@ -67,12 +67,22 @@ export function useApplicationTasksQuery(sessionId: string, accessToken: string)
   });
 }
 
-export function useUpdateApplicationTaskMutation(sessionId: string, accessToken: string) {
+export function useUpdateApplicationTaskMutation(
+  sessionId: string,
+  accessToken: string,
+  applicationId?: string,
+) {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (input: { taskId: string; status: "pending" | "completed" | "skipped" }) =>
       updateApplicationTask(sessionId, input.taskId, input.status, accessToken),
-    onSuccess: () => queryClient.invalidateQueries({queryKey: ["application-tasks", sessionId]}),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({queryKey: ["application-tasks", sessionId]});
+      if (applicationId) {
+        void queryClient.invalidateQueries({queryKey: ["application", sessionId, applicationId]});
+      }
+      void queryClient.invalidateQueries({queryKey: ["applications", sessionId]});
+    },
   });
 }
 

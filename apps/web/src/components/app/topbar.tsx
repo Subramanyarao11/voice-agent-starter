@@ -8,7 +8,7 @@ type TopbarProps = {
   sessionId: string;
   connected: boolean;
   currentLanguage?: string;
-  activeSection?: "home" | "saved";
+  activeSection?: "home" | "saved" | "applications";
 };
 
 export function Topbar({ sessionId, connected, currentLanguage, activeSection = "home" }: TopbarProps) {
@@ -87,6 +87,19 @@ export function Topbar({ sessionId, connected, currentLanguage, activeSection = 
             <a className="inline-flex min-h-11 items-center gap-2 border-b-4 border-transparent px-3 text-sm font-semibold text-muted-foreground transition-colors hover:text-foreground" href="/#saved-work">
               {t("savedWork")}
             </a>
+          </li>
+          <li>
+            <Link
+              to="/applications"
+              aria-current={activeSection === "applications" ? "page" : undefined}
+              className={`inline-flex min-h-11 items-center gap-2 border-b-4 px-3 text-sm font-semibold transition-colors ${
+                activeSection === "applications"
+                  ? "border-primary text-primary"
+                  : "border-transparent text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              My applications
+            </Link>
           </li>
           <li>
             <a className="inline-flex min-h-11 items-center gap-2 border-b-4 border-transparent px-3 text-sm font-semibold text-muted-foreground transition-colors hover:text-foreground" href="/#help-note">

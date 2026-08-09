@@ -1,5 +1,13 @@
 """Infrastructure shared by every Sahaayak service."""
 
+from sahaayak_common.application_crypto import (
+    ApplicationDataEncryptionUnavailable,
+    encrypt_reference,
+    mask_reference,
+    normalize_reference,
+    reference_hash,
+    reset_application_encryption_cache,
+)
 from sahaayak_common.benefit_governance import (
     apply_benefit_snapshot,
     benefit_snapshot,
@@ -43,6 +51,8 @@ from sahaayak_common.ids import new_id, session_id, slugify, ticket_id, turn_id
 from sahaayak_common.logging import configure_logging, get_logger, request_id_var
 from sahaayak_common.messaging_budget import BudgetPosture, evaluate_budget, spend_since
 from sahaayak_common.models import (
+    ApplicationCase,
+    ApplicationStatusEvent,
     ApplicationTask,
     AuditEvent,
     Benefit,
@@ -88,7 +98,10 @@ from sahaayak_common.settings import REPO_ROOT, Settings, get_settings, settings
 
 __all__ = [
     "REPO_ROOT",
+    "ApplicationCase",
+    "ApplicationStatusEvent",
     "AuditEvent",
+    "ApplicationDataEncryptionUnavailable",
     "ApplicationTask",
     "Benefit",
     "BenefitIssueReport",
@@ -156,14 +169,19 @@ __all__ = [
     "is_valid_e164",
     "is_valid_email",
     "mask_destination",
+    "mask_reference",
     "new_id",
     "normalize_destination",
+    "normalize_reference",
     "request_id_var",
     "record_benefit_version",
     "record_directory_version",
     "apply_directory_snapshot",
     "reset_cache",
+    "reset_application_encryption_cache",
     "reset_encryption_cache",
+    "encrypt_reference",
+    "reference_hash",
     "resolve_escalation_route",
     "run_migrations",
     "session_id",

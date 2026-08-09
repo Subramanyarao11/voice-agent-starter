@@ -286,8 +286,100 @@ class SavedBenefit(SQLModel, table=True):
     created_at: datetime = Field(default_factory=_utcnow, index=True)
 
 
+class ApplicationCase(SQLModel, table=True):
+    """A citizen-owned application journey for one reviewed benefit.
+
+    This is deliberately separate from ``SavedBenefit``. Saving is a
+    shortlist action; starting an application creates a durable, immutable
+    reference to the reviewed benefit content and a status history that can be
+    reconciled later when an authorized provider adapter is available.
+    """
+
+    __tablename__ = "application_case"
+    __table_args__ = (
+        Index(
+            "ix_application_case_session_status_updated",
+            "session_id",
+            "status",
+            "updated_at",
+        ),
+        Index(
+            "ix_application_case_session_benefit_status",
+            "session_id",
+            "benefit_id",
+            "status",
+        ),
+    )
+
+    id: str = Field(primary_key=True)
+    session_id: str = Field(foreign_key="user_session.id", index=True)
+    benefit_id: str = Field(foreign_key="benefit.id", index=True)
+
+    # The case stays understandable even after a benefit is edited. This is
+    # a public snapshot only; it never contains profile, transcript, or
+    # contact data.
+    benefit_revision: int = 0
+    benefit_snapshot: dict = Field(default_factory=dict, sa_column=json_dict())
+
+    application_channel: str = "official_portal"
+    status: str = Field(default="draft", index=True)
+    status_provenance: str = "system_derived"
+    # system_derived | citizen_reported | provider_verified
+    status_recorded_at: datetime = Field(default_factory=_utcnow, index=True)
+    status_source_url: str = ""
+
+    # A readiness value is recomputed from the current task rows for API
+    # responses. These fields are retained for operational queries and safe
+    # recovery if a worker needs to inspect a case without rendering it.
+    readiness_state: str = "not_ready"  # not_ready | ready | ready_with_warnings
+    readiness_blockers: list[str] = Field(default_factory=list, sa_column=json_list())
+
+    # Government acknowledgement/reference numbers are sensitive. Store only
+    # encrypted ciphertext plus a keyed lookup hash and masked display value.
+    external_reference_ciphertext: str | None = None
+    external_reference_hash: str | None = Field(default=None, index=True)
+    external_reference_masked: str = ""
+    submission_date: date | None = None
+
+    revision: int = 1
+    created_at: datetime = Field(default_factory=_utcnow, index=True)
+    updated_at: datetime = Field(default_factory=_utcnow, index=True)
+    closed_at: datetime | None = None
+
+
+class ApplicationStatusEvent(SQLModel, table=True):
+    """Append-only status evidence for an application case."""
+
+    __tablename__ = "application_status_event"
+    __table_args__ = (
+        Index(
+            "ix_application_status_event_case_occurred",
+            "application_case_id",
+            "occurred_at",
+        ),
+        Index(
+            "ix_application_status_event_case_recorded",
+            "application_case_id",
+            "recorded_at",
+        ),
+    )
+
+    id: str = Field(primary_key=True)
+    application_case_id: str = Field(foreign_key="application_case.id", index=True)
+    status: str = Field(index=True)
+    provenance: str = Field(index=True)  # system_derived | citizen_reported | provider_verified
+    actor_type: str = "system"  # system | citizen | provider | operator
+    actor_id: str = ""
+    occurred_at: datetime = Field(index=True)
+    recorded_at: datetime = Field(default_factory=_utcnow, index=True)
+    source_url: str = ""
+    reason_code: str = ""
+    external_reference_masked: str = ""
+    safe_metadata: dict = Field(default_factory=dict, sa_column=json_dict())
+
+
 class ApplicationTask(SQLModel, table=True):
-    """A private, durable checklist item for one saved benefit."""
+    """A private, durable checklist item for one saved benefit or case."""
 
     __tablename__ = "application_task"
     __table_args__ = (
@@ -310,6 +402,9 @@ class ApplicationTask(SQLModel, table=True):
     id: str = Field(primary_key=True)
     session_id: str = Field(foreign_key="user_session.id", index=True)
     benefit_id: str = Field(foreign_key="benefit.id", index=True)
+    application_case_id: str | None = Field(
+        default=None, foreign_key="application_case.id", index=True
+    )
     kind: str = Field(index=True)  # document | application_step
     title: str
     description: str = ""

@@ -130,7 +130,7 @@ def save_benefit(
         )
     ).first()
     if existing is not None:
-        _ensure_application_tasks(db, principal.session_id, benefit)
+        ensure_application_tasks(db, principal.session_id, benefit)
         db.commit()
         return _saved_out(db, existing, benefit=benefit)  # type: ignore[return-value]
     row = SavedBenefit(
@@ -139,7 +139,7 @@ def save_benefit(
         benefit_id=benefit.id,
     )
     db.add(row)
-    _ensure_application_tasks(db, principal.session_id, benefit)
+    ensure_application_tasks(db, principal.session_id, benefit)
     db.commit()
     db.refresh(row)
     return _saved_out(db, row, benefit=benefit)  # type: ignore[return-value]
@@ -164,6 +164,7 @@ def remove_saved_benefit(
             select(ApplicationTask).where(
                 ApplicationTask.session_id == principal.session_id,
                 ApplicationTask.benefit_id == benefit_id,
+                ApplicationTask.application_case_id.is_(None),
             )
         ).all():
             db.delete(task)
@@ -186,7 +187,7 @@ def list_application_tasks(
     for saved in saved_rows:
         benefit = db.get(Benefit, saved.benefit_id)
         if benefit is not None:
-            _ensure_application_tasks(db, principal.session_id, benefit)
+            ensure_application_tasks(db, principal.session_id, benefit)
     db.commit()
     task_query = select(ApplicationTask).where(ApplicationTask.session_id == principal.session_id)
     if benefit_id:
@@ -198,7 +199,7 @@ def list_application_tasks(
             ApplicationTask.created_at,
         )
     ).all()
-    return [_task_out(db, row) for row in rows]
+    return [task_out(db, row) for row in rows]
 
 
 @router.post("/{session_id}/tasks/{task_id}", response_model=ApplicationTaskOut)
@@ -224,7 +225,7 @@ def update_application_task(
             SavedBenefit.benefit_id == row.benefit_id,
         )
     ).first()
-    if saved is None:
+    if saved is None and row.application_case_id is None:
         raise HTTPException(status_code=404, detail="Saved benefit not found")
     row.status = payload.status
     row.completed_at = datetime.now(UTC) if payload.status == "completed" else None
@@ -232,7 +233,7 @@ def update_application_task(
     db.add(row)
     db.commit()
     db.refresh(row)
-    return _task_out(db, row)
+    return task_out(db, row)
 
 
 @router.get("/{session_id}/reminders", response_model=list[ReminderOut])
@@ -364,7 +365,13 @@ def _saved_out(
     )
 
 
-def _ensure_application_tasks(db: Session, session_id: str, benefit: Benefit) -> None:
+def ensure_application_tasks(
+    db: Session,
+    session_id: str,
+    benefit: Benefit,
+    *,
+    application_case_id: str | None = None,
+) -> None:
     """Materialize source documents/application guidance without overwriting progress."""
     specs: list[tuple[str, str, str]] = []
     seen_documents: set[str] = set()
@@ -410,12 +417,15 @@ def _ensure_application_tasks(db: Session, session_id: str, benefit: Benefit) ->
                     benefit_id=benefit.id,
                     kind=kind,
                     title=title,
+                    application_case_id=application_case_id,
                     description=description,
                     position=position,
                     source_revision=benefit.content_revision,
                 )
             )
         else:
+            if application_case_id and existing.application_case_id is None:
+                existing.application_case_id = application_case_id
             existing.position = position
             existing.source_revision = benefit.content_revision
             if existing.status == "pending":
@@ -424,7 +434,7 @@ def _ensure_application_tasks(db: Session, session_id: str, benefit: Benefit) ->
             db.add(existing)
 
 
-def _task_out(db: Session, row: ApplicationTask) -> ApplicationTaskOut:
+def task_out(db: Session, row: ApplicationTask) -> ApplicationTaskOut:
     benefit = db.get(Benefit, row.benefit_id)
     return ApplicationTaskOut(
         id=row.id,

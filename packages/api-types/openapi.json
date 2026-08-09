@@ -760,6 +760,214 @@
         }
       }
     },
+    "/api/sessions/{session_id}/applications": {
+      "get": {
+        "tags": [
+          "applications"
+        ],
+        "summary": "List Applications",
+        "operationId": "list_applications_api_sessions__session_id__applications_get",
+        "parameters": [
+          {
+            "name": "session_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Session Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ApplicationCaseOut"
+                  },
+                  "title": "Response List Applications Api Sessions  Session Id  Applications Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "applications"
+        ],
+        "summary": "Create Application",
+        "operationId": "create_application_api_sessions__session_id__applications_post",
+        "parameters": [
+          {
+            "name": "session_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Session Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApplicationCaseCreate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApplicationCaseOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/sessions/{session_id}/applications/{application_id}": {
+      "get": {
+        "tags": [
+          "applications"
+        ],
+        "summary": "Get Application",
+        "operationId": "get_application_api_sessions__session_id__applications__application_id__get",
+        "parameters": [
+          {
+            "name": "session_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Session Id"
+            }
+          },
+          {
+            "name": "application_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Application Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApplicationCaseOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/sessions/{session_id}/applications/{application_id}/status-events": {
+      "post": {
+        "tags": [
+          "applications"
+        ],
+        "summary": "Record Application Status",
+        "operationId": "record_application_status_api_sessions__session_id__applications__application_id__status_events_post",
+        "parameters": [
+          {
+            "name": "session_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Session Id"
+            }
+          },
+          {
+            "name": "application_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Application Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApplicationStatusEventCreate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApplicationCaseOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/benefits/{benefit_id}/reports": {
       "post": {
         "tags": [
@@ -3792,6 +4000,334 @@
           "recent_errors"
         ],
         "title": "AdminOverviewOut"
+      },
+      "ApplicationCaseCreate": {
+        "properties": {
+          "benefit_id": {
+            "type": "string",
+            "maxLength": 160,
+            "minLength": 1,
+            "title": "Benefit Id"
+          },
+          "application_channel": {
+            "type": "string",
+            "enum": [
+              "official_portal",
+              "in_person",
+              "assisted",
+              "other"
+            ],
+            "title": "Application Channel",
+            "default": "official_portal"
+          }
+        },
+        "type": "object",
+        "required": [
+          "benefit_id"
+        ],
+        "title": "ApplicationCaseCreate"
+      },
+      "ApplicationCaseOut": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "benefit_id": {
+            "type": "string",
+            "title": "Benefit Id"
+          },
+          "benefit_name": {
+            "type": "string",
+            "title": "Benefit Name"
+          },
+          "benefit_domain": {
+            "type": "string",
+            "title": "Benefit Domain"
+          },
+          "benefit_state_code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Benefit State Code"
+          },
+          "benefit_revision": {
+            "type": "integer",
+            "title": "Benefit Revision"
+          },
+          "benefit_verification_status": {
+            "type": "string",
+            "title": "Benefit Verification Status"
+          },
+          "source_title": {
+            "type": "string",
+            "title": "Source Title"
+          },
+          "source_document_url": {
+            "type": "string",
+            "title": "Source Document Url"
+          },
+          "last_verified_date": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Verified Date"
+          },
+          "application_channel": {
+            "type": "string",
+            "title": "Application Channel"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "status_provenance": {
+            "type": "string",
+            "title": "Status Provenance"
+          },
+          "status_recorded_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Status Recorded At"
+          },
+          "status_source_url": {
+            "type": "string",
+            "title": "Status Source Url"
+          },
+          "readiness_state": {
+            "type": "string",
+            "title": "Readiness State"
+          },
+          "readiness_blockers": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Readiness Blockers"
+          },
+          "external_reference_masked": {
+            "type": "string",
+            "title": "External Reference Masked"
+          },
+          "submission_date": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Submission Date"
+          },
+          "revision": {
+            "type": "integer",
+            "title": "Revision"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Updated At"
+          },
+          "closed_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Closed At"
+          },
+          "tasks": {
+            "items": {
+              "$ref": "#/components/schemas/ApplicationTaskOut"
+            },
+            "type": "array",
+            "title": "Tasks"
+          },
+          "status_events": {
+            "items": {
+              "$ref": "#/components/schemas/ApplicationStatusEventOut"
+            },
+            "type": "array",
+            "title": "Status Events"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "benefit_id",
+          "benefit_name",
+          "benefit_domain",
+          "benefit_state_code",
+          "benefit_revision",
+          "benefit_verification_status",
+          "source_title",
+          "source_document_url",
+          "last_verified_date",
+          "application_channel",
+          "status",
+          "status_provenance",
+          "status_recorded_at",
+          "status_source_url",
+          "readiness_state",
+          "readiness_blockers",
+          "external_reference_masked",
+          "submission_date",
+          "revision",
+          "created_at",
+          "updated_at",
+          "closed_at",
+          "tasks",
+          "status_events"
+        ],
+        "title": "ApplicationCaseOut"
+      },
+      "ApplicationStatusEventCreate": {
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "portal_opened",
+              "submitted",
+              "acknowledged",
+              "under_review",
+              "action_required",
+              "approved",
+              "delivered",
+              "rejected",
+              "withdrawn"
+            ],
+            "title": "Status"
+          },
+          "occurred_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Occurred At"
+          },
+          "submission_date": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Submission Date"
+          },
+          "external_reference": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 160
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "External Reference"
+          },
+          "reason_code": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 80
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason Code"
+          }
+        },
+        "type": "object",
+        "required": [
+          "status"
+        ],
+        "title": "ApplicationStatusEventCreate"
+      },
+      "ApplicationStatusEventOut": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "provenance": {
+            "type": "string",
+            "title": "Provenance"
+          },
+          "actor_type": {
+            "type": "string",
+            "title": "Actor Type"
+          },
+          "occurred_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Occurred At"
+          },
+          "recorded_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Recorded At"
+          },
+          "source_url": {
+            "type": "string",
+            "title": "Source Url"
+          },
+          "reason_code": {
+            "type": "string",
+            "title": "Reason Code"
+          },
+          "external_reference_masked": {
+            "type": "string",
+            "title": "External Reference Masked"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "status",
+          "provenance",
+          "actor_type",
+          "occurred_at",
+          "recorded_at",
+          "source_url",
+          "reason_code",
+          "external_reference_masked"
+        ],
+        "title": "ApplicationStatusEventOut"
       },
       "ApplicationTaskOut": {
         "properties": {

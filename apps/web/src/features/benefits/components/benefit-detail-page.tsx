@@ -1,6 +1,6 @@
 import { useState, type ReactNode } from "react";
 
-import { Link, useParams } from "@tanstack/react-router";
+import { Link, useNavigate, useParams } from "@tanstack/react-router";
 import {
   ArrowLeft,
   BriefcaseBusiness,
@@ -19,6 +19,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { useBenefitDetailQuery } from "@/features/benefits/queries";
+import { useCreateApplicationMutation } from "@/features/applications/queries";
 import { ReportIssuePanel } from "@/features/benefits/components/report-issue-panel";
 import { CriterionEvidence } from "@/features/conversation/components/criterion-evidence";
 import { useConversationStore } from "@/features/conversation/store";
@@ -99,9 +100,12 @@ export function BenefitDetailPage() {
   const detailQuery = useBenefitDetailQuery(benefitId);
   const sessionId = useGuestSessionStore((state) => state.sessionId);
   const accessToken = useGuestSessionStore((state) => state.accessToken);
+  const createApplicationMutation = useCreateApplicationMutation(sessionId, accessToken);
+  const navigate = useNavigate();
   const languageCode = useConversationStore((state) => state.languageCode);
   const lastTurn = useConversationStore((state) => state.lastTurn);
   const [shareNotice, setShareNotice] = useState("");
+  const [applicationNotice, setApplicationNotice] = useState("");
 
   const currentMatch = lastTurn?.matches.find((match) => match.benefit_id === benefitId);
   const detail = detailQuery.data;
@@ -122,6 +126,25 @@ export function BenefitDetailPage() {
     } catch {
       setShareNotice("Sharing was cancelled.");
     }
+  }
+
+  function startApplicationAssistance() {
+    if (!detail || !sessionId || !accessToken) {
+      setApplicationNotice("Start a guest session from the home page before creating a private checklist.");
+      return;
+    }
+    setApplicationNotice("");
+    createApplicationMutation.mutate(
+      { benefit_id: detail.id, application_channel: "official_portal" },
+      {
+        onSuccess: (application) =>
+          void navigate({
+            to: "/applications/$applicationId",
+            params: { applicationId: application.id },
+          }),
+        onError: (error) => setApplicationNotice(toUserMessage(error)),
+      },
+    );
   }
 
   return (
@@ -175,12 +198,31 @@ export function BenefitDetailPage() {
                   </h1>
                   <p className="mt-4 max-w-3xl text-base leading-7 text-paper/65">{detail.description}</p>
                 </div>
-                <Button type="button" variant="outline" className="shrink-0" onClick={sharePage}>
-                  <Share2 className="size-4" aria-hidden="true" />
-                  Share
-                </Button>
+                <div className="flex shrink-0 flex-wrap gap-2 sm:justify-end">
+                  {detail.verification_status === "human_verified" && (
+                    <Button
+                      type="button"
+                      onClick={startApplicationAssistance}
+                      disabled={createApplicationMutation.isPending}
+                    >
+                      <ClipboardList className="size-4" aria-hidden="true" />
+                      {createApplicationMutation.isPending
+                        ? "Opening…"
+                        : "Start application assistance"}
+                    </Button>
+                  )}
+                  <Button type="button" variant="outline" onClick={sharePage}>
+                    <Share2 className="size-4" aria-hidden="true" />
+                    Share
+                  </Button>
+                </div>
               </div>
               {shareNotice && <p className="mt-2 text-xs text-acid" role="status">{shareNotice}</p>}
+              {applicationNotice && (
+                <p className="mt-2 text-xs text-orange" role="status">
+                  {applicationNotice}
+                </p>
+              )}
             </header>
 
             {currentMatch && (

@@ -318,6 +318,58 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/sessions/{session_id}/applications": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Applications */
+        get: operations["list_applications_api_sessions__session_id__applications_get"];
+        put?: never;
+        /** Create Application */
+        post: operations["create_application_api_sessions__session_id__applications_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/sessions/{session_id}/applications/{application_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Application */
+        get: operations["get_application_api_sessions__session_id__applications__application_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/sessions/{session_id}/applications/{application_id}/status-events": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Record Application Status */
+        post: operations["record_application_status_api_sessions__session_id__applications__application_id__status_events_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/benefits/{benefit_id}/reports": {
         parameters: {
             query?: never;
@@ -1407,6 +1459,122 @@ export interface components {
             providers: components["schemas"]["ProviderStatusOut"][];
             /** Recent Errors */
             recent_errors: components["schemas"]["RecentErrorOut"][];
+        };
+        /** ApplicationCaseCreate */
+        ApplicationCaseCreate: {
+            /** Benefit Id */
+            benefit_id: string;
+            /**
+             * Application Channel
+             * @default official_portal
+             * @enum {string}
+             */
+            application_channel: "official_portal" | "in_person" | "assisted" | "other";
+        };
+        /** ApplicationCaseOut */
+        ApplicationCaseOut: {
+            /** Id */
+            id: string;
+            /** Benefit Id */
+            benefit_id: string;
+            /** Benefit Name */
+            benefit_name: string;
+            /** Benefit Domain */
+            benefit_domain: string;
+            /** Benefit State Code */
+            benefit_state_code: string | null;
+            /** Benefit Revision */
+            benefit_revision: number;
+            /** Benefit Verification Status */
+            benefit_verification_status: string;
+            /** Source Title */
+            source_title: string;
+            /** Source Document Url */
+            source_document_url: string;
+            /** Last Verified Date */
+            last_verified_date: string | null;
+            /** Application Channel */
+            application_channel: string;
+            /** Status */
+            status: string;
+            /** Status Provenance */
+            status_provenance: string;
+            /**
+             * Status Recorded At
+             * Format: date-time
+             */
+            status_recorded_at: string;
+            /** Status Source Url */
+            status_source_url: string;
+            /** Readiness State */
+            readiness_state: string;
+            /** Readiness Blockers */
+            readiness_blockers: string[];
+            /** External Reference Masked */
+            external_reference_masked: string;
+            /** Submission Date */
+            submission_date: string | null;
+            /** Revision */
+            revision: number;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /**
+             * Updated At
+             * Format: date-time
+             */
+            updated_at: string;
+            /** Closed At */
+            closed_at: string | null;
+            /** Tasks */
+            tasks: components["schemas"]["ApplicationTaskOut"][];
+            /** Status Events */
+            status_events: components["schemas"]["ApplicationStatusEventOut"][];
+        };
+        /** ApplicationStatusEventCreate */
+        ApplicationStatusEventCreate: {
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "portal_opened" | "submitted" | "acknowledged" | "under_review" | "action_required" | "approved" | "delivered" | "rejected" | "withdrawn";
+            /** Occurred At */
+            occurred_at?: string | null;
+            /** Submission Date */
+            submission_date?: string | null;
+            /** External Reference */
+            external_reference?: string | null;
+            /** Reason Code */
+            reason_code?: string | null;
+        };
+        /** ApplicationStatusEventOut */
+        ApplicationStatusEventOut: {
+            /** Id */
+            id: string;
+            /** Status */
+            status: string;
+            /** Provenance */
+            provenance: string;
+            /** Actor Type */
+            actor_type: string;
+            /**
+             * Occurred At
+             * Format: date-time
+             */
+            occurred_at: string;
+            /**
+             * Recorded At
+             * Format: date-time
+             */
+            recorded_at: string;
+            /** Source Url */
+            source_url: string;
+            /** Reason Code */
+            reason_code: string;
+            /** External Reference Masked */
+            external_reference_masked: string;
         };
         /** ApplicationTaskOut */
         ApplicationTaskOut: {
@@ -4316,6 +4484,140 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_applications_api_sessions__session_id__applications_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                session_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApplicationCaseOut"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    create_application_api_sessions__session_id__applications_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                session_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ApplicationCaseCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApplicationCaseOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_application_api_sessions__session_id__applications__application_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                session_id: string;
+                application_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApplicationCaseOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    record_application_status_api_sessions__session_id__applications__application_id__status_events_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                session_id: string;
+                application_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ApplicationStatusEventCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApplicationCaseOut"];
+                };
             };
             /** @description Validation Error */
             422: {

@@ -61,6 +61,21 @@ DEFAULT_FEATURE_FLAGS: dict[str, dict[str, Any]] = {
         "enabled": False,
         "rollout_percentage": 0,
     },
+    "application_copilot": {
+        "description": (
+            "Citizen application checklist and manually reported status journey "
+            "for reviewed benefits."
+        ),
+        "enabled": True,
+        "rollout_percentage": 100,
+    },
+    "application_status_sync": {
+        "description": (
+            "Authorized provider adapters that verify application status from official systems."
+        ),
+        "enabled": False,
+        "rollout_percentage": 0,
+    },
 }
 
 

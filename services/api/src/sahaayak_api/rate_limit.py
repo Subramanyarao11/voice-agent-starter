@@ -177,6 +177,14 @@ async def enforce_rate_limit(
         "text": (settings.rate_limit_text_per_session, settings.rate_limit_text_per_ip),
         "voice": (settings.rate_limit_voice_per_session, settings.rate_limit_voice_per_ip),
         "rag": (settings.rate_limit_rag_per_session, settings.rate_limit_rag_per_ip),
+        "application_create": (
+            settings.rate_limit_application_create_per_session,
+            settings.rate_limit_application_create_per_ip,
+        ),
+        "application_status": (
+            settings.rate_limit_application_status_per_session,
+            settings.rate_limit_application_status_per_ip,
+        ),
         # Contact verification gets its own budget rather than sharing the
         # text bucket. Each challenge sends a real charged message, and the
         # attempt limit is an anti-guessing control as much as an abuse one.

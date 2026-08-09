@@ -118,6 +118,10 @@ class Settings(BaseSettings):
     rate_limit_rag_per_session: int = 10
     rate_limit_rag_per_ip: int = 30
     rate_limit_session_create_per_ip: int = 10
+    rate_limit_application_create_per_session: int = 10
+    rate_limit_application_create_per_ip: int = 30
+    rate_limit_application_status_per_session: int = 20
+    rate_limit_application_status_per_ip: int = 60
     rate_limit_window_seconds: int = 60
     rate_limit_key_salt: str = ""
     rate_limit_enabled: bool = True
@@ -199,6 +203,12 @@ class Settings(BaseSettings):
     # channels refuse to enable without it rather than falling back to storing
     # a phone number in plaintext.
     infobip_contact_encryption_key: str = ""
+
+    # Application references (acknowledgement numbers, application IDs) are
+    # encrypted separately from messaging destinations. The manual status
+    # workflow can still be used without this key when no reference is saved;
+    # reference capture fails closed until deployment supplies it.
+    application_data_encryption_key: str = ""
 
     # A single outbound message can only cost so much before something is
     # wrong with the template. Unicode Kannada/Hindi text costs roughly one

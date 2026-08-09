@@ -3,6 +3,7 @@
 from sahaayak_api.routers import (
     admin,
     admin_directory,
+    applications,
     benefit_feedback,
     browser_sessions,
     catalog,
@@ -19,6 +20,7 @@ from sahaayak_api.routers import (
 __all__ = [
     "admin",
     "admin_directory",
+    "applications",
     "benefit_feedback",
     "browser_sessions",
     "catalog",

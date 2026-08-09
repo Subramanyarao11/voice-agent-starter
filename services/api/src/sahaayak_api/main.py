@@ -19,6 +19,7 @@ from sahaayak_api.routers import (
     admin,
     admin_directory,
     admin_notifications,
+    applications,
     benefit_feedback,
     browser_sessions,
     catalog,
@@ -88,6 +89,7 @@ app.include_router(turns.router)
 app.include_router(voice_stream.router)
 app.include_router(rag.router)
 app.include_router(saved_benefits.router)
+app.include_router(applications.router)
 app.include_router(benefit_feedback.router)
 app.include_router(contact_points.router)
 app.include_router(browser_sessions.router)

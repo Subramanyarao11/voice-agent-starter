@@ -182,6 +182,46 @@ export const applicationTaskSchema = z.object({
   updated_at: z.string(),
 });
 
+export const applicationStatusEventSchema = z.object({
+  id: z.string(),
+  status: z.string(),
+  provenance: z.string(),
+  actor_type: z.string(),
+  occurred_at: z.string(),
+  recorded_at: z.string(),
+  source_url: z.string(),
+  reason_code: z.string(),
+  external_reference_masked: z.string(),
+});
+
+export const applicationCaseSchema = z.object({
+  id: z.string(),
+  benefit_id: z.string(),
+  benefit_name: z.string(),
+  benefit_domain: z.string(),
+  benefit_state_code: z.string().nullable(),
+  benefit_revision: z.number(),
+  benefit_verification_status: z.string(),
+  source_title: z.string(),
+  source_document_url: z.string(),
+  last_verified_date: z.string().nullable(),
+  application_channel: z.string(),
+  status: z.string(),
+  status_provenance: z.string(),
+  status_recorded_at: z.string(),
+  status_source_url: z.string(),
+  readiness_state: z.string(),
+  readiness_blockers: z.array(z.string()),
+  external_reference_masked: z.string(),
+  submission_date: z.string().nullable(),
+  revision: z.number(),
+  created_at: z.string(),
+  updated_at: z.string(),
+  closed_at: z.string().nullable(),
+  tasks: z.array(applicationTaskSchema),
+  status_events: z.array(applicationStatusEventSchema),
+});
+
 export const contactPointSchema = z.object({
   id: z.string(),
   channel: z.string(),
@@ -243,6 +283,8 @@ export type RetrievedSource = z.infer<typeof retrievedSourceSchema>;
 export type SavedBenefit = z.infer<typeof savedBenefitSchema>;
 export type Reminder = z.infer<typeof reminderSchema>;
 export type ApplicationTask = z.infer<typeof applicationTaskSchema>;
+export type ApplicationStatusEvent = z.infer<typeof applicationStatusEventSchema>;
+export type ApplicationCase = z.infer<typeof applicationCaseSchema>;
 export type ContactPoint = z.infer<typeof contactPointSchema>;
 export type ChannelStatus = z.infer<typeof channelStatusSchema>;
 
@@ -465,6 +507,69 @@ export function updateApplicationTask(
       method: "POST",
       body: JSON.stringify({status}),
       headers: {Authorization: `Bearer ${accessToken}`},
+    },
+  );
+}
+
+export function getApplications(sessionId: string, accessToken: string): Promise<ApplicationCase[]> {
+  return request(
+    "/api/sessions/" + encodeURIComponent(sessionId) + "/applications",
+    z.array(applicationCaseSchema),
+    { headers: { Authorization: "Bearer " + accessToken } },
+  );
+}
+
+export function getApplication(
+  sessionId: string,
+  applicationId: string,
+  accessToken: string,
+): Promise<ApplicationCase> {
+  return request(
+    "/api/sessions/" + encodeURIComponent(sessionId) + "/applications/" + encodeURIComponent(applicationId),
+    applicationCaseSchema,
+    { headers: { Authorization: "Bearer " + accessToken } },
+  );
+}
+
+export function createApplication(
+  sessionId: string,
+  payload: { benefit_id: string; application_channel?: string },
+  accessToken: string,
+): Promise<ApplicationCase> {
+  return request(
+    "/api/sessions/" + encodeURIComponent(sessionId) + "/applications",
+    applicationCaseSchema,
+    {
+      method: "POST",
+      body: JSON.stringify(payload),
+      headers: { Authorization: "Bearer " + accessToken },
+    },
+  );
+}
+
+export function recordApplicationStatus(
+  sessionId: string,
+  applicationId: string,
+  payload: {
+    status: string;
+    occurred_at?: string;
+    submission_date?: string;
+    external_reference?: string;
+    reason_code?: string;
+  },
+  accessToken: string,
+): Promise<ApplicationCase> {
+  return request(
+    "/api/sessions/" +
+      encodeURIComponent(sessionId) +
+      "/applications/" +
+      encodeURIComponent(applicationId) +
+      "/status-events",
+    applicationCaseSchema,
+    {
+      method: "POST",
+      body: JSON.stringify(payload),
+      headers: { Authorization: "Bearer " + accessToken },
     },
   );
 }
