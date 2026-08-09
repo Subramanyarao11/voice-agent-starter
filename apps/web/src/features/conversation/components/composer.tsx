@@ -59,7 +59,7 @@ export function Composer({
         value={draft}
         onChange={(event) => onDraftChange(event.target.value)}
         onKeyDown={handleKeyDown}
-        placeholder={selectedLanguageName ? t("typeInLanguage", {language: selectedLanguageName}) : t("typeWhatYouNeed")}
+        placeholder={selectedLanguageName && selectedLanguageName !== "English" ? t("typeInLanguage", {language: selectedLanguageName}) : t("typeWhatYouNeed")}
         rows={2}
         disabled={disabled || recording}
         aria-describedby="composer-help"

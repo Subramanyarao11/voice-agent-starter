@@ -16,7 +16,19 @@ export function PwaRuntime({ children }: { children: ReactNode }) {
   // shell. It avoids competing with the first text render and is a no-op in
   // development because the Vite PWA plugin's dev option is disabled.
   useEffect(() => {
-    if (!import.meta.env.PROD) return;
+    if (!import.meta.env.PROD) {
+      // A production service worker previously installed on localhost can
+      // otherwise keep serving an old build over the Vite development server.
+      // Clear only Cache Storage/service-worker registrations; IndexedDB
+      // drafts and user-created local state are intentionally preserved.
+      void navigator.serviceWorker?.getRegistrations().then((registrations) =>
+        Promise.all(registrations.map((registration) => registration.unregister())),
+      );
+      if ("caches" in window) {
+        void caches.keys().then((keys) => Promise.all(keys.map((key) => caches.delete(key))));
+      }
+      return;
+    }
     const timer = window.setTimeout(() => {
       const update = registerServiceWorker({
         onNeedRefresh: () => setNeedRefresh(true),

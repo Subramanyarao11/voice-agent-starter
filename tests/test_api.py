@@ -354,6 +354,49 @@ def test_a_caller_can_have_their_record_deleted(client, guest_session):
     ).status_code == 401
 
 
+def test_clearing_conversation_preserves_saved_work(client, guest_session):
+    session = guest_session()
+    client.post(
+        "/api/turns",
+        json={"text": "I need a scholarship", "language_code": "en"},
+        headers=session["headers"],
+    )
+    saved = client.post(
+        f"/api/sessions/{session['session_id']}/saved-benefits",
+        json={"benefit_id": "demo-csss-cus"},
+        headers=session["headers"],
+    )
+    assert saved.status_code == 201
+
+    cleared = client.delete(
+        f"/api/sessions/{session['session_id']}/conversation",
+        headers=session["headers"],
+    )
+    assert cleared.status_code == 204
+
+    body = client.get(
+        f"/api/sessions/{session['session_id']}", headers=session["headers"]
+    ).json()
+    assert body["profile"] == {}
+    assert body["conversation_state"] == {}
+    assert body["turn_count"] == 0
+    assert body["matched_benefit_ids"] == []
+    assert client.get(
+        f"/api/sessions/{session['session_id']}/transcript",
+        headers=session["headers"],
+    ).json() == []
+    assert len(
+        client.get(
+            f"/api/sessions/{session['session_id']}/saved-benefits",
+            headers=session["headers"],
+        ).json()
+    ) == 1
+    assert client.get(
+        f"/api/sessions/{session['session_id']}/tasks",
+        headers=session["headers"],
+    ).json()
+
+
 def test_escalations_are_recorded_as_tickets(client, guest_session):
     session = guest_session()
     client.post(

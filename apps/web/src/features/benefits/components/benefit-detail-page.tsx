@@ -250,9 +250,12 @@ export function BenefitDetailPage() {
                     </ul>
                   )}
                   <CriterionEvidence match={currentMatch} />
-                  <p className="text-xs text-paper/45">
-                    Confidence: {Math.round(currentMatch.confidence * 100)}%. Missing or
-                    source-ambiguous conditions should be confirmed with a person.
+                  <p className="text-xs leading-5 text-paper/50">
+                    {currentMatch.verdict === "eligible"
+                      ? "Your answers match the conditions checked above. Confirm the official source before applying."
+                      : currentMatch.verdict === "not_eligible"
+                        ? "At least one confirmed answer does not meet a condition above. This is guidance, not an official decision."
+                        : "Some conditions still need information or source confirmation before eligibility can be assessed."}
                   </p>
                 </CardContent>
               </Card>

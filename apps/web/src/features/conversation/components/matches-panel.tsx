@@ -2,7 +2,6 @@ import { Bookmark, BookmarkCheck, CheckCircle2, CircleAlert, CircleX, Columns3 }
 import { Link } from "@tanstack/react-router";
 
 import type { MatchSummary, TurnResponse } from "@/lib/api";
-import { formatConfidence } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -168,9 +167,6 @@ function MatchCard({
         >
           {t("viewDetails")}
         </Link>
-        <p className="mt-5 font-mono text-[0.65rem] uppercase tracking-[0.14em] text-muted-foreground">
-          {t("confidence")} · {formatConfidence(match.confidence)}
-        </p>
       </CardContent>
     </Card>
   );

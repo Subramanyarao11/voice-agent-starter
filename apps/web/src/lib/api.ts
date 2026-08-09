@@ -1334,7 +1334,7 @@ export function sendVoiceTurn(
 }
 
 export function resetSession(sessionId: string, accessToken: string): Promise<void> {
-  return request(`/api/sessions/${encodeURIComponent(sessionId)}`, z.undefined(), {
+  return request(`/api/sessions/${encodeURIComponent(sessionId)}/conversation`, z.undefined(), {
     method: "DELETE",
     headers: { Authorization: `Bearer ${accessToken}` },
   });

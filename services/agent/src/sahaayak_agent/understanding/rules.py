@@ -87,14 +87,47 @@ def parse_money(text: str) -> int | None:
     value, since callers reading off an income certificate say the full figure.
     """
     normalised = _normalise(text).lower()
-    number = extract_number(normalised)
-    if number is None:
-        return None
+
+    # A volunteered answer often contains several numbers, for example
+    # "I am 22 and my income is 12 lakh".  The amount is the number nearest
+    # the magnitude/currency marker, not necessarily the first number in the
+    # sentence.  Reading the first number here silently turned that example
+    # into 22 lakh and produced a wrong eligibility explanation.
+    currency_amount = re.search(r"₹\s*(\d[\d,]*\.?\d*)", normalised)
+    if currency_amount:
+        return int(round(float(currency_amount.group(1).replace(",", ""))))
 
     for word, factor in _MULTIPLIERS:
-        if word in normalised:
+        marker = normalised.find(word)
+        if marker < 0:
+            continue
+        number = _nearest_number_before(normalised, marker)
+        if number is not None:
             return int(round(number * factor))
-    return int(round(number))
+
+    rupee_context = re.search(
+        r"(?:rupees?|rs\.?)\s*(\d[\d,]*\.?\d*)|(\d[\d,]*\.?\d*)\s*(?:rupees?|rs\.?)",
+        normalised,
+    )
+    if rupee_context:
+        amount = rupee_context.group(1) or rupee_context.group(2)
+        return int(round(float(amount.replace(",", ""))))
+
+    number = extract_number(normalised)
+    return int(round(number)) if number is not None else None
+
+
+def _nearest_number_before(text: str, marker: int) -> float | None:
+    """Return the number immediately preceding a money magnitude marker."""
+    prefix = text[:marker]
+    numeric_matches = list(_NUMERIC.finditer(prefix))
+    if numeric_matches:
+        return float(numeric_matches[-1].group(1).replace(",", ""))
+
+    for token in reversed(_TOKEN_SEPARATOR.split(prefix)):
+        if token in _WORD_NUMBERS:
+            return float(_WORD_NUMBERS[token])
+    return None
 
 
 def parse_age(text: str) -> int | None:
@@ -173,15 +206,17 @@ _EDUCATION_PATTERNS: list[tuple[EducationLevel, re.Pattern]] = [
         "iti", "diploma", "polytechnic", "डिप्लोमा", "आईटीआई", "ಡಿಪ್ಲೊಮಾ", "ಐಟಿಐ",
     ])),
     (EducationLevel.CLASS_12, _keyword_matcher([
-        "12th", "12", "twelfth", "puc", "pu", "intermediate", "plus two", "+2",
+        "12th", "class 12", "grade 12", "standard 12", "twelfth", "puc", "pu",
+        "intermediate", "plus two", "+2",
         "बारहवीं", "बारहवी", "ಪಿಯುಸಿ", "ಹನ್ನೆರಡನೇ",
     ])),
     (EducationLevel.CLASS_10, _keyword_matcher([
-        "10th", "10", "tenth", "sslc", "matric", "matriculation",
+        "10th", "class 10", "grade 10", "standard 10", "tenth", "sslc", "matric",
+        "matriculation",
         "दसवीं", "दसवी", "ಎಸ್ಎಸ್ಎಲ್ಸಿ", "ಹತ್ತನೇ",
     ])),
     (EducationLevel.CLASS_8, _keyword_matcher([
-        "8th", "8", "eighth", "आठवीं", "ಎಂಟನೇ",
+        "8th", "class 8", "grade 8", "standard 8", "eighth", "आठवीं", "ಎಂಟನೇ",
     ])),
     (EducationLevel.PRIMARY, _keyword_matcher([
         "primary", "5th", "प्राथमिक", "ಪ್ರಾಥಮಿಕ",
@@ -286,6 +321,16 @@ def parse_category(text: str) -> SocialCategory | None:
 
 
 def parse_education(text: str) -> EducationLevel | None:
+    # A bare class number is valid when it is the entire answer to an
+    # education question. Inside a longer volunteered sentence, however,
+    # numbers such as "12 lakh" are money and must not imply class 12.
+    direct_class = _normalise(text).lower().strip()
+    if direct_class in {"12", "१२", "೧೨"}:
+        return EducationLevel.CLASS_12
+    if direct_class in {"10", "१०", "೧೦"}:
+        return EducationLevel.CLASS_10
+    if direct_class in {"8", "८", "೮"}:
+        return EducationLevel.CLASS_8
     for level, pattern in _EDUCATION_PATTERNS:
         if pattern.search(text):
             return level

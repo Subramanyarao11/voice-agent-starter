@@ -121,6 +121,11 @@ async def test_no_matches_offers_a_human_rather_than_stopping(runtime, caller_id
         EscalationReason.NO_MATCHES,
         EscalationReason.LOW_CONFIDENCE,
     }
+    if state.matches:
+        assert get_catalog("en").render(
+            "related_options", count=len(state.matches)
+        ) in state.response_text
+        assert get_catalog("en").render("no_matches") not in state.response_text
 
 
 @pytest.mark.asyncio

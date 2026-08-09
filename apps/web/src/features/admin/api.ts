@@ -816,7 +816,10 @@ export function resolveAdminEscalation(
 }
 
 export function getAdminDirectory(token: string): Promise<AdminDirectory> {
-  return request("/api/admin/departments?status=all&limit=500", directoryListSchema, adminInit(token));
+  // Directory rows contain edit and history controls. Rendering hundreds of
+  // those forms at once makes the control centre unresponsive, so the review
+  // queue intentionally loads only the newest operational batch.
+  return request("/api/admin/departments?status=all&limit=50", directoryListSchema, adminInit(token));
 }
 
 export function approveAdminDirectoryEntry(token: string, entryId: string, reason: string): Promise<AdminDirectoryEntry> {

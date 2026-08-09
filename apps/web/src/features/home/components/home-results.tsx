@@ -72,11 +72,13 @@ export default function HomeResults({
           savedBenefits={savedBenefitsQuery.data ?? []}
         />
       </section>
-      <ContactSettingsPanel
-        sessionId={sessionId}
-        accessToken={accessToken}
-        languageCode={languageCode}
-      />
+      {(savedBenefitsQuery.data?.length ?? 0) > 0 && (
+        <ContactSettingsPanel
+          sessionId={sessionId}
+          accessToken={accessToken}
+          languageCode={languageCode}
+        />
+      )}
     </section>
   );
 }

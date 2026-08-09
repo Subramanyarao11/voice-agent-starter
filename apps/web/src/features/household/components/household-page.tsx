@@ -79,7 +79,7 @@ function SignInPanel({ onSignIn, pending }: { onSignIn: () => void; pending: boo
           <div className="rounded-lg border border-warning/40 bg-warning/10 p-4 text-sm leading-6">
             <p className="font-semibold">Citizen sign-in is not enabled for this web deployment.</p>
             <p className="mt-1 text-muted-foreground">
-              Configure the citizen OIDC issuer, public client, BFF flag, redirect URI, and server encryption key before enabling this workspace.
+              You can still search anonymously, save work in this browser, and use the application tools. Household profiles will be available when secure sign-in is enabled.
             </p>
           </div>
         )}

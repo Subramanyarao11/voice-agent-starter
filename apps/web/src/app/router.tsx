@@ -6,6 +6,7 @@ import { CitizenCallbackPage } from "@/routes/citizen-callback";
 import { DataUsagePage } from "@/routes/data-usage";
 import { OfflinePage } from "@/routes/offline";
 import { PwaRuntime } from "@/features/pwa/components/pwa-runtime";
+import { AppErrorBoundary } from "@/components/app/app-error-boundary";
 
 const AdminRoutePage = lazyRouteComponent(() => import("@/routes/admin"), "AdminRoutePage");
 const BenefitDetailRoutePage = lazyRouteComponent(
@@ -37,7 +38,9 @@ const AssistantSessionRoutePage = lazyRouteComponent(
 function RootLayout() {
   return (
     <PwaRuntime>
-      <Outlet />
+      <AppErrorBoundary>
+        <Outlet />
+      </AppErrorBoundary>
     </PwaRuntime>
   );
 }

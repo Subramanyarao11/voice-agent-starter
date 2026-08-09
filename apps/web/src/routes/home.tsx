@@ -215,13 +215,12 @@ export function HomePage() {
     } finally {
       clearConversation();
       clearComparison();
-      clearSession();
       setFeedback({
         kind: remoteResetFailed ? "error" : "notice",
         text: remoteResetFailed ? t("sessionClearedLocally") : t("sessionCleared"),
       });
     }
-  }, [accessToken, clearComparison, clearConversation, clearSession, isSending, resetMutation, sessionId, t]);
+  }, [accessToken, clearComparison, clearConversation, isSending, resetMutation, sessionId, t]);
 
   const connected = healthQuery.data?.status === "ok" && Boolean(accessToken);
 

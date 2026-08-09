@@ -261,6 +261,7 @@ function EscalationCard({
 }
 
 function DirectoryPage({ token, role }: { token: string; role: string }) {
+  const [visibleCount, setVisibleCount] = useState(12);
   const query = useAdminDirectoryQuery(token);
   const approve = useApproveAdminDirectoryMutation(token);
   const deactivate = useDeactivateAdminDirectoryMutation(token);
@@ -362,7 +363,10 @@ function DirectoryPage({ token, role }: { token: string; role: string }) {
           <p className="text-sm leading-6 text-paper/50">The runtime prefers exact pincode, then pincode prefix, then district. Stale or unapproved records fall back to a clearly labelled state/domain helpdesk.</p>
         </CardHeader>
         <CardContent className="space-y-3">
-          {query.data.entries.map((entry) => (
+          <p className="text-sm leading-6 text-paper/55">
+            Showing {Math.min(visibleCount, query.data.entries.length)} of the {query.data.entries.length} newest loaded rows ({query.data.total} total). Use the state coverage table to plan review batches.
+          </p>
+          {query.data.entries.slice(0, visibleCount).map((entry) => (
             <DirectoryEntryCard
               key={entry.id}
               token={token}
@@ -376,6 +380,11 @@ function DirectoryPage({ token, role }: { token: string; role: string }) {
               onRollback={(version, reason) => rollback.mutate({entryId: entry.id, version, reason})}
             />
           ))}
+          {visibleCount < query.data.entries.length && (
+            <Button type="button" variant="outline" onClick={() => setVisibleCount((count) => count + 12)}>
+              Show 12 more directory rows
+            </Button>
+          )}
           {!query.data.entries.length && <EmptyState label="No directory rows imported. Run the official directory import script, then review the pending rows here." />}
         </CardContent>
       </Card>

@@ -26,6 +26,9 @@ from sahaayak_contracts import EducationLevel, Gender, Intent, SlotName, SocialC
         ("२ लाख", 200_000),
         ("೧ ಲಕ್ಷ", 100_000),
         ("₹45000", 45_000),
+        ("I am 22 years old and my annual family income is 12 lakh", 1_200_000),
+        ("I am 22 years old and earn ₹4,50,000", 450_000),
+        ("age 22 and income is 450000 rupees", 450_000),
     ],
 )
 def test_money_handles_indian_magnitudes_and_scripts(utterance, expected):
@@ -73,6 +76,12 @@ def test_education_prefers_the_more_specific_match():
     assert rules.parse_education("I am doing my degree") is EducationLevel.UG
     assert rules.parse_education("ಪದವಿ") is EducationLevel.UG
     assert rules.parse_education("SSLC pass") is EducationLevel.CLASS_10
+    assert rules.parse_education("12") is EducationLevel.CLASS_12
+    assert rules.parse_education("I studied up to class 10") is EducationLevel.CLASS_10
+    assert (
+        rules.parse_education("I am 22 and my income is 12 lakh and I studied class 10")
+        is EducationLevel.CLASS_10
+    )
 
 
 def test_negation_wins_over_a_stray_affirmative():
@@ -110,6 +119,14 @@ def test_volunteered_details_are_picked_up_without_being_asked():
     assert found[SlotName.SOCIAL_CATEGORY] == SocialCategory.SC.value
     assert found[SlotName.GENDER] == Gender.FEMALE.value
     assert found[SlotName.EDUCATION_LEVEL] == EducationLevel.UG.value
+
+
+def test_age_is_not_mistaken_for_the_income_in_a_combined_answer():
+    found = rules.extract_volunteered_slots(
+        "I am 22 years old and my annual family income is 12 lakh"
+    )
+    assert found[SlotName.AGE] == 22
+    assert found[SlotName.ANNUAL_FAMILY_INCOME] == 1_200_000
 
 
 def test_bare_numbers_are_not_guessed_as_income():

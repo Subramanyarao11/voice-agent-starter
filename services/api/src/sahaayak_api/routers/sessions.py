@@ -226,6 +226,33 @@ def reset_session(
     db.commit()
 
 
+@router.delete("/{session_id}/conversation", status_code=204)
+def clear_conversation(
+    session_id: str,
+    db: Session = Depends(get_session),
+    principal: BrowserSessionPrincipal = Depends(require_browser_session),
+) -> None:
+    """Start a fresh conversation while preserving the caller's saved work.
+
+    This is deliberately separate from deleting the guest session. A button
+    labelled "Clear conversation" must not also erase saved benefits,
+    application tasks, reminders, or verified contact preferences.
+    """
+    _require_own_session(session_id, principal)
+    row = db.get(UserSession, principal.session_id)
+    if row is None:
+        return
+
+    db.exec(delete(ConversationTurnLog).where(ConversationTurnLog.session_id == row.id))
+    row.profile = {}
+    row.conversation_state = {}
+    row.open_tasks = []
+    row.matched_benefit_ids = []
+    row.turn_count = 0
+    db.add(row)
+    db.commit()
+
+
 def _require_own_session(session_id: str, principal: BrowserSessionPrincipal) -> None:
     if session_id != principal.session_id:
         # Do not reveal whether another public identifier exists.

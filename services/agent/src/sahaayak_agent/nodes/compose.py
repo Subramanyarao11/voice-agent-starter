@@ -106,7 +106,12 @@ def _render_results(state: AgentState, catalog, deps: GraphDeps) -> list[str]:
     ][:MAX_SPOKEN_RESULTS]
 
     if not confident:
-        return [catalog.render("no_matches")]
+        # Ranked rows can still be useful even when none is a confident
+        # eligibility match.  Calling that state "nothing found" contradicts
+        # the visual client, which deliberately shows those rows as related
+        # options with criterion-level reasons.
+        key = "related_options" if state.matches else "no_matches"
+        return [catalog.render(key, count=len(state.matches))]
 
     with deps.session_factory() as session:
         details = load_briefs(
