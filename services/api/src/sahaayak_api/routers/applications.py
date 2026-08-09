@@ -757,24 +757,87 @@ async def record_application_status(
     apply_rate_limit_headers(http_response, decision)
 
     case = _case_for_session(db, principal.session_id, application_id)
+    _apply_application_status_event(
+        db,
+        case,
+        status_value=payload.status,
+        occurred_at=payload.occurred_at,
+        submission_date=payload.submission_date,
+        external_reference=payload.external_reference,
+        reason_code=payload.reason_code,
+        provenance="citizen_reported",
+        actor_type="citizen",
+        actor_id=principal.session_id,
+    )
+    db.commit()
+    db.refresh(case)
+    return _case_out(db, case)
+
+
+def apply_assisted_application_status(
+    db: Session,
+    case: ApplicationCase,
+    *,
+    status_value: ApplicationStatus,
+    occurred_at: datetime | None,
+    submission_date: date | None,
+    external_reference: str | None,
+    reason_code: str | None,
+    actor_id: str,
+) -> None:
+    """Apply a citizen-confirmed Saathi status to the real application case.
+
+    This is intentionally a service seam rather than an HTTP self-call. The
+    helper action already passed citizen confirmation, so the downstream
+    mutation shares the application transition, encryption, reminder, and
+    append-only status-event rules without fabricating a browser token.
+    """
+
+    _apply_application_status_event(
+        db,
+        case,
+        status_value=status_value,
+        occurred_at=occurred_at,
+        submission_date=submission_date,
+        external_reference=external_reference,
+        reason_code=reason_code,
+        provenance="citizen_reported",
+        actor_type="operator",
+        actor_id=actor_id,
+    )
+
+
+def _apply_application_status_event(
+    db: Session,
+    case: ApplicationCase,
+    *,
+    status_value: ApplicationStatus,
+    occurred_at: datetime | None,
+    submission_date: date | None,
+    external_reference: str | None,
+    reason_code: str | None,
+    provenance: str,
+    actor_type: str,
+    actor_id: str,
+) -> None:
     allowed = _ALLOWED_NEXT.get(case.status, set())
-    if payload.status != case.status and payload.status not in allowed:
+    if status_value != case.status and status_value not in allowed:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
             detail=(
                 f"A {case.status.replace('_', ' ')} application cannot move to "
-                f"{payload.status.replace('_', ' ')}."
+                f"{status_value.replace('_', ' ')}."
             ),
         )
 
-    occurred_at = _as_utc(payload.occurred_at or datetime.now(UTC))
+    occurred = _as_utc(occurred_at or datetime.now(UTC))
     now = datetime.now(UTC)
-    if occurred_at > now + timedelta(minutes=5):
+    if occurred > now + timedelta(minutes=5):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Status time cannot be in the future.",
         )
-    if occurred_at < _as_utc(case.created_at) - timedelta(days=1):
+    if occurred < _as_utc(case.created_at) - timedelta(days=1):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Status time is earlier than this application journey.",
@@ -783,9 +846,9 @@ async def record_application_status(
     masked_reference = ""
     encrypted_reference = None
     reference_digest = None
-    if payload.external_reference:
+    if external_reference:
         try:
-            normalized_reference = normalize_reference(payload.external_reference)
+            normalized_reference = normalize_reference(external_reference)
             masked_reference = mask_reference(normalized_reference)
             encrypted_reference = encrypt_reference(normalized_reference)
             reference_digest = reference_hash(normalized_reference)
@@ -800,22 +863,22 @@ async def record_application_status(
     source_url = case.status_source_url or str(
         case.benefit_snapshot.get("source_document_url", "")
     )
-    case.status = payload.status
-    case.status_provenance = "citizen_reported"
-    case.status_recorded_at = occurred_at
+    case.status = status_value
+    case.status_provenance = provenance
+    case.status_recorded_at = occurred
     case.updated_at = now
     case.revision += 1
-    if payload.submission_date is not None:
-        case.submission_date = payload.submission_date
+    if submission_date is not None:
+        case.submission_date = submission_date
     if encrypted_reference is not None:
         case.external_reference_ciphertext = encrypted_reference
         case.external_reference_hash = reference_digest
         case.external_reference_masked = masked_reference
-    if payload.status in _TERMINAL_STATUSES:
+    if status_value in _TERMINAL_STATUSES:
         case.closed_at = now
     elif case.closed_at is not None:
         case.closed_at = None
-    if payload.status == "action_required":
+    if status_value == "action_required":
         _ensure_in_app_reminder(
             db,
             case,
@@ -829,20 +892,17 @@ async def record_application_status(
         ApplicationStatusEvent(
             id=new_id("application-event"),
             application_case_id=case.id,
-            status=payload.status,
-            provenance="citizen_reported",
-            actor_type="citizen",
-            actor_id=principal.session_id,
-            occurred_at=occurred_at,
+            status=status_value,
+            provenance=provenance,
+            actor_type=actor_type,
+            actor_id=actor_id,
+            occurred_at=occurred,
             recorded_at=now,
             source_url=source_url,
-            reason_code=(payload.reason_code or "").strip(),
+            reason_code=(reason_code or "").strip(),
             external_reference_masked=masked_reference,
         )
     )
-    db.commit()
-    db.refresh(case)
-    return _case_out(db, case)
 
 
 def _require_application_copilot(principal: BrowserSessionPrincipal) -> None:

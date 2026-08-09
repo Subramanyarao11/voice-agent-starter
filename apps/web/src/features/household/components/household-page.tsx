@@ -4,6 +4,7 @@ import { Link } from "@tanstack/react-router";
 import {
   ArrowRight,
   Check,
+  Copy,
   ExternalLink,
   LogIn,
   LogOut,
@@ -33,7 +34,8 @@ import {
   useWriteMemberFactMutation,
 } from "@/features/citizen/queries";
 import { useCatalogQuery } from "@/features/catalog/queries";
-import { ApiError, toUserMessage, type HouseholdMember, type ProfileFact, type RadarRecommendation } from "@/lib/api";
+import { useCreateAssistanceInvitationMutation } from "@/features/assistance/queries";
+import { ApiError, toUserMessage, type AssistanceInvitation, type HouseholdMember, type ProfileFact, type RadarRecommendation } from "@/lib/api";
 import { useQueryClient } from "@tanstack/react-query";
 
 function textFromLocale(values: Record<string, string>, fallback: string): string {
@@ -290,6 +292,61 @@ function RadarCard({ householdId, memberId }: { householdId: string; memberId: s
   );
 }
 
+function SaathiInviteCard({ householdId, memberId }: { householdId: string; memberId: string }) {
+  const createMutation = useCreateAssistanceInvitationMutation();
+  const [purpose, setPurpose] = useState("prepare_application");
+  const [invitation, setInvitation] = useState<AssistanceInvitation | null>(null);
+  const [copied, setCopied] = useState(false);
+  const inviteUrl = invitation && typeof window !== "undefined"
+    ? `${window.location.origin}/assistant/redeem?token=${encodeURIComponent(invitation.invitation_token)}`
+    : "";
+  const create = () => {
+    createMutation.mutate(
+      {
+        purpose,
+        household_id: householdId,
+        household_member_id: memberId,
+        locale: document.documentElement.lang || "en",
+      },
+      { onSuccess: setInvitation },
+    );
+  };
+  const copy = async () => {
+    if (!inviteUrl) return;
+    try {
+      await navigator.clipboard.writeText(inviteUrl);
+      setCopied(true);
+      window.setTimeout(() => setCopied(false), 2_000);
+    } catch {
+      setCopied(false);
+    }
+  };
+  return (
+    <Card className="border-primary/20 bg-primary/5">
+      <CardHeader>
+        <CardTitle className="text-lg">Ask a trusted Saathi for help</CardTitle>
+        <CardDescription>Create a short-lived invitation for one purpose. Share the link out of band, then review consent on the next screen.</CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        <div className="grid gap-4 sm:grid-cols-[1fr_auto] sm:items-end">
+          <label className="grid gap-2 text-sm font-semibold">What should the helper do?
+            <select className="min-h-11 rounded-md border bg-background px-3 font-normal" value={purpose} onChange={(event) => setPurpose(event.target.value)}>
+              <option value="discover_benefits">Find relevant benefits</option>
+              <option value="prepare_application">Prepare an application</option>
+              <option value="contact_department">Contact a department</option>
+              <option value="create_escalation">Ask for human support</option>
+              <option value="language_or_accessibility_help">Help with language or accessibility</option>
+            </select>
+          </label>
+          <Button type="button" className="gap-2" disabled={createMutation.isPending} onClick={create}>{createMutation.isPending ? "Creating…" : "Create invitation"}</Button>
+        </div>
+        {createMutation.error && <HouseholdError error={createMutation.error} />}
+        {invitation && inviteUrl && <div className="space-y-3 rounded-lg border border-primary/30 bg-background p-4"><div><p className="font-semibold">Share this one-time link</p><p className="mt-1 text-sm leading-6 text-muted-foreground">It expires {formatDate(invitation.expires_at)}. Anyone holding it can ask to help, but they cannot see household data until you confirm.</p></div><div className="flex flex-wrap gap-2"><input readOnly value={inviteUrl} aria-label="Saathi invitation link" className="min-h-11 min-w-0 flex-1 rounded-md border bg-muted px-3 text-sm" /><Button type="button" variant="outline" className="gap-2" onClick={() => void copy()}>{copied ? <Check className="size-4" aria-hidden="true" /> : <Copy className="size-4" aria-hidden="true" />}{copied ? "Copied" : "Copy link"}</Button></div><Link to="/assistant/sessions/$assistanceId" params={{ assistanceId: invitation.id }} className="inline-flex items-center gap-2 text-sm font-semibold text-primary underline underline-offset-4">Open citizen approval <ExternalLink className="size-3.5" aria-hidden="true" /></Link></div>}
+      </CardContent>
+    </Card>
+  );
+}
+
 export function HouseholdPage() {
   const { t } = useUi();
   const queryClient = useQueryClient();
@@ -344,7 +401,7 @@ export function HouseholdPage() {
           {!authenticated && !meQuery.isPending && <SignInPanel onSignIn={() => void signIn()} pending={signInPending} />}
           {authenticated && householdsQuery.isPending && <p role="status" className="text-sm text-muted-foreground">Loading your household…</p>}
           {authenticated && !householdsQuery.isPending && households.length === 0 && <HouseholdSetup onCreated={setActiveHousehold} />}
-          {authenticated && activeHousehold && <section className="space-y-6" aria-labelledby="household-heading"><div className="flex flex-wrap items-end justify-between gap-4"><div><p className="text-sm font-semibold text-primary">{activeHousehold.state_code || "India"}{activeHousehold.district ? ` · ${activeHousehold.district}` : ""}</p><h2 id="household-heading" className="mt-1 text-2xl font-bold">{activeHousehold.label}</h2><p className="mt-1 text-sm text-muted-foreground">{activeHousehold.member_count} member{activeHousehold.member_count === 1 ? "" : "s"} · matching policy {activeHousehold.matching_policy_version}</p></div>{members.length > 0 && <div className="min-w-[16rem]"><MemberPicker members={members} selectedId={activeMember?.id ?? ""} onChange={setActiveMember} /></div>}</div>{membersQuery.error && <HouseholdError error={membersQuery.error} />}{activeMember && <><FactsCard householdId={activeHousehold.id} memberId={activeMember.id} /><RadarCard householdId={activeHousehold.id} memberId={activeMember.id} /></>}<AddMemberCard householdId={activeHousehold.id} /></section>}
+          {authenticated && activeHousehold && <section className="space-y-6" aria-labelledby="household-heading"><div className="flex flex-wrap items-end justify-between gap-4"><div><p className="text-sm font-semibold text-primary">{activeHousehold.state_code || "India"}{activeHousehold.district ? ` · ${activeHousehold.district}` : ""}</p><h2 id="household-heading" className="mt-1 text-2xl font-bold">{activeHousehold.label}</h2><p className="mt-1 text-sm text-muted-foreground">{activeHousehold.member_count} member{activeHousehold.member_count === 1 ? "" : "s"} · matching policy {activeHousehold.matching_policy_version}</p></div>{members.length > 0 && <div className="min-w-[16rem]"><MemberPicker members={members} selectedId={activeMember?.id ?? ""} onChange={setActiveMember} /></div>}</div>{membersQuery.error && <HouseholdError error={membersQuery.error} />}{activeMember && <><FactsCard householdId={activeHousehold.id} memberId={activeMember.id} /><RadarCard householdId={activeHousehold.id} memberId={activeMember.id} /><SaathiInviteCard householdId={activeHousehold.id} memberId={activeMember.id} /></>}<AddMemberCard householdId={activeHousehold.id} /></section>}
         </div>
       </main>
       <PublicFooter />

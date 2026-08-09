@@ -7,6 +7,8 @@ import hmac
 import re
 from functools import lru_cache
 
+from cryptography.fernet import InvalidToken
+
 from sahaayak_common.settings import settings
 
 
@@ -49,6 +51,15 @@ def normalize_reference(value: str) -> str:
 
 def encrypt_reference(value: str) -> str:
     return _fernet().encrypt(normalize_reference(value).encode("utf-8")).decode("ascii")
+
+
+def decrypt_reference(value: str) -> str:
+    """Decrypt a reference only inside a trusted downstream operation."""
+    try:
+        raw = _fernet().decrypt(value.encode("ascii")).decode("utf-8")
+    except (InvalidToken, TypeError, ValueError, UnicodeError) as exc:
+        raise ValueError("Application reference ciphertext is not valid") from exc
+    return normalize_reference(raw)
 
 
 def reference_hash(value: str) -> str:

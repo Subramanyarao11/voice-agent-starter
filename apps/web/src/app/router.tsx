@@ -25,6 +25,14 @@ const ApplicationPackRoutePage = lazyRouteComponent(
   "ApplicationPackRoutePage",
 );
 const HouseholdRoutePage = lazyRouteComponent(() => import("@/routes/household"), "HouseholdRoutePage");
+const AssistantRedeemRoutePage = lazyRouteComponent(
+  () => import("@/routes/assistant-redeem"),
+  "AssistantRedeemRoutePage",
+);
+const AssistantSessionRoutePage = lazyRouteComponent(
+  () => import("@/routes/assistant-session"),
+  "AssistantSessionRoutePage",
+);
 
 function RootLayout() {
   return (
@@ -95,6 +103,18 @@ const householdRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/household",
   component: HouseholdRoutePage,
+});
+
+const assistantRedeemRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/assistant/redeem",
+  component: AssistantRedeemRoutePage,
+});
+
+const assistantSessionRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/assistant/sessions/$assistanceId",
+  component: AssistantSessionRoutePage,
 });
 
 const citizenCallbackRoute = createRoute({
@@ -202,6 +222,8 @@ const routeTree = rootRoute.addChildren([
   applicationDetailRoute,
   applicationPackRoute,
   householdRoute,
+  assistantRedeemRoute,
+  assistantSessionRoute,
   citizenCallbackRoute,
   adminRoute,
   adminCallbackRoute,

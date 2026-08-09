@@ -3,6 +3,7 @@
 from sahaayak_common.application_crypto import (
     ApplicationDataEncryptionUnavailable,
     application_value_hash,
+    decrypt_reference,
     encrypt_application_value,
     encrypt_reference,
     mask_application_value,
@@ -256,6 +257,7 @@ __all__ = [
     "reset_citizen_auth_encryption_cache",
     "reset_encryption_cache",
     "encrypt_reference",
+    "decrypt_reference",
     "encrypt_application_value",
     "reference_hash",
     "profile_value_hash",

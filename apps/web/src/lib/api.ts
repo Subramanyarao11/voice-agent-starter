@@ -170,6 +170,74 @@ export const radarRefreshSchema = z.object({
   recommendations: z.array(radarRecommendationSchema),
 });
 
+export const assistanceInvitationSchema = z.object({
+  id: z.string(),
+  invitation_token: z.string(),
+  status: z.string(),
+  purpose: z.string(),
+  approved_data_categories: z.array(z.string()),
+  allowed_action_keys: z.array(z.string()),
+  locale: z.string(),
+  notice_version: z.string(),
+  expires_at: z.string(),
+});
+
+const assistanceProjectionSchema = z.object({
+  projection_version: z.string().optional(),
+  purpose: z.string().optional(),
+  data_categories: z.array(z.string()).optional(),
+  allowed_action_keys: z.array(z.string()).optional(),
+  subject: z
+    .object({ type: z.string(), safe_member_id: z.string() })
+    .optional(),
+  live_data_required: z.boolean().optional(),
+});
+
+export const assistanceSessionSchema = z.object({
+  id: z.string(),
+  purpose: z.string(),
+  status: z.string(),
+  approved_data_categories: z.array(z.string()),
+  allowed_action_keys: z.array(z.string()),
+  locale: z.string(),
+  helper_actor_id: z.string().nullable().optional(),
+  helper_org_id: z.string().default(""),
+  expires_at: z.string(),
+  last_activity_at: z.string(),
+  created_at: z.string(),
+  consented_at: z.string().nullable().optional(),
+  ended_at: z.string().nullable().optional(),
+  revision: z.number(),
+  projection: assistanceProjectionSchema.default({}),
+});
+
+export const assistanceActionSchema = z.object({
+  id: z.string(),
+  action_key: z.string(),
+  target_type: z.string(),
+  target_id: z.string(),
+  stage: z.string(),
+  preview_code: z.string(),
+  effect_code: z.string().default(""),
+  effect_reference_masked: z.string().default(""),
+  effect_record_id: z.string().default(""),
+  confirmation_mode: z.string(),
+  error_code: z.string().nullable().optional(),
+  created_at: z.string(),
+  updated_at: z.string(),
+});
+
+export const assistanceReceiptSchema = z.object({
+  id: z.string(),
+  status: z.string(),
+  purpose: z.string(),
+  helper_actor_id: z.string().nullable().optional(),
+  helper_org_id: z.string().default(""),
+  created_at: z.string(),
+  ended_at: z.string().nullable().optional(),
+  actions: z.array(assistanceActionSchema),
+});
+
 const retrievedSourceSchema = z.object({
   source_id: z.string(),
   filename: z.string(),
@@ -465,6 +533,10 @@ export type ProfileFact = z.infer<typeof profileFactSchema>;
 export type RadarRecommendation = z.infer<typeof radarRecommendationSchema>;
 export type RadarList = z.infer<typeof radarListSchema>;
 export type RadarRefresh = z.infer<typeof radarRefreshSchema>;
+export type AssistanceInvitation = z.infer<typeof assistanceInvitationSchema>;
+export type AssistanceSession = z.infer<typeof assistanceSessionSchema>;
+export type AssistanceAction = z.infer<typeof assistanceActionSchema>;
+export type AssistanceReceipt = z.infer<typeof assistanceReceiptSchema>;
 export type TurnResponse = z.infer<typeof turnResponseSchema>;
 export type MatchSummary = z.infer<typeof matchSchema>;
 export type BenefitDetail = z.infer<typeof benefitDetailSchema>;
@@ -689,6 +761,161 @@ export function updateHouseholdRadar(
     `/api/households/${encodeURIComponent(householdId)}/radar/${encodeURIComponent(recommendationId)}`,
     radarRecommendationSchema,
     { method: "POST", body: JSON.stringify(payload) },
+  );
+}
+
+export function createAssistanceInvitation(payload: {
+  purpose: string;
+  data_categories?: string[];
+  household_id?: string;
+  household_member_id?: string;
+  locale?: string;
+  expires_in_minutes?: number;
+}): Promise<AssistanceInvitation> {
+  return request("/api/assistance/invitations", assistanceInvitationSchema, {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
+export function getCitizenAssistanceSession(assistanceId: string): Promise<AssistanceSession> {
+  return request(
+    `/api/assistance/invitations/${encodeURIComponent(assistanceId)}`,
+    assistanceSessionSchema,
+  );
+}
+
+export function consentToAssistance(assistanceId: string, locale?: string): Promise<AssistanceSession> {
+  return request(
+    `/api/assistance/invitations/${encodeURIComponent(assistanceId)}/consent`,
+    assistanceSessionSchema,
+    {
+      method: "POST",
+      body: JSON.stringify({ confirm: true, locale }),
+    },
+  );
+}
+
+export function revokeAssistance(assistanceId: string): Promise<AssistanceSession> {
+  return request(
+    `/api/assistance/sessions/${encodeURIComponent(assistanceId)}/revoke`,
+    assistanceSessionSchema,
+    { method: "POST" },
+  );
+}
+
+export function getAssistanceReceipt(assistanceId: string): Promise<AssistanceReceipt> {
+  return request(
+    `/api/assistance/sessions/${encodeURIComponent(assistanceId)}/receipt`,
+    assistanceReceiptSchema,
+  );
+}
+
+export function getCitizenAssistanceActions(assistanceId: string): Promise<AssistanceAction[]> {
+  return request(
+    `/api/assistance/sessions/${encodeURIComponent(assistanceId)}/actions`,
+    z.array(assistanceActionSchema),
+  );
+}
+
+export function redeemAssistanceInvitation(
+  invitationToken: string,
+  adminToken: string,
+): Promise<AssistanceSession> {
+  return request("/api/assistant/invitations/redeem", assistanceSessionSchema, {
+    method: "POST",
+    body: JSON.stringify({ invitation_token: invitationToken }),
+    headers: { Authorization: `Bearer ${adminToken}` },
+  });
+}
+
+export function getHelperAssistanceSession(
+  assistanceId: string,
+  adminToken: string,
+): Promise<AssistanceSession> {
+  return request(
+    `/api/assistant/sessions/${encodeURIComponent(assistanceId)}`,
+    assistanceSessionSchema,
+    { headers: { Authorization: `Bearer ${adminToken}` } },
+  );
+}
+
+export function getHelperAssistanceActions(
+  assistanceId: string,
+  adminToken: string,
+): Promise<AssistanceAction[]> {
+  return request(
+    `/api/assistant/sessions/${encodeURIComponent(assistanceId)}/actions`,
+    z.array(assistanceActionSchema),
+    { headers: { Authorization: `Bearer ${adminToken}` } },
+  );
+}
+
+export function draftAssistanceAction(
+  assistanceId: string,
+  payload: {
+    action_key: string;
+    target_type?: string;
+    target_id?: string;
+    preview_code?: string;
+    application_status?: string;
+    submission_date?: string;
+    external_reference?: string;
+    reason_code?: string;
+    idempotency_key: string;
+  },
+  adminToken: string,
+): Promise<AssistanceAction> {
+  return request(
+    `/api/assistant/sessions/${encodeURIComponent(assistanceId)}/draft-actions`,
+    assistanceActionSchema,
+    {
+      method: "POST",
+      body: JSON.stringify(payload),
+      headers: { Authorization: `Bearer ${adminToken}` },
+    },
+  );
+}
+
+export function confirmAssistanceAction(
+  assistanceId: string,
+  actionId: string,
+): Promise<AssistanceAction> {
+  return request(
+    `/api/assistance/sessions/${encodeURIComponent(assistanceId)}/actions/${encodeURIComponent(actionId)}/confirm`,
+    assistanceActionSchema,
+    { method: "POST", body: JSON.stringify({ confirm: true }) },
+  );
+}
+
+export function executeAssistanceAction(
+  assistanceId: string,
+  actionId: string,
+  adminToken: string,
+): Promise<AssistanceAction> {
+  return request(
+    `/api/assistant/sessions/${encodeURIComponent(assistanceId)}/actions/${encodeURIComponent(actionId)}/execute`,
+    assistanceActionSchema,
+    { method: "POST", headers: { Authorization: `Bearer ${adminToken}` } },
+  );
+}
+
+export function pauseAssistance(assistanceId: string, adminToken: string): Promise<AssistanceSession> {
+  return request(
+    `/api/assistant/sessions/${encodeURIComponent(assistanceId)}/pause`,
+    assistanceSessionSchema,
+    { method: "POST", headers: { Authorization: `Bearer ${adminToken}` } },
+  );
+}
+
+export function completeAssistance(
+  assistanceId: string,
+  adminToken: string,
+): Promise<AssistanceReceipt> {
+  return request(
+    `/api/assistant/sessions/${encodeURIComponent(assistanceId)}/complete`,
+    assistanceReceiptSchema,
+    { method: "POST", headers: { Authorization: `Bearer ${adminToken}` } },
   );
 }
 

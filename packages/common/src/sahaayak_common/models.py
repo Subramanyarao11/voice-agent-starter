@@ -637,10 +637,9 @@ class AssistanceConsent(SQLModel, table=True):
 class AssistanceAction(SQLModel, table=True):
     """Append-only-safe action ledger for helper work.
 
-    The row records lifecycle and redacted metadata only. Executing this
-    foundation action does not grant access to arbitrary application or
-    household APIs; downstream integrations must explicitly consume the
-    citizen-confirmed action.
+    The row records lifecycle and redacted metadata only. Executing an action
+    never grants arbitrary application or household access; narrowly
+    allowlisted downstream services consume the citizen-confirmed action.
     """
 
     __tablename__ = "assistance_action"
@@ -664,6 +663,12 @@ class AssistanceAction(SQLModel, table=True):
     confirmation_actor_hash: str = ""
     confirmation_mode: str = ""
     safe_preview: dict = Field(default_factory=dict, sa_column=json_dict())
+    # Only an encrypted, short-lived downstream input is stored. The helper
+    # UI may submit an application reference, but it is never placed in the
+    # redacted action projection or audit event.
+    requested_reference_ciphertext: str | None = None
+    requested_reference_hash: str | None = Field(default=None, index=True)
+    requested_reference_masked: str = ""
     before_safe_hash: str = ""
     after_safe_hash: str = ""
     idempotency_key: str = Field(index=True)
