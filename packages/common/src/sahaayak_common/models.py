@@ -541,6 +541,112 @@ class GuestMigration(SQLModel, table=True):
     updated_at: datetime = Field(default_factory=_utcnow)
 
 
+class AssistanceSession(SQLModel, table=True):
+    """A short-lived, purpose-bound Saathi helper session.
+
+    The invitation is a capability, not an identity. Only its digest is
+    stored, and the helper projection is granted after the citizen confirms
+    the named purpose and data categories. This row intentionally contains no
+    transcript, profile value, contact destination, or generated artifact.
+    """
+
+    __tablename__ = "assistance_session"
+    __table_args__ = (
+        Index("ix_assistance_session_account_status", "citizen_account_id", "status"),
+        Index("ix_assistance_session_helper_status", "helper_actor_id", "status"),
+        Index("ix_assistance_session_expiry_status", "expires_at", "status"),
+    )
+
+    id: str = Field(primary_key=True)
+    invitation_token_hash: str | None = Field(default=None, index=True, unique=True)
+    citizen_session_id: str | None = Field(
+        default=None, foreign_key="user_session.id", index=True
+    )
+    citizen_account_id: str | None = Field(
+        default=None, foreign_key="citizen_account.id", index=True
+    )
+    household_id: str | None = Field(default=None, foreign_key="household.id", index=True)
+    household_member_id: str | None = Field(
+        default=None, foreign_key="household_member.id", index=True
+    )
+    helper_actor_id: str | None = Field(default=None, index=True)
+    helper_org_id: str = ""
+    purpose: str = Field(index=True)
+    approved_data_categories: list[str] = Field(default_factory=list, sa_column=json_list())
+    allowed_action_keys: list[str] = Field(default_factory=list, sa_column=json_list())
+    status: str = Field(default="invited", index=True)
+    projection_version: str = "assisted-saathi-2026-08-09.v1"
+    locale: str = "en"
+    expires_at: datetime = Field(index=True)
+    last_activity_at: datetime = Field(default_factory=_utcnow, index=True)
+    created_at: datetime = Field(default_factory=_utcnow, index=True)
+    consented_at: datetime | None = None
+    ended_at: datetime | None = None
+    revision: int = 1
+
+
+class AssistanceConsent(SQLModel, table=True):
+    """Append-only citizen grant/revocation evidence for Saathi sessions."""
+
+    __tablename__ = "assistance_consent"
+    __table_args__ = (
+        Index("ix_assistance_consent_session_created", "assistance_session_id", "created_at"),
+    )
+
+    id: str = Field(primary_key=True)
+    assistance_session_id: str = Field(foreign_key="assistance_session.id", index=True)
+    citizen_account_id: str = Field(foreign_key="citizen_account.id", index=True)
+    action: str = Field(index=True)  # granted | withdrawn | expired
+    notice_version: str = ""
+    locale: str = "en"
+    confirmation_mode: str = "citizen_affirmed"
+    approved_data_categories: list[str] = Field(default_factory=list, sa_column=json_list())
+    approved_action_keys: list[str] = Field(default_factory=list, sa_column=json_list())
+    citizen_subject_hash: str = ""
+    helper_actor_id: str = ""
+    helper_org_id: str = ""
+    created_at: datetime = Field(default_factory=_utcnow, index=True)
+
+
+class AssistanceAction(SQLModel, table=True):
+    """Append-only-safe action ledger for helper work.
+
+    The row records lifecycle and redacted metadata only. Executing this
+    foundation action does not grant access to arbitrary application or
+    household APIs; downstream integrations must explicitly consume the
+    citizen-confirmed action.
+    """
+
+    __tablename__ = "assistance_action"
+    __table_args__ = (
+        Index(
+            "ix_assistance_action_session_idempotency",
+            "assistance_session_id",
+            "idempotency_key",
+            unique=True,
+        ),
+        Index("ix_assistance_action_session_created", "assistance_session_id", "created_at"),
+    )
+
+    id: str = Field(primary_key=True)
+    assistance_session_id: str = Field(foreign_key="assistance_session.id", index=True)
+    action_key: str = Field(index=True)
+    target_type: str = ""
+    target_id: str = ""
+    stage: str = Field(default="drafted", index=True)
+    helper_actor_id: str = ""
+    confirmation_actor_hash: str = ""
+    confirmation_mode: str = ""
+    safe_preview: dict = Field(default_factory=dict, sa_column=json_dict())
+    before_safe_hash: str = ""
+    after_safe_hash: str = ""
+    idempotency_key: str = Field(index=True)
+    error_code: str | None = None
+    reason: str = ""
+    created_at: datetime = Field(default_factory=_utcnow, index=True)
+    updated_at: datetime = Field(default_factory=_utcnow)
+
+
 class SavedBenefit(SQLModel, table=True):
     """A caller's private shortlist of benefits.
 

@@ -1866,6 +1866,244 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/assistance/invitations": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Create Assistance Invitation */
+        post: operations["create_assistance_invitation_api_assistance_invitations_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/assistance/invitations/{assistance_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Assistance Invitation */
+        get: operations["get_assistance_invitation_api_assistance_invitations__assistance_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/assistance/invitations/{assistance_id}/consent": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Consent To Assistance */
+        post: operations["consent_to_assistance_api_assistance_invitations__assistance_id__consent_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/assistance/sessions/{assistance_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Citizen Assistance Session */
+        get: operations["get_citizen_assistance_session_api_assistance_sessions__assistance_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/assistance/sessions/{assistance_id}/revoke": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Revoke Assistance */
+        post: operations["revoke_assistance_api_assistance_sessions__assistance_id__revoke_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/assistance/sessions/{assistance_id}/resume": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Resume Assistance */
+        post: operations["resume_assistance_api_assistance_sessions__assistance_id__resume_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/assistance/sessions/{assistance_id}/receipt": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Assistance Receipt */
+        get: operations["assistance_receipt_api_assistance_sessions__assistance_id__receipt_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/assistant/invitations/redeem": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Redeem Assistance Invitation */
+        post: operations["redeem_assistance_invitation_api_assistant_invitations_redeem_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/assistant/sessions/{assistance_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Helper Assistance Session */
+        get: operations["get_helper_assistance_session_api_assistant_sessions__assistance_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/assistant/sessions/{assistance_id}/draft-actions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Draft Assistance Action */
+        post: operations["draft_assistance_action_api_assistant_sessions__assistance_id__draft_actions_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/assistance/sessions/{assistance_id}/actions/{action_id}/confirm": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Confirm Assistance Action */
+        post: operations["confirm_assistance_action_api_assistance_sessions__assistance_id__actions__action_id__confirm_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/assistant/sessions/{assistance_id}/actions/{action_id}/execute": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Execute Assistance Action */
+        post: operations["execute_assistance_action_api_assistant_sessions__assistance_id__actions__action_id__execute_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/assistant/sessions/{assistance_id}/pause": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Pause Assistance */
+        post: operations["pause_assistance_api_assistant_sessions__assistance_id__pause_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/assistant/sessions/{assistance_id}/complete": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Complete Assistance */
+        post: operations["complete_assistance_api_assistant_sessions__assistance_id__complete_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -2416,6 +2654,206 @@ export interface components {
              * @enum {string}
              */
             status: "pending" | "completed" | "skipped";
+        };
+        /** AssistanceActionConfirm */
+        AssistanceActionConfirm: {
+            /**
+             * Confirm
+             * @default false
+             */
+            confirm: boolean;
+            /**
+             * Confirmation Mode
+             * @default citizen_affirmed
+             * @constant
+             */
+            confirmation_mode: "citizen_affirmed";
+        };
+        /** AssistanceActionCreate */
+        AssistanceActionCreate: {
+            /** Action Key */
+            action_key: string;
+            /**
+             * Target Type
+             * @default
+             */
+            target_type: string;
+            /**
+             * Target Id
+             * @default
+             */
+            target_id: string;
+            /**
+             * Preview Code
+             * @default ready_for_citizen_review
+             */
+            preview_code: string;
+            /** Idempotency Key */
+            idempotency_key: string;
+        };
+        /** AssistanceActionOut */
+        AssistanceActionOut: {
+            /** Id */
+            id: string;
+            /** Action Key */
+            action_key: string;
+            /** Target Type */
+            target_type: string;
+            /** Target Id */
+            target_id: string;
+            /** Stage */
+            stage: string;
+            /** Preview Code */
+            preview_code: string;
+            /** Confirmation Mode */
+            confirmation_mode: string;
+            /** Error Code */
+            error_code?: string | null;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /**
+             * Updated At
+             * Format: date-time
+             */
+            updated_at: string;
+        };
+        /** AssistanceConsentRequest */
+        AssistanceConsentRequest: {
+            /**
+             * Confirm
+             * @default false
+             */
+            confirm: boolean;
+            /** Locale */
+            locale?: string | null;
+            /**
+             * Confirmation Mode
+             * @default citizen_affirmed
+             * @constant
+             */
+            confirmation_mode: "citizen_affirmed";
+        };
+        /** AssistanceInvitationCreate */
+        AssistanceInvitationCreate: {
+            /** Purpose */
+            purpose: string;
+            /** Data Categories */
+            data_categories?: string[];
+            /** Household Id */
+            household_id?: string | null;
+            /** Household Member Id */
+            household_member_id?: string | null;
+            /**
+             * Locale
+             * @default en
+             */
+            locale: string;
+            /** Expires In Minutes */
+            expires_in_minutes?: number | null;
+        };
+        /** AssistanceInvitationOut */
+        AssistanceInvitationOut: {
+            /** Id */
+            id: string;
+            /** Invitation Token */
+            invitation_token: string;
+            /** Status */
+            status: string;
+            /** Purpose */
+            purpose: string;
+            /** Approved Data Categories */
+            approved_data_categories: string[];
+            /** Allowed Action Keys */
+            allowed_action_keys: string[];
+            /** Locale */
+            locale: string;
+            /** Notice Version */
+            notice_version: string;
+            /**
+             * Expires At
+             * Format: date-time
+             */
+            expires_at: string;
+        };
+        /** AssistanceReceiptOut */
+        AssistanceReceiptOut: {
+            /** Id */
+            id: string;
+            /** Status */
+            status: string;
+            /** Purpose */
+            purpose: string;
+            /** Helper Actor Id */
+            helper_actor_id?: string | null;
+            /**
+             * Helper Org Id
+             * @default
+             */
+            helper_org_id: string;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Ended At */
+            ended_at?: string | null;
+            /** Actions */
+            actions: components["schemas"]["AssistanceActionOut"][];
+        };
+        /** AssistanceRedeemRequest */
+        AssistanceRedeemRequest: {
+            /** Invitation Token */
+            invitation_token: string;
+        };
+        /** AssistanceSessionOut */
+        AssistanceSessionOut: {
+            /** Id */
+            id: string;
+            /** Purpose */
+            purpose: string;
+            /** Status */
+            status: string;
+            /** Approved Data Categories */
+            approved_data_categories: string[];
+            /** Allowed Action Keys */
+            allowed_action_keys: string[];
+            /** Locale */
+            locale: string;
+            /** Helper Actor Id */
+            helper_actor_id?: string | null;
+            /**
+             * Helper Org Id
+             * @default
+             */
+            helper_org_id: string;
+            /**
+             * Expires At
+             * Format: date-time
+             */
+            expires_at: string;
+            /**
+             * Last Activity At
+             * Format: date-time
+             */
+            last_activity_at: string;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Consented At */
+            consented_at?: string | null;
+            /** Ended At */
+            ended_at?: string | null;
+            /** Revision */
+            revision: number;
+            /** Projection */
+            projection?: {
+                [key: string]: unknown;
+            };
         };
         /** AuditEventOut */
         AuditEventOut: {
@@ -8718,6 +9156,462 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["NotificationOverviewOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    create_assistance_invitation_api_assistance_invitations_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AssistanceInvitationCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AssistanceInvitationOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_assistance_invitation_api_assistance_invitations__assistance_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                assistance_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AssistanceSessionOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    consent_to_assistance_api_assistance_invitations__assistance_id__consent_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                assistance_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AssistanceConsentRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AssistanceSessionOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_citizen_assistance_session_api_assistance_sessions__assistance_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                assistance_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AssistanceSessionOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    revoke_assistance_api_assistance_sessions__assistance_id__revoke_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                assistance_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AssistanceSessionOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    resume_assistance_api_assistance_sessions__assistance_id__resume_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                assistance_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AssistanceConsentRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AssistanceSessionOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    assistance_receipt_api_assistance_sessions__assistance_id__receipt_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                assistance_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AssistanceReceiptOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    redeem_assistance_invitation_api_assistant_invitations_redeem_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AssistanceRedeemRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AssistanceSessionOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_helper_assistance_session_api_assistant_sessions__assistance_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                assistance_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AssistanceSessionOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    draft_assistance_action_api_assistant_sessions__assistance_id__draft_actions_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                assistance_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AssistanceActionCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AssistanceActionOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    confirm_assistance_action_api_assistance_sessions__assistance_id__actions__action_id__confirm_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                assistance_id: string;
+                action_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AssistanceActionConfirm"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AssistanceActionOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    execute_assistance_action_api_assistant_sessions__assistance_id__actions__action_id__execute_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                assistance_id: string;
+                action_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AssistanceActionOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    pause_assistance_api_assistant_sessions__assistance_id__pause_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                assistance_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AssistanceSessionOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    complete_assistance_api_assistant_sessions__assistance_id__complete_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                assistance_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AssistanceReceiptOut"];
                 };
             };
             /** @description Validation Error */

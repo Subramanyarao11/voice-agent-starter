@@ -24,7 +24,13 @@ from sahaayak_common import get_logger, settings
 
 log = get_logger(__name__)
 
-ROLE_ORDER = {"observer": 10, "operator": 20, "reviewer": 20, "admin": 30}
+ROLE_ORDER = {
+    "observer": 10,
+    "assistant": 20,
+    "operator": 20,
+    "reviewer": 20,
+    "admin": 30,
+}
 _OIDC_ALGORITHMS = {
     "RS256",
     "RS384",
@@ -42,6 +48,7 @@ _OIDC_ALGORITHMS = {
 class AdminPrincipal:
     actor_id: str
     role: str
+    organization_id: str | None = None
     auth_source: str = "static"
     mfa_verified: bool = False
 
@@ -75,7 +82,7 @@ def _configured_tokens() -> list[tuple[str, AdminPrincipal]]:
         configured.append(
             (
                 settings.admin_api_token.strip(),
-                AdminPrincipal(actor_id="local-admin", role="admin"),
+                AdminPrincipal(actor_id="local-admin", role="admin", organization_id="local"),
             )
         )
 
@@ -96,15 +103,26 @@ def _configured_tokens() -> list[tuple[str, AdminPrincipal]]:
             continue
         role = "observer"
         actor_id = f"token-{len(configured) + 1}"
+        organization_id = "local"
         if isinstance(descriptor, str):
             role = descriptor
         elif isinstance(descriptor, dict):
             role = str(descriptor.get("role", role))
             actor_id = str(descriptor.get("actor_id", actor_id))
+            organization_id = str(descriptor.get("organization_id", organization_id))
         if role not in ROLE_ORDER:
             log.warning("admin_token_role_invalid", role=role, actor_id=actor_id)
             continue
-        configured.append((token, AdminPrincipal(actor_id=actor_id, role=role)))
+        configured.append(
+            (
+                token,
+                AdminPrincipal(
+                    actor_id=actor_id,
+                    role=role,
+                    organization_id=organization_id[:160],
+                ),
+            )
+        )
     return configured
 
 
@@ -209,9 +227,16 @@ async def _validate_oidc_token(token: str) -> AdminPrincipal:
     actor_claim = _claim_value(claims, settings.admin_oidc_actor_claim)
     if not isinstance(actor_claim, str) or not actor_claim.strip():
         raise _OIDCRejected("The OIDC token has no usable workforce subject")
+    organization_claim = _claim_value(claims, settings.admin_oidc_org_claim)
+    organization_id = (
+        str(organization_claim).strip()[:160]
+        if isinstance(organization_claim, (str, int)) and str(organization_claim).strip()
+        else None
+    )
     return AdminPrincipal(
         actor_id=f"oidc:{actor_claim.strip()[:120]}",
         role=_role_from_claims(claims),
+        organization_id=organization_id,
         auth_source="oidc",
         mfa_verified=True,
     )

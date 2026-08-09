@@ -5760,6 +5760,650 @@
           }
         }
       }
+    },
+    "/api/assistance/invitations": {
+      "post": {
+        "tags": [
+          "assisted saathi"
+        ],
+        "summary": "Create Assistance Invitation",
+        "operationId": "create_assistance_invitation_api_assistance_invitations_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AssistanceInvitationCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AssistanceInvitationOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/assistance/invitations/{assistance_id}": {
+      "get": {
+        "tags": [
+          "assisted saathi"
+        ],
+        "summary": "Get Assistance Invitation",
+        "operationId": "get_assistance_invitation_api_assistance_invitations__assistance_id__get",
+        "parameters": [
+          {
+            "name": "assistance_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Assistance Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AssistanceSessionOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/assistance/invitations/{assistance_id}/consent": {
+      "post": {
+        "tags": [
+          "assisted saathi"
+        ],
+        "summary": "Consent To Assistance",
+        "operationId": "consent_to_assistance_api_assistance_invitations__assistance_id__consent_post",
+        "parameters": [
+          {
+            "name": "assistance_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Assistance Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AssistanceConsentRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AssistanceSessionOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/assistance/sessions/{assistance_id}": {
+      "get": {
+        "tags": [
+          "assisted saathi"
+        ],
+        "summary": "Get Citizen Assistance Session",
+        "operationId": "get_citizen_assistance_session_api_assistance_sessions__assistance_id__get",
+        "parameters": [
+          {
+            "name": "assistance_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Assistance Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AssistanceSessionOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/assistance/sessions/{assistance_id}/revoke": {
+      "post": {
+        "tags": [
+          "assisted saathi"
+        ],
+        "summary": "Revoke Assistance",
+        "operationId": "revoke_assistance_api_assistance_sessions__assistance_id__revoke_post",
+        "parameters": [
+          {
+            "name": "assistance_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Assistance Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AssistanceSessionOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/assistance/sessions/{assistance_id}/resume": {
+      "post": {
+        "tags": [
+          "assisted saathi"
+        ],
+        "summary": "Resume Assistance",
+        "operationId": "resume_assistance_api_assistance_sessions__assistance_id__resume_post",
+        "parameters": [
+          {
+            "name": "assistance_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Assistance Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AssistanceConsentRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AssistanceSessionOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/assistance/sessions/{assistance_id}/receipt": {
+      "get": {
+        "tags": [
+          "assisted saathi"
+        ],
+        "summary": "Assistance Receipt",
+        "operationId": "assistance_receipt_api_assistance_sessions__assistance_id__receipt_get",
+        "parameters": [
+          {
+            "name": "assistance_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Assistance Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AssistanceReceiptOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/assistant/invitations/redeem": {
+      "post": {
+        "tags": [
+          "assisted saathi"
+        ],
+        "summary": "Redeem Assistance Invitation",
+        "operationId": "redeem_assistance_invitation_api_assistant_invitations_redeem_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AssistanceRedeemRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AssistanceSessionOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/assistant/sessions/{assistance_id}": {
+      "get": {
+        "tags": [
+          "assisted saathi"
+        ],
+        "summary": "Get Helper Assistance Session",
+        "operationId": "get_helper_assistance_session_api_assistant_sessions__assistance_id__get",
+        "parameters": [
+          {
+            "name": "assistance_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Assistance Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AssistanceSessionOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/assistant/sessions/{assistance_id}/draft-actions": {
+      "post": {
+        "tags": [
+          "assisted saathi"
+        ],
+        "summary": "Draft Assistance Action",
+        "operationId": "draft_assistance_action_api_assistant_sessions__assistance_id__draft_actions_post",
+        "parameters": [
+          {
+            "name": "assistance_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Assistance Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AssistanceActionCreate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AssistanceActionOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/assistance/sessions/{assistance_id}/actions/{action_id}/confirm": {
+      "post": {
+        "tags": [
+          "assisted saathi"
+        ],
+        "summary": "Confirm Assistance Action",
+        "operationId": "confirm_assistance_action_api_assistance_sessions__assistance_id__actions__action_id__confirm_post",
+        "parameters": [
+          {
+            "name": "assistance_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Assistance Id"
+            }
+          },
+          {
+            "name": "action_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Action Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AssistanceActionConfirm"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AssistanceActionOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/assistant/sessions/{assistance_id}/actions/{action_id}/execute": {
+      "post": {
+        "tags": [
+          "assisted saathi"
+        ],
+        "summary": "Execute Assistance Action",
+        "operationId": "execute_assistance_action_api_assistant_sessions__assistance_id__actions__action_id__execute_post",
+        "parameters": [
+          {
+            "name": "assistance_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Assistance Id"
+            }
+          },
+          {
+            "name": "action_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Action Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AssistanceActionOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/assistant/sessions/{assistance_id}/pause": {
+      "post": {
+        "tags": [
+          "assisted saathi"
+        ],
+        "summary": "Pause Assistance",
+        "operationId": "pause_assistance_api_assistant_sessions__assistance_id__pause_post",
+        "parameters": [
+          {
+            "name": "assistance_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Assistance Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AssistanceSessionOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/assistant/sessions/{assistance_id}/complete": {
+      "post": {
+        "tags": [
+          "assisted saathi"
+        ],
+        "summary": "Complete Assistance",
+        "operationId": "complete_assistance_api_assistant_sessions__assistance_id__complete_post",
+        "parameters": [
+          {
+            "name": "assistance_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Assistance Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AssistanceReceiptOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -7267,6 +7911,478 @@
           "status"
         ],
         "title": "ApplicationTaskUpdate"
+      },
+      "AssistanceActionConfirm": {
+        "properties": {
+          "confirm": {
+            "type": "boolean",
+            "title": "Confirm",
+            "default": false
+          },
+          "confirmation_mode": {
+            "type": "string",
+            "const": "citizen_affirmed",
+            "title": "Confirmation Mode",
+            "default": "citizen_affirmed"
+          }
+        },
+        "type": "object",
+        "title": "AssistanceActionConfirm"
+      },
+      "AssistanceActionCreate": {
+        "properties": {
+          "action_key": {
+            "type": "string",
+            "maxLength": 80,
+            "minLength": 1,
+            "title": "Action Key"
+          },
+          "target_type": {
+            "type": "string",
+            "maxLength": 40,
+            "title": "Target Type",
+            "default": ""
+          },
+          "target_id": {
+            "type": "string",
+            "maxLength": 160,
+            "title": "Target Id",
+            "default": ""
+          },
+          "preview_code": {
+            "type": "string",
+            "maxLength": 80,
+            "title": "Preview Code",
+            "default": "ready_for_citizen_review"
+          },
+          "idempotency_key": {
+            "type": "string",
+            "maxLength": 160,
+            "minLength": 8,
+            "title": "Idempotency Key"
+          }
+        },
+        "type": "object",
+        "required": [
+          "action_key",
+          "idempotency_key"
+        ],
+        "title": "AssistanceActionCreate"
+      },
+      "AssistanceActionOut": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "action_key": {
+            "type": "string",
+            "title": "Action Key"
+          },
+          "target_type": {
+            "type": "string",
+            "title": "Target Type"
+          },
+          "target_id": {
+            "type": "string",
+            "title": "Target Id"
+          },
+          "stage": {
+            "type": "string",
+            "title": "Stage"
+          },
+          "preview_code": {
+            "type": "string",
+            "title": "Preview Code"
+          },
+          "confirmation_mode": {
+            "type": "string",
+            "title": "Confirmation Mode"
+          },
+          "error_code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error Code"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Updated At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "action_key",
+          "target_type",
+          "target_id",
+          "stage",
+          "preview_code",
+          "confirmation_mode",
+          "created_at",
+          "updated_at"
+        ],
+        "title": "AssistanceActionOut"
+      },
+      "AssistanceConsentRequest": {
+        "properties": {
+          "confirm": {
+            "type": "boolean",
+            "title": "Confirm",
+            "default": false
+          },
+          "locale": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 16,
+                "minLength": 2
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Locale"
+          },
+          "confirmation_mode": {
+            "type": "string",
+            "const": "citizen_affirmed",
+            "title": "Confirmation Mode",
+            "default": "citizen_affirmed"
+          }
+        },
+        "type": "object",
+        "title": "AssistanceConsentRequest"
+      },
+      "AssistanceInvitationCreate": {
+        "properties": {
+          "purpose": {
+            "type": "string",
+            "maxLength": 64,
+            "minLength": 1,
+            "title": "Purpose"
+          },
+          "data_categories": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "maxItems": 8,
+            "title": "Data Categories"
+          },
+          "household_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 160
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Household Id"
+          },
+          "household_member_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 160
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Household Member Id"
+          },
+          "locale": {
+            "type": "string",
+            "maxLength": 16,
+            "minLength": 2,
+            "title": "Locale",
+            "default": "en"
+          },
+          "expires_in_minutes": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "maximum": 60.0,
+                "minimum": 1.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Expires In Minutes"
+          }
+        },
+        "type": "object",
+        "required": [
+          "purpose"
+        ],
+        "title": "AssistanceInvitationCreate"
+      },
+      "AssistanceInvitationOut": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "invitation_token": {
+            "type": "string",
+            "title": "Invitation Token"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "purpose": {
+            "type": "string",
+            "title": "Purpose"
+          },
+          "approved_data_categories": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Approved Data Categories"
+          },
+          "allowed_action_keys": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Allowed Action Keys"
+          },
+          "locale": {
+            "type": "string",
+            "title": "Locale"
+          },
+          "notice_version": {
+            "type": "string",
+            "title": "Notice Version"
+          },
+          "expires_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Expires At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "invitation_token",
+          "status",
+          "purpose",
+          "approved_data_categories",
+          "allowed_action_keys",
+          "locale",
+          "notice_version",
+          "expires_at"
+        ],
+        "title": "AssistanceInvitationOut"
+      },
+      "AssistanceReceiptOut": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "purpose": {
+            "type": "string",
+            "title": "Purpose"
+          },
+          "helper_actor_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Helper Actor Id"
+          },
+          "helper_org_id": {
+            "type": "string",
+            "title": "Helper Org Id",
+            "default": ""
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "ended_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ended At"
+          },
+          "actions": {
+            "items": {
+              "$ref": "#/components/schemas/AssistanceActionOut"
+            },
+            "type": "array",
+            "title": "Actions"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "status",
+          "purpose",
+          "created_at",
+          "actions"
+        ],
+        "title": "AssistanceReceiptOut"
+      },
+      "AssistanceRedeemRequest": {
+        "properties": {
+          "invitation_token": {
+            "type": "string",
+            "maxLength": 256,
+            "minLength": 32,
+            "title": "Invitation Token"
+          }
+        },
+        "type": "object",
+        "required": [
+          "invitation_token"
+        ],
+        "title": "AssistanceRedeemRequest"
+      },
+      "AssistanceSessionOut": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "purpose": {
+            "type": "string",
+            "title": "Purpose"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "approved_data_categories": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Approved Data Categories"
+          },
+          "allowed_action_keys": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Allowed Action Keys"
+          },
+          "locale": {
+            "type": "string",
+            "title": "Locale"
+          },
+          "helper_actor_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Helper Actor Id"
+          },
+          "helper_org_id": {
+            "type": "string",
+            "title": "Helper Org Id",
+            "default": ""
+          },
+          "expires_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Expires At"
+          },
+          "last_activity_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Last Activity At"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "consented_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Consented At"
+          },
+          "ended_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ended At"
+          },
+          "revision": {
+            "type": "integer",
+            "title": "Revision"
+          },
+          "projection": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Projection"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "purpose",
+          "status",
+          "approved_data_categories",
+          "allowed_action_keys",
+          "locale",
+          "expires_at",
+          "last_activity_at",
+          "created_at",
+          "revision"
+        ],
+        "title": "AssistanceSessionOut"
       },
       "AuditEventOut": {
         "properties": {

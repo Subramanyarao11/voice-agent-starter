@@ -104,6 +104,7 @@ class Settings(BaseSettings):
     admin_oidc_required_acr: str = ""
     admin_oidc_roles_claim: str = "roles"
     admin_oidc_actor_claim: str = "sub"
+    admin_oidc_org_claim: str = "organization"
     admin_oidc_clock_skew_seconds: int = 60
     admin_oidc_jwks_cache_seconds: int = 3600
 
@@ -124,6 +125,14 @@ class Settings(BaseSettings):
     citizen_household_max_members: int = 8
     citizen_household_retention_days: int = 730
 
+    # Assisted Saathi sessions are short-lived and purpose-bound. The API
+    # keeps the capability token hashed and requires citizen confirmation
+    # before a helper projection or consequential action is available.
+    assistance_invitation_ttl_minutes: int = 15
+    assistance_session_ttl_minutes: int = 60
+    assistance_idle_timeout_minutes: int = 10
+    assistance_notice_version: str = "assisted-saathi-2026-08-09.v1"
+
     # Guest browser sessions stay login-free, but are still server-owned and
     # bounded. The access token is issued once and stored only in the browser
     # session; no user-supplied caller identifier authorizes a request.
@@ -141,6 +150,8 @@ class Settings(BaseSettings):
     rate_limit_application_status_per_ip: int = 60
     rate_limit_application_pack_per_session: int = 10
     rate_limit_application_pack_per_ip: int = 30
+    rate_limit_assistance_per_session: int = 12
+    rate_limit_assistance_per_ip: int = 30
     rate_limit_window_seconds: int = 60
     rate_limit_key_salt: str = ""
     rate_limit_enabled: bool = True

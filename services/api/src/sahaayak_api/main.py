@@ -20,6 +20,7 @@ from sahaayak_api.routers import (
     admin_directory,
     admin_notifications,
     applications,
+    assistance,
     benefit_feedback,
     browser_sessions,
     catalog,
@@ -102,3 +103,4 @@ app.include_router(escalations.router)
 app.include_router(admin.router)
 app.include_router(admin_directory.router)
 app.include_router(admin_notifications.router)
+app.include_router(assistance.router)
