@@ -5,4 +5,5 @@ set -eu
 
 cd /app
 /app/.venv/bin/alembic upgrade head
+/app/.venv/bin/python /app/scripts/render_demo_bootstrap.py
 exec /app/.venv/bin/uvicorn sahaayak_api.main:app --host 0.0.0.0 --port "${PORT:-8000}"

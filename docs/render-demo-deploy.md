@@ -20,6 +20,20 @@ Admin uses a **static token** (`ADMIN_STATIC_TOKENS_ENABLED=true`). Free instanc
 
 Expect **30–60s cold starts** after ~15 minutes idle.
 
+### Why the UI might show 0 benefits / few languages
+
+A fresh Render Postgres only has migrations. API boot runs
+`scripts/render_demo_bootstrap.py` when `RENDER_DEMO_BOOTSTRAP=true` to:
+
+- seed the small **illustrative** demo benefit set if the catalog is empty;
+- optionally open planned languages (`RENDER_DEMO_OPEN_CATALOG=true`) for the
+  short public demo (not a production language-release attestation).
+
+Without that bootstrap, visitors can open the app but cannot get useful
+eligibility matches. Demo benefits are hand-entered scaffolding, not the full
+reviewed corpus (that lives in gitignored `data/structured/` and must be loaded
+separately for a richer catalog).
+
 ## Prerequisites
 
 - Render account ([sign up](https://dashboard.render.com/register); free instances do not require a card)

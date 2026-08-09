@@ -26,6 +26,11 @@ services:
         value: production
       - key: LOG_JSON
         value: "true"
+      # Seed illustrative benefits + open planned languages for the short demo.
+      - key: RENDER_DEMO_BOOTSTRAP
+        value: "true"
+      - key: RENDER_DEMO_OPEN_CATALOG
+        value: "true"
       - key: DATABASE_URL
         fromDatabase:
           name: sahaayak-postgres
