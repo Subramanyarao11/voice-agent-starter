@@ -145,7 +145,8 @@ def _open_demo_catalog() -> None:
                     "Render Free demo bootstrap — temporary activation for a "
                     "2–3 day public validation, not a production release attestation."
                 )
-                review.attestation = "render-demo-bootstrap"
+                review.reviewed_by = "render-demo-bootstrap"
+                review.reviewed_at = review.reviewed_at or now
                 review.activated_at = review.activated_at or now
                 db.add(review)
 
