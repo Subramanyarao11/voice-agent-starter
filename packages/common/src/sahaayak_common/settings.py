@@ -107,6 +107,23 @@ class Settings(BaseSettings):
     admin_oidc_clock_skew_seconds: int = 60
     admin_oidc_jwks_cache_seconds: int = 3600
 
+    # Citizen identity is deliberately separate from workforce/admin OIDC.
+    # Static citizen tokens are a local/test seam only; production must use a
+    # configured PKCE/OIDC BFF or approved passwordless identity provider.
+    citizen_static_tokens_enabled: bool = False
+    citizen_api_token: str = ""
+    citizen_oidc_enabled: bool = False
+    citizen_oidc_issuer_url: str = ""
+    citizen_oidc_discovery_url: str = ""
+    citizen_oidc_audience: str = ""
+    citizen_oidc_jwks_url: str = ""
+    citizen_oidc_allowed_algorithms: str = "RS256"
+    citizen_oidc_subject_claim: str = "sub"
+    citizen_oidc_clock_skew_seconds: int = 60
+    citizen_household_dependants_enabled: bool = False
+    citizen_household_max_members: int = 8
+    citizen_household_retention_days: int = 730
+
     # Guest browser sessions stay login-free, but are still server-owned and
     # bounded. The access token is issued once and stored only in the browser
     # session; no user-supplied caller identifier authorizes a request.
@@ -211,6 +228,9 @@ class Settings(BaseSettings):
     # workflow can still be used without this key when no reference is saved;
     # reference capture fails closed until deployment supplies it.
     application_data_encryption_key: str = ""
+    profile_data_encryption_key: str = ""
+    profile_hash_key: str = ""
+    citizen_identity_hash_key: str = ""
 
     # A single outbound message can only cost so much before something is
     # wrong with the template. Unicode Kannada/Hindi text costs roughly one

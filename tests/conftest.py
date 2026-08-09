@@ -20,9 +20,14 @@ os.environ["SARVAM_API_KEY"] = ""
 os.environ["LANGFUSE_PUBLIC_KEY"] = ""
 os.environ["LANGFUSE_SECRET_KEY"] = ""
 os.environ["ADMIN_API_TOKEN"] = "test-admin-token"
+os.environ["CITIZEN_STATIC_TOKENS_ENABLED"] = "true"
+os.environ["CITIZEN_API_TOKEN"] = "test-citizen-token"
 # Valid deterministic test-only Fernet key. Production references must use a
 # deployment secret and are never stored in the repository.
 os.environ["APPLICATION_DATA_ENCRYPTION_KEY"] = "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA="
+os.environ["PROFILE_DATA_ENCRYPTION_KEY"] = "BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB="
+os.environ["PROFILE_HASH_KEY"] = "test-profile-hash-key"
+os.environ["CITIZEN_IDENTITY_HASH_KEY"] = "test-citizen-identity-key"
 os.environ["ENV"] = "test"
 
 # Pinned off regardless of the developer's .env. Without this the suite reads

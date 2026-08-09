@@ -72,14 +72,20 @@ def upgrade() -> None:
         # SQLite's date arithmetic is only needed for legacy local rows. The
         # API treats a null deadline as an unclocked legacy ticket.
 
-    for column in (
-        "department",
-        "routing_location",
-        "routing_source",
-        "operator_notes",
-        "resolution_note",
-    ):
-        op.alter_column("escalation_ticket", column, server_default=None)
+    # PostgreSQL can remove the temporary defaults directly. SQLite's ALTER
+    # TABLE implementation cannot drop a default without reconstructing the
+    # table, and these defaults are harmless for the legacy compatibility
+    # columns. The application owns future writes, so leave them in place on
+    # local SQLite databases rather than making a clean install fail here.
+    if bind.dialect.name != "sqlite":
+        for column in (
+            "department",
+            "routing_location",
+            "routing_source",
+            "operator_notes",
+            "resolution_note",
+        ):
+            op.alter_column("escalation_ticket", column, server_default=None)
 
 
 def downgrade() -> None:

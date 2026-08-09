@@ -266,6 +266,281 @@ class UserSession(SQLModel, table=True):
     last_contact_at: datetime = Field(default_factory=_utcnow)
 
 
+class CitizenAccount(SQLModel, table=True):
+    """Durable citizen identity projection; authentication tokens live elsewhere."""
+
+    __tablename__ = "citizen_account"
+
+    id: str = Field(primary_key=True)
+    identity_provider: str = Field(default="oidc", index=True)
+    provider_subject_hash: str = Field(index=True, unique=True)
+    status: str = Field(default="active", index=True)
+    preferred_language_code: str = Field(default="en", foreign_key="language.code")
+    timezone: str = "Asia/Kolkata"
+    terms_version: str = ""
+    privacy_notice_version: str = ""
+    created_at: datetime = Field(default_factory=_utcnow, index=True)
+    last_login_at: datetime = Field(default_factory=_utcnow)
+    deletion_requested_at: datetime | None = None
+
+
+class Household(SQLModel, table=True):
+    """Minimal, account-owned household container."""
+
+    __tablename__ = "household"
+    __table_args__ = (
+        Index("ix_household_owner_status", "owner_account_id", "status"),
+    )
+
+    id: str = Field(primary_key=True)
+    owner_account_id: str = Field(foreign_key="citizen_account.id", index=True)
+    label_ciphertext: str | None = None
+    label_masked: str = "My household"
+    state_code: str | None = Field(default=None, foreign_key="state.code", index=True)
+    district: str = ""
+    pincode_ciphertext: str | None = None
+    pincode_masked: str = ""
+    pincode_prefix: str | None = Field(default=None, index=True)
+    status: str = Field(default="active", index=True)
+    revision: int = 1
+    matching_policy_version: str = "household-v1"
+    retention_expires_at: datetime | None = None
+    created_at: datetime = Field(default_factory=_utcnow, index=True)
+    updated_at: datetime = Field(default_factory=_utcnow)
+
+
+class HouseholdMember(SQLModel, table=True):
+    """An explicit household subject; relationship and authority are asserted."""
+
+    __tablename__ = "household_member"
+    __table_args__ = (
+        Index("ix_household_member_household_status", "household_id", "status"),
+    )
+
+    id: str = Field(primary_key=True)
+    household_id: str = Field(foreign_key="household.id", index=True)
+    alias_ciphertext: str | None = None
+    alias_masked: str = "Member"
+    safe_ordinal: str = "member_1"
+    relationship_category: str = "self"
+    is_account_owner_subject: bool = False
+    age_class: str = "unknown"  # child | adult | dependant | unknown
+    authority_status: str = "not_applicable"  # asserted | confirmed | required | not_applicable
+    authority_confirmed_at: datetime | None = None
+    status: str = Field(default="active", index=True)
+    revision: int = 1
+    created_at: datetime = Field(default_factory=_utcnow, index=True)
+    updated_at: datetime = Field(default_factory=_utcnow)
+
+
+class ProfileFactDefinition(SQLModel, table=True):
+    """Reviewed catalog entry controlling what a household fact may do."""
+
+    __tablename__ = "profile_fact_definition"
+    __table_args__ = (
+        Index("ix_profile_fact_definition_key_version", "fact_key", "version", unique=True),
+        Index("ix_profile_fact_definition_status", "review_status", "fact_key"),
+    )
+
+    id: str = Field(primary_key=True)
+    fact_key: str = Field(index=True)
+    version: int = 1
+    scope: str = "member"  # household | member | application
+    data_type: str = "text"
+    allowed_values: list[str] = Field(default_factory=list, sa_column=json_list())
+    validation: dict = Field(default_factory=dict, sa_column=json_dict())
+    sensitivity: str = "personal"
+    allowed_purposes: list[str] = Field(default_factory=list, sa_column=json_list())
+    inheritance_allowed: bool = False
+    reconfirmation_days: int | None = None
+    question: dict = Field(default_factory=dict, sa_column=json_dict())
+    help_text: dict = Field(default_factory=dict, sa_column=json_dict())
+    matcher_slot: str | None = None
+    review_status: str = Field(default="pending", index=True)
+    reviewed_by: str | None = None
+    reviewed_at: datetime | None = None
+    created_at: datetime = Field(default_factory=_utcnow, index=True)
+    updated_at: datetime = Field(default_factory=_utcnow)
+
+
+class ProfileFact(SQLModel, table=True):
+    """Current encrypted fact; revisions preserve provenance history."""
+
+    __tablename__ = "profile_fact"
+    __table_args__ = (
+        Index(
+            "ix_profile_fact_member_key_current",
+            "household_member_id",
+            "fact_key",
+            "status",
+            unique=True,
+        ),
+        Index("ix_profile_fact_household_key_current", "household_id", "fact_key", "status"),
+    )
+
+    id: str = Field(primary_key=True)
+    household_id: str = Field(foreign_key="household.id", index=True)
+    household_member_id: str | None = Field(
+        default=None, foreign_key="household_member.id", index=True
+    )
+    fact_key: str = Field(index=True)
+    definition_version: int = 1
+    value_ciphertext: str
+    value_hash: str = Field(index=True)
+    masked_value: str = ""
+    value_source: str = "citizen_entered"
+    purposes: list[str] = Field(default_factory=list, sa_column=json_list())
+    confirmed_by: str = ""
+    confirmed_at: datetime = Field(default_factory=_utcnow)
+    valid_from: datetime | None = None
+    reconfirm_after: datetime | None = None
+    expires_at: datetime | None = None
+    status: str = Field(default="current", index=True)
+    revision: int = 1
+    created_at: datetime = Field(default_factory=_utcnow, index=True)
+    updated_at: datetime = Field(default_factory=_utcnow)
+
+
+class ProfileFactRevision(SQLModel, table=True):
+    """Append-only metadata for fact corrections and consent changes."""
+
+    __tablename__ = "profile_fact_revision"
+
+    id: str = Field(primary_key=True)
+    profile_fact_id: str = Field(foreign_key="profile_fact.id", index=True)
+    revision: int = 1
+    action: str = "created"
+    actor_id: str = ""
+    reason: str = ""
+    before_masked_value: str = ""
+    after_masked_value: str = ""
+    value_hash: str = ""
+    definition_version: int = 1
+    created_at: datetime = Field(default_factory=_utcnow, index=True)
+
+
+class LifeEvent(SQLModel, table=True):
+    """Confirmed structured event that can trigger a bounded rematch."""
+
+    __tablename__ = "life_event"
+    __table_args__ = (
+        Index("ix_life_event_household_member_status", "household_member_id", "status"),
+    )
+
+    id: str = Field(primary_key=True)
+    household_id: str = Field(foreign_key="household.id", index=True)
+    household_member_id: str | None = Field(
+        default=None, foreign_key="household_member.id", index=True
+    )
+    event_key: str = Field(index=True)
+    schema_version: int = 1
+    occurred_on: date | None = None
+    occurred_precision: str = "unknown"  # day | month | year | unknown
+    attributes_ciphertext: str | None = None
+    attributes_hash: str = ""
+    provenance: str = "citizen_confirmed"
+    confirmed_by: str = ""
+    confirmed_at: datetime = Field(default_factory=_utcnow)
+    status: str = Field(default="active", index=True)
+    supersedes_event_id: str | None = None
+    affected_domains: list[str] = Field(default_factory=list, sa_column=json_list())
+    created_at: datetime = Field(default_factory=_utcnow, index=True)
+    updated_at: datetime = Field(default_factory=_utcnow)
+
+
+class MemberRecommendation(SQLModel, table=True):
+    """A deterministic, versioned radar snapshot for one member and benefit."""
+
+    __tablename__ = "member_recommendation"
+    __table_args__ = (
+        Index(
+            "ix_member_recommendation_member_benefit_revision",
+            "household_member_id",
+            "benefit_id",
+            "benefit_revision",
+            unique=True,
+        ),
+        Index("ix_member_recommendation_member_state", "household_member_id", "state"),
+    )
+
+    id: str = Field(primary_key=True)
+    household_id: str = Field(foreign_key="household.id", index=True)
+    household_member_id: str = Field(foreign_key="household_member.id", index=True)
+    benefit_id: str = Field(foreign_key="benefit.id", index=True)
+    benefit_revision: int = 0
+    matcher_rules_version: str = ""
+    computed_profile_version: str = ""
+    verdict: str = "undetermined"
+    state: str = Field(default="new", index=True)
+    deterministic_score: float = 0.0
+    reason_codes: list[str] = Field(default_factory=list, sa_column=json_list())
+    criterion_evidence: list[dict] = Field(default_factory=list, sa_column=json_list())
+    fact_use_evidence: list[dict] = Field(default_factory=list, sa_column=json_list())
+    trigger_type: str = "manual"
+    trigger_reference_hash: str = ""
+    first_generated_at: datetime = Field(default_factory=_utcnow)
+    last_generated_at: datetime = Field(default_factory=_utcnow)
+    viewed_at: datetime | None = None
+    snoozed_until: datetime | None = None
+    dismissed_at: datetime | None = None
+    dismissal_reason_code: str | None = None
+    linked_saved_benefit_id: str | None = Field(default=None, foreign_key="saved_benefit.id")
+    linked_application_case_id: str | None = Field(
+        default=None, foreign_key="application_case.id"
+    )
+    source_deadline: date | None = None
+    source_last_verified_date: date | None = None
+    created_at: datetime = Field(default_factory=_utcnow, index=True)
+    updated_at: datetime = Field(default_factory=_utcnow)
+
+
+class HouseholdConsentEvent(SQLModel, table=True):
+    """Purpose-specific append-only household consent."""
+
+    __tablename__ = "household_consent_event"
+
+    id: str = Field(primary_key=True)
+    citizen_account_id: str = Field(foreign_key="citizen_account.id", index=True)
+    household_id: str | None = Field(default=None, foreign_key="household.id", index=True)
+    household_member_id: str | None = Field(
+        default=None, foreign_key="household_member.id", index=True
+    )
+    purpose: str = Field(index=True)
+    action: str = Field(index=True)  # granted | withdrawn | expired
+    notice_version: str = ""
+    locale: str = "en"
+    actor_id: str = ""
+    assistance_session_id: str | None = None
+    safe_context: dict = Field(default_factory=dict, sa_column=json_dict())
+    created_at: datetime = Field(default_factory=_utcnow, index=True)
+
+
+class GuestMigration(SQLModel, table=True):
+    """Idempotent review/commit record for guest-to-account migration."""
+
+    __tablename__ = "guest_migration"
+    __table_args__ = (
+        Index("ix_guest_migration_account_status", "citizen_account_id", "status"),
+        Index(
+            "ix_guest_migration_idempotency",
+            "citizen_account_id",
+            "idempotency_key",
+            unique=True,
+        ),
+    )
+
+    id: str = Field(primary_key=True)
+    guest_session_id: str = Field(foreign_key="user_session.id", index=True)
+    citizen_account_id: str = Field(foreign_key="citizen_account.id", index=True)
+    selected_object_ids: dict = Field(default_factory=dict, sa_column=json_dict())
+    status: str = Field(default="preview", index=True)
+    idempotency_key: str
+    conflict_report: dict = Field(default_factory=dict, sa_column=json_dict())
+    source_deletion_status: str = "not_started"
+    created_at: datetime = Field(default_factory=_utcnow, index=True)
+    updated_at: datetime = Field(default_factory=_utcnow)
+
+
 class SavedBenefit(SQLModel, table=True):
     """A caller's private shortlist of benefits.
 
@@ -282,6 +557,12 @@ class SavedBenefit(SQLModel, table=True):
 
     id: str = Field(primary_key=True)
     session_id: str = Field(foreign_key="user_session.id", index=True)
+    citizen_account_id: str | None = Field(
+        default=None, foreign_key="citizen_account.id", index=True
+    )
+    household_member_id: str | None = Field(
+        default=None, foreign_key="household_member.id", index=True
+    )
     benefit_id: str = Field(foreign_key="benefit.id", index=True)
     created_at: datetime = Field(default_factory=_utcnow, index=True)
 
@@ -313,6 +594,12 @@ class ApplicationCase(SQLModel, table=True):
 
     id: str = Field(primary_key=True)
     session_id: str = Field(foreign_key="user_session.id", index=True)
+    citizen_account_id: str | None = Field(
+        default=None, foreign_key="citizen_account.id", index=True
+    )
+    household_member_id: str | None = Field(
+        default=None, foreign_key="household_member.id", index=True
+    )
     benefit_id: str = Field(foreign_key="benefit.id", index=True)
 
     # The case stays understandable even after a benefit is edited. This is
@@ -405,6 +692,12 @@ class ApplicationTask(SQLModel, table=True):
     id: str = Field(primary_key=True)
     session_id: str = Field(foreign_key="user_session.id", index=True)
     benefit_id: str = Field(foreign_key="benefit.id", index=True)
+    citizen_account_id: str | None = Field(
+        default=None, foreign_key="citizen_account.id", index=True
+    )
+    household_member_id: str | None = Field(
+        default=None, foreign_key="household_member.id", index=True
+    )
     application_case_id: str | None = Field(
         default=None, foreign_key="application_case.id", index=True
     )

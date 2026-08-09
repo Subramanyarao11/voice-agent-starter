@@ -16,6 +16,7 @@ from sahaayak_common import (
     ensure_benefit_baselines,
     ensure_default_feature_flags,
     ensure_directory_baselines,
+    ensure_household_fact_definitions,
     get_logger,
     session_scope,
 )
@@ -85,6 +86,7 @@ def ensure_reference_data() -> None:
                     is_active=active,
                 )
             )
+        household_fact_definitions = ensure_household_fact_definitions(db)
 
     ensure_default_feature_flags()
 
@@ -95,4 +97,5 @@ def ensure_reference_data() -> None:
         active_states=sum(1 for _, _, lang in DEFAULT_STATES if lang in served),
         benefit_baselines=benefit_baselines,
         directory_baselines=directory_baselines,
+        household_fact_definitions=household_fact_definitions,
     )

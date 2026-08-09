@@ -593,6 +593,252 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/citizen/me": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Citizen Me */
+        get: operations["citizen_me_api_citizen_me_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/households": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Households */
+        get: operations["list_households_api_households_get"];
+        put?: never;
+        /** Create Household */
+        post: operations["create_household_api_households_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/households/{household_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Household */
+        get: operations["get_household_api_households__household_id__get"];
+        put?: never;
+        post?: never;
+        /** Request Household Deletion */
+        delete: operations["request_household_deletion_api_households__household_id__delete"];
+        options?: never;
+        head?: never;
+        /** Update Household */
+        patch: operations["update_household_api_households__household_id__patch"];
+        trace?: never;
+    };
+    "/api/households/{household_id}/members": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Members */
+        get: operations["list_members_api_households__household_id__members_get"];
+        put?: never;
+        /** Add Member */
+        post: operations["add_member_api_households__household_id__members_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/households/{household_id}/members/{member_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Member */
+        get: operations["get_member_api_households__household_id__members__member_id__get"];
+        put?: never;
+        post?: never;
+        /** Delete Member */
+        delete: operations["delete_member_api_households__household_id__members__member_id__delete"];
+        options?: never;
+        head?: never;
+        /** Update Member */
+        patch: operations["update_member_api_households__household_id__members__member_id__patch"];
+        trace?: never;
+    };
+    "/api/households/{household_id}/facts": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Household Facts */
+        get: operations["list_household_facts_api_households__household_id__facts_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/households/{household_id}/members/{member_id}/facts": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Member Facts */
+        get: operations["list_member_facts_api_households__household_id__members__member_id__facts_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/households/{household_id}/facts/{fact_key}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Write Household Fact */
+        put: operations["write_household_fact_api_households__household_id__facts__fact_key__put"];
+        post?: never;
+        /** Delete Household Fact */
+        delete: operations["delete_household_fact_api_households__household_id__facts__fact_key__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/households/{household_id}/members/{member_id}/facts/{fact_key}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Write Member Fact */
+        put: operations["write_member_fact_api_households__household_id__members__member_id__facts__fact_key__put"];
+        post?: never;
+        /** Delete Member Fact */
+        delete: operations["delete_member_fact_api_households__household_id__members__member_id__facts__fact_key__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/households/{household_id}/facts/{fact_key}/confirm": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Confirm Household Fact */
+        post: operations["confirm_household_fact_api_households__household_id__facts__fact_key__confirm_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/households/{household_id}/members/{member_id}/facts/{fact_key}/confirm": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Confirm Member Fact */
+        post: operations["confirm_member_fact_api_households__household_id__members__member_id__facts__fact_key__confirm_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/households/{household_id}/facts/{fact_key}/history": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Household Fact History */
+        get: operations["household_fact_history_api_households__household_id__facts__fact_key__history_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/households/{household_id}/members/{member_id}/facts/{fact_key}/history": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Member Fact History */
+        get: operations["member_fact_history_api_households__household_id__members__member_id__facts__fact_key__history_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/citizen/fact-definitions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Fact Definitions */
+        get: operations["list_fact_definitions_api_citizen_fact_definitions_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/sessions/{session_id}": {
         parameters: {
             query?: never;
@@ -2582,6 +2828,31 @@ export interface components {
              */
             display_suffix: string;
         };
+        /** CitizenMeOut */
+        CitizenMeOut: {
+            /** Id */
+            id: string;
+            /** Identity Provider */
+            identity_provider: string;
+            /** Preferred Language Code */
+            preferred_language_code: string;
+            /** Timezone */
+            timezone: string;
+            /** Status */
+            status: string;
+            /** Household Ids */
+            household_ids: string[];
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /**
+             * Last Login At
+             * Format: date-time
+             */
+            last_login_at: string;
+        };
         /** ContactPointCreate */
         ContactPointCreate: {
             /**
@@ -3078,6 +3349,37 @@ export interface components {
             /** Completed At */
             completed_at: string | null;
         };
+        /** FactDefinitionOut */
+        FactDefinitionOut: {
+            /** Fact Key */
+            fact_key: string;
+            /** Version */
+            version: number;
+            /** Scope */
+            scope: string;
+            /** Data Type */
+            data_type: string;
+            /** Allowed Values */
+            allowed_values: string[];
+            /** Allowed Purposes */
+            allowed_purposes: string[];
+            /** Sensitivity */
+            sensitivity: string;
+            /** Inheritance Allowed */
+            inheritance_allowed: boolean;
+            /** Reconfirmation Days */
+            reconfirmation_days: number | null;
+            /** Question */
+            question: {
+                [key: string]: string;
+            };
+            /** Help Text */
+            help_text: {
+                [key: string]: string;
+            };
+            /** Matcher Slot */
+            matcher_slot: string | null;
+        };
         /** FeatureFlagListOut */
         FeatureFlagListOut: {
             /**
@@ -3317,6 +3619,110 @@ export interface components {
             /** Languages */
             languages: string[];
         };
+        /** HouseholdCreate */
+        HouseholdCreate: {
+            /**
+             * Label
+             * @default My household
+             */
+            label: string;
+            /** State Code */
+            state_code?: string | null;
+            /** District */
+            district?: string | null;
+            /** Pincode */
+            pincode?: string | null;
+            /**
+             * Include Self
+             * @default true
+             */
+            include_self: boolean;
+            /**
+             * Consent Persistence
+             * @default false
+             */
+            consent_persistence: boolean;
+            /**
+             * Consent Personalization
+             * @default false
+             */
+            consent_personalization: boolean;
+        };
+        /** HouseholdMemberOut */
+        HouseholdMemberOut: {
+            /** Id */
+            id: string;
+            /** Alias */
+            alias: string;
+            /** Safe Ordinal */
+            safe_ordinal: string;
+            /** Relationship Category */
+            relationship_category: string;
+            /** Is Account Owner Subject */
+            is_account_owner_subject: boolean;
+            /** Age Class */
+            age_class: string;
+            /** Authority Status */
+            authority_status: string;
+            /** Status */
+            status: string;
+            /** Revision */
+            revision: number;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /**
+             * Updated At
+             * Format: date-time
+             */
+            updated_at: string;
+        };
+        /** HouseholdOut */
+        HouseholdOut: {
+            /** Id */
+            id: string;
+            /** Label */
+            label: string;
+            /** State Code */
+            state_code: string | null;
+            /** District */
+            district: string;
+            /** Pincode */
+            pincode: string;
+            /** Status */
+            status: string;
+            /** Revision */
+            revision: number;
+            /** Matching Policy Version */
+            matching_policy_version: string;
+            /** Member Count */
+            member_count: number;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /**
+             * Updated At
+             * Format: date-time
+             */
+            updated_at: string;
+        };
+        /** HouseholdUpdate */
+        HouseholdUpdate: {
+            /** Label */
+            label?: string | null;
+            /** State Code */
+            state_code?: string | null;
+            /** District */
+            district?: string | null;
+            /** Pincode */
+            pincode?: string | null;
+            /** Expected Revision */
+            expected_revision?: number | null;
+        };
         /** ImportRunOut */
         ImportRunOut: {
             /** Id */
@@ -3532,6 +3938,47 @@ export interface components {
                 [key: string]: string | number | boolean | null;
             };
         };
+        /** MemberCreate */
+        MemberCreate: {
+            /**
+             * Alias
+             * @default Member
+             */
+            alias: string;
+            /**
+             * Relationship Category
+             * @default other
+             */
+            relationship_category: string;
+            /**
+             * Age Class
+             * @default unknown
+             */
+            age_class: string;
+            /**
+             * Authority Confirmed
+             * @default false
+             */
+            authority_confirmed: boolean;
+            /**
+             * Consent Member Management
+             * @default false
+             */
+            consent_member_management: boolean;
+        };
+        /** MemberUpdate */
+        MemberUpdate: {
+            /** Alias */
+            alias?: string | null;
+            /** Relationship Category */
+            relationship_category?: string | null;
+            /** Age Class */
+            age_class?: string | null;
+            /** Authority Confirmed */
+            authority_confirmed?: boolean | null;
+            /** Expected Revision */
+            expected_revision?: number | null;
+        };
         /** NotificationOverviewOut */
         NotificationOverviewOut: {
             /**
@@ -3564,6 +4011,95 @@ export interface components {
             };
             /** Controls Note */
             controls_note: string;
+        };
+        /** ProfileFactConfirm */
+        ProfileFactConfirm: {
+            /** Expected Revision */
+            expected_revision?: number | null;
+        };
+        /** ProfileFactOut */
+        ProfileFactOut: {
+            /** Fact Key */
+            fact_key: string;
+            /** Version */
+            version: number;
+            /** Scope */
+            scope: string;
+            /** Data Type */
+            data_type: string;
+            /** Allowed Values */
+            allowed_values: string[];
+            /** Allowed Purposes */
+            allowed_purposes: string[];
+            /** Sensitivity */
+            sensitivity: string;
+            /** Inheritance Allowed */
+            inheritance_allowed: boolean;
+            /** Reconfirmation Days */
+            reconfirmation_days: number | null;
+            /** Question */
+            question: {
+                [key: string]: string;
+            };
+            /** Help Text */
+            help_text: {
+                [key: string]: string;
+            };
+            /** Matcher Slot */
+            matcher_slot: string | null;
+            /**
+             * State
+             * @enum {string}
+             */
+            state: "missing" | "current" | "stale";
+            /** Masked Value */
+            masked_value: string;
+            /** Value Source */
+            value_source: string;
+            /** Purposes */
+            purposes: string[];
+            /** Confirmed At */
+            confirmed_at: string | null;
+            /** Reconfirm After */
+            reconfirm_after: string | null;
+            /** Expires At */
+            expires_at: string | null;
+            /** Revision */
+            revision: number | null;
+        };
+        /** ProfileFactRevisionOut */
+        ProfileFactRevisionOut: {
+            /** Revision */
+            revision: number;
+            /** Action */
+            action: string;
+            /** Reason */
+            reason: string;
+            /** Before Masked Value */
+            before_masked_value: string;
+            /** After Masked Value */
+            after_masked_value: string;
+            /** Definition Version */
+            definition_version: number;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+        };
+        /** ProfileFactWrite */
+        ProfileFactWrite: {
+            /** Value */
+            value: string;
+            /** Purposes */
+            purposes: string[];
+            /**
+             * Confirm Purpose
+             * @default false
+             */
+            confirm_purpose: boolean;
+            /** Expected Revision */
+            expected_revision?: number | null;
         };
         /** ProviderFailureSimulationListOut */
         ProviderFailureSimulationListOut: {
@@ -5642,6 +6178,697 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    citizen_me_api_citizen_me_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CitizenMeOut"];
+                };
+            };
+        };
+    };
+    list_households_api_households_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HouseholdOut"][];
+                };
+            };
+        };
+    };
+    create_household_api_households_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["HouseholdCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HouseholdOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_household_api_households__household_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                household_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HouseholdOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    request_household_deletion_api_households__household_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                household_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HouseholdOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    update_household_api_households__household_id__patch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                household_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["HouseholdUpdate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HouseholdOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_members_api_households__household_id__members_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                household_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HouseholdMemberOut"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    add_member_api_households__household_id__members_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                household_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MemberCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HouseholdMemberOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_member_api_households__household_id__members__member_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                household_id: string;
+                member_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HouseholdMemberOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    delete_member_api_households__household_id__members__member_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                household_id: string;
+                member_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HouseholdMemberOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    update_member_api_households__household_id__members__member_id__patch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                household_id: string;
+                member_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MemberUpdate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HouseholdMemberOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_household_facts_api_households__household_id__facts_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                household_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProfileFactOut"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_member_facts_api_households__household_id__members__member_id__facts_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                household_id: string;
+                member_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProfileFactOut"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    write_household_fact_api_households__household_id__facts__fact_key__put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                household_id: string;
+                fact_key: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ProfileFactWrite"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProfileFactOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    delete_household_fact_api_households__household_id__facts__fact_key__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                household_id: string;
+                fact_key: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    write_member_fact_api_households__household_id__members__member_id__facts__fact_key__put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                household_id: string;
+                member_id: string;
+                fact_key: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ProfileFactWrite"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProfileFactOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    delete_member_fact_api_households__household_id__members__member_id__facts__fact_key__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                household_id: string;
+                member_id: string;
+                fact_key: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    confirm_household_fact_api_households__household_id__facts__fact_key__confirm_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                household_id: string;
+                fact_key: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ProfileFactConfirm"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProfileFactOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    confirm_member_fact_api_households__household_id__members__member_id__facts__fact_key__confirm_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                household_id: string;
+                member_id: string;
+                fact_key: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ProfileFactConfirm"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProfileFactOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    household_fact_history_api_households__household_id__facts__fact_key__history_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                household_id: string;
+                fact_key: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProfileFactRevisionOut"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    member_fact_history_api_households__household_id__members__member_id__facts__fact_key__history_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                household_id: string;
+                member_id: string;
+                fact_key: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProfileFactRevisionOut"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_fact_definitions_api_citizen_fact_definitions_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FactDefinitionOut"][];
                 };
             };
         };
