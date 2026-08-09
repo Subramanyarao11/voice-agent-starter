@@ -67,7 +67,7 @@ Optional seed (one-off Shell / local against the Render DB only if you know what
 
 ```bash
 # Prefer restoring a private dump or running reviewed seed scripts after migrate.
-# preDeployCommand already runs: alembic upgrade head
+# Free-tier API boot already runs: alembic upgrade head
 ```
 
 ## Local vs Render (do not mix)
