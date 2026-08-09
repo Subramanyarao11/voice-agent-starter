@@ -8,7 +8,7 @@ type TopbarProps = {
   sessionId: string;
   connected: boolean;
   currentLanguage?: string;
-  activeSection?: "home" | "saved" | "applications";
+  activeSection?: "home" | "saved" | "applications" | "household";
 };
 
 export function Topbar({ sessionId, connected, currentLanguage, activeSection = "home" }: TopbarProps) {
@@ -76,6 +76,17 @@ export function Topbar({ sessionId, connected, currentLanguage, activeSection = 
               }`}
             >
               {t("home")}
+            </Link>
+          </li>
+          <li>
+            <Link
+              to="/household"
+              aria-current={activeSection === "household" ? "page" : undefined}
+              className={`inline-flex min-h-11 items-center gap-2 border-b-4 px-3 text-sm font-semibold transition-colors ${
+                activeSection === "household" ? "border-primary text-primary" : "border-transparent text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              Household radar
             </Link>
           </li>
           <li>

@@ -2,6 +2,7 @@ import { createRootRoute, createRoute, createRouter, lazyRouteComponent, Outlet 
 
 import { HomePage } from "@/routes/home";
 import { AdminCallbackPage } from "@/routes/admin-callback";
+import { CitizenCallbackPage } from "@/routes/citizen-callback";
 import { DataUsagePage } from "@/routes/data-usage";
 import { OfflinePage } from "@/routes/offline";
 import { PwaRuntime } from "@/features/pwa/components/pwa-runtime";
@@ -23,6 +24,7 @@ const ApplicationPackRoutePage = lazyRouteComponent(
   () => import("@/routes/applications"),
   "ApplicationPackRoutePage",
 );
+const HouseholdRoutePage = lazyRouteComponent(() => import("@/routes/household"), "HouseholdRoutePage");
 
 function RootLayout() {
   return (
@@ -87,6 +89,18 @@ const applicationPackRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/applications/$applicationId/pack",
   component: ApplicationPackRoutePage,
+});
+
+const householdRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/household",
+  component: HouseholdRoutePage,
+});
+
+const citizenCallbackRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/account/callback",
+  component: CitizenCallbackPage,
 });
 
 const adminRoute = createRoute({
@@ -187,6 +201,8 @@ const routeTree = rootRoute.addChildren([
   applicationsRoute,
   applicationDetailRoute,
   applicationPackRoute,
+  householdRoute,
+  citizenCallbackRoute,
   adminRoute,
   adminCallbackRoute,
   adminOverviewRoute,

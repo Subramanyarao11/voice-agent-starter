@@ -57,6 +57,119 @@ export const browserSessionSchema = z.object({
   expires_at: z.string(),
 });
 
+export const citizenMeSchema = z.object({
+  id: z.string(),
+  identity_provider: z.string(),
+  preferred_language_code: z.string(),
+  timezone: z.string(),
+  status: z.string(),
+  household_ids: z.array(z.string()),
+  created_at: z.string(),
+  last_login_at: z.string(),
+});
+
+export const householdSchema = z.object({
+  id: z.string(),
+  label: z.string(),
+  state_code: z.string().nullable(),
+  district: z.string(),
+  pincode: z.string(),
+  status: z.string(),
+  revision: z.number(),
+  matching_policy_version: z.string(),
+  member_count: z.number(),
+  created_at: z.string(),
+  updated_at: z.string(),
+});
+
+export const householdMemberSchema = z.object({
+  id: z.string(),
+  alias: z.string(),
+  safe_ordinal: z.string(),
+  relationship_category: z.string(),
+  is_account_owner_subject: z.boolean(),
+  age_class: z.string(),
+  authority_status: z.string(),
+  status: z.string(),
+  revision: z.number(),
+  created_at: z.string(),
+  updated_at: z.string(),
+});
+
+export const profileFactSchema = z.object({
+  fact_key: z.string(),
+  version: z.number(),
+  scope: z.string(),
+  data_type: z.string(),
+  allowed_values: z.array(z.string()),
+  allowed_purposes: z.array(z.string()),
+  sensitivity: z.string(),
+  inheritance_allowed: z.boolean(),
+  reconfirmation_days: z.number().nullable(),
+  question: z.record(z.string(), z.string()),
+  help_text: z.record(z.string(), z.string()),
+  matcher_slot: z.string().nullable(),
+  state: z.enum(["missing", "current", "stale"]),
+  masked_value: z.string(),
+  value_source: z.string(),
+  purposes: z.array(z.string()),
+  confirmed_at: z.string().nullable(),
+  reconfirm_after: z.string().nullable(),
+  expires_at: z.string().nullable(),
+  revision: z.number().nullable(),
+});
+
+export const radarCriterionEvidenceSchema = z.object({
+  slot: z.string(),
+  status: z.string(),
+  requirement: z.string(),
+  fact_key: z.string(),
+  fact_state: z.string(),
+  evidence_source: z.string(),
+});
+
+export const radarRecommendationSchema = z.object({
+  id: z.string(),
+  household_member_id: z.string(),
+  member_ordinal: z.string(),
+  benefit_id: z.string(),
+  benefit_name: z.string(),
+  domain: z.string(),
+  verdict: z.string(),
+  confidence: z.number(),
+  state: z.string(),
+  reason_codes: z.array(z.string()),
+  criterion_evidence: z.array(radarCriterionEvidenceSchema),
+  fact_use_evidence: z.array(z.record(z.string(), z.unknown())),
+  source_title: z.string(),
+  source_url: z.string(),
+  source_last_verified_date: z.string().nullable(),
+  valid_until: z.string().nullable(),
+  benefit_revision: z.number(),
+  matcher_rules_version: z.string(),
+  computed_profile_version: z.string(),
+  viewed_at: z.string().nullable(),
+  snoozed_until: z.string().nullable(),
+  dismissed_at: z.string().nullable(),
+  updated_at: z.string(),
+});
+
+export const radarListSchema = z.object({
+  household_id: z.string(),
+  generated_at: z.string(),
+  recommendations: z.array(radarRecommendationSchema),
+  counts_by_state: z.record(z.string(), z.number()),
+});
+
+export const radarRefreshSchema = z.object({
+  household_id: z.string(),
+  generated_at: z.string(),
+  profile_version: z.string(),
+  recommendation_count: z.number(),
+  counts_by_verdict: z.record(z.string(), z.number()),
+  recommendations: z.array(radarRecommendationSchema),
+});
+
 const retrievedSourceSchema = z.object({
   source_id: z.string(),
   filename: z.string(),
@@ -345,6 +458,13 @@ export type State = z.infer<typeof stateSchema>;
 export type Coverage = z.infer<typeof coverageSchema>;
 export type Health = z.infer<typeof healthSchema>;
 export type BrowserSession = z.infer<typeof browserSessionSchema>;
+export type CitizenMe = z.infer<typeof citizenMeSchema>;
+export type Household = z.infer<typeof householdSchema>;
+export type HouseholdMember = z.infer<typeof householdMemberSchema>;
+export type ProfileFact = z.infer<typeof profileFactSchema>;
+export type RadarRecommendation = z.infer<typeof radarRecommendationSchema>;
+export type RadarList = z.infer<typeof radarListSchema>;
+export type RadarRefresh = z.infer<typeof radarRefreshSchema>;
 export type TurnResponse = z.infer<typeof turnResponseSchema>;
 export type MatchSummary = z.infer<typeof matchSchema>;
 export type BenefitDetail = z.infer<typeof benefitDetailSchema>;
@@ -402,6 +522,7 @@ export async function request<T>(path: string, schema: z.ZodType<T>, init?: Requ
   let response: Response;
   try {
     response = await fetch(`${API_ROOT}${path}`, {
+      credentials: "include",
       ...init,
       headers: {
         ...(init?.body instanceof FormData ? {} : { "Content-Type": "application/json" }),
@@ -446,6 +567,129 @@ export function createBrowserSession(payload: {
     method: "POST",
     body: JSON.stringify(payload),
   });
+}
+
+export function exchangeCitizenCode(payload: {
+  code: string;
+  code_verifier: string;
+  redirect_uri: string;
+}): Promise<{ authenticated: boolean; expires_at: string }> {
+  return request("/api/citizen/auth/exchange", z.object({ authenticated: z.boolean(), expires_at: z.string() }), {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
+export function logoutCitizen(): Promise<void> {
+  return request("/api/citizen/auth/logout", z.undefined(), { method: "POST" });
+}
+
+export function getCitizenMe(): Promise<CitizenMe> {
+  return request("/api/citizen/me", citizenMeSchema);
+}
+
+export function getHouseholds(): Promise<Household[]> {
+  return request("/api/households", z.array(householdSchema));
+}
+
+export function createHousehold(payload: {
+  label: string;
+  state_code?: string;
+  district?: string;
+  pincode?: string;
+  include_self: boolean;
+  consent_persistence: boolean;
+  consent_personalization: boolean;
+}): Promise<Household> {
+  return request("/api/households", householdSchema, {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
+export function getHouseholdMembers(householdId: string): Promise<HouseholdMember[]> {
+  return request(
+    `/api/households/${encodeURIComponent(householdId)}/members`,
+    z.array(householdMemberSchema),
+  );
+}
+
+export function addHouseholdMember(
+  householdId: string,
+  payload: {
+    alias: string;
+    relationship_category: string;
+    age_class: string;
+    authority_confirmed: boolean;
+    consent_member_management: boolean;
+  },
+): Promise<HouseholdMember> {
+  return request(
+    `/api/households/${encodeURIComponent(householdId)}/members`,
+    householdMemberSchema,
+    { method: "POST", body: JSON.stringify(payload) },
+  );
+}
+
+export function getHouseholdFacts(householdId: string): Promise<ProfileFact[]> {
+  return request(
+    `/api/households/${encodeURIComponent(householdId)}/facts`,
+    z.array(profileFactSchema),
+  );
+}
+
+export function getMemberFacts(householdId: string, memberId: string): Promise<ProfileFact[]> {
+  return request(
+    `/api/households/${encodeURIComponent(householdId)}/members/${encodeURIComponent(memberId)}/facts`,
+    z.array(profileFactSchema),
+  );
+}
+
+export function writeMemberFact(
+  householdId: string,
+  memberId: string,
+  factKey: string,
+  payload: { value: string; purposes: string[]; confirm_purpose: boolean; expected_revision?: number },
+): Promise<ProfileFact> {
+  return request(
+    `/api/households/${encodeURIComponent(householdId)}/members/${encodeURIComponent(memberId)}/facts/${encodeURIComponent(factKey)}`,
+    profileFactSchema,
+    { method: "PUT", body: JSON.stringify(payload) },
+  );
+}
+
+export function refreshHouseholdRadar(
+  householdId: string,
+  payload: { member_id?: string; domains?: string[]; limit_per_member?: number } = {},
+): Promise<RadarRefresh> {
+  return request(
+    `/api/households/${encodeURIComponent(householdId)}/radar/refresh`,
+    radarRefreshSchema,
+    { method: "POST", body: JSON.stringify(payload) },
+  );
+}
+
+export function getHouseholdRadar(
+  householdId: string,
+  memberId?: string,
+): Promise<RadarList> {
+  const query = memberId ? `?member_id=${encodeURIComponent(memberId)}` : "";
+  return request(
+    `/api/households/${encodeURIComponent(householdId)}/radar${query}`,
+    radarListSchema,
+  );
+}
+
+export function updateHouseholdRadar(
+  householdId: string,
+  recommendationId: string,
+  payload: { action: "view" | "snooze" | "dismiss"; snooze_until?: string; reason_code?: string },
+): Promise<RadarRecommendation> {
+  return request(
+    `/api/households/${encodeURIComponent(householdId)}/radar/${encodeURIComponent(recommendationId)}`,
+    radarRecommendationSchema,
+    { method: "POST", body: JSON.stringify(payload) },
+  );
 }
 
 export async function getCatalog(): Promise<Catalog> {
