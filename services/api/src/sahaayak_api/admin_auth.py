@@ -204,22 +204,35 @@ async def _validate_oidc_token(token: str) -> AdminPrincipal:
 
     key = await _oidc_key(key_id)
     try:
+        # Keycloak access tokens often put the client id in ``azp`` while ``aud``
+        # remains ``account``. Validate signature/issuer first, then accept either
+        # an explicit audience match or azp == configured audience.
         claims = jwt.decode(
             token,
             key,
             algorithms=algorithms,
-            audience=audience,
             issuer=issuer,
             leeway=max(0, settings.admin_oidc_clock_skew_seconds),
-            options={"require": ["exp", "iat", "sub"]},
+            options={"require": ["exp", "iat", "sub"], "verify_aud": False},
         )
     except jwt.ExpiredSignatureError as exc:
         raise _OIDCRejected("The OIDC session has expired") from exc
     except jwt.PyJWTError as exc:
+        log.warning("admin_oidc_jwt_rejected", error=str(exc))
         raise _OIDCRejected("The OIDC token claims are not valid") from exc
+
+    if not _audience_accepted(claims, audience):
+        raise _OIDCRejected("The OIDC token audience is not accepted")
 
     mfa_verified = _mfa_verified(claims)
     if not mfa_verified:
+        log.warning(
+            "admin_oidc_mfa_rejected",
+            amr=claims.get("amr"),
+            acr=claims.get("acr"),
+            required_amr=settings.admin_oidc_required_amr,
+            required_acr=settings.admin_oidc_required_acr,
+        )
         raise _OIDCRejected(
             "Workforce access requires an MFA-assured OIDC session",
             http_status=status.HTTP_403_FORBIDDEN,
@@ -328,6 +341,21 @@ def _claim_value(claims: dict[str, Any], path: str) -> Any:
     return value
 
 
+def _audience_accepted(claims: dict[str, Any], audience: str) -> bool:
+    raw_aud = claims.get("aud")
+    values = (
+        [raw_aud]
+        if isinstance(raw_aud, str)
+        else [item for item in raw_aud if isinstance(item, str)]
+        if isinstance(raw_aud, list)
+        else []
+    )
+    if audience in values:
+        return True
+    azp = claims.get("azp")
+    return isinstance(azp, str) and azp == audience
+
+
 def _mfa_verified(claims: dict[str, Any]) -> bool:
     required_amr = settings.admin_oidc_required_amr.strip()
     required_acr = settings.admin_oidc_required_acr.strip()
@@ -336,7 +364,9 @@ def _mfa_verified(claims: dict[str, Any]) -> bool:
     raw_amr = claims.get("amr", [])
     amr = [raw_amr] if isinstance(raw_amr, str) else raw_amr if isinstance(raw_amr, list) else []
     acr = claims.get("acr")
-    return (bool(required_amr) and required_amr in amr) or (
+    # Comma-separated accepted AMR values (Keycloak OTP commonly emits "otp").
+    accepted_amr = {part.strip() for part in required_amr.split(",") if part.strip()}
+    return (bool(accepted_amr) and any(value in accepted_amr for value in amr)) or (
         bool(required_acr) and acr == required_acr
     )
 

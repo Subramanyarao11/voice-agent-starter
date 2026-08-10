@@ -8,12 +8,24 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { useAdminMeQuery } from "@/features/admin/queries";
 import { useAdminSessionStore } from "@/features/admin/store";
-import { toUserMessage } from "@/lib/api";
+import { ApiError } from "@/lib/api";
 import {
   beginAdminOidcLogin,
   beginAdminOidcLogout,
   isAdminOidcConfigured,
 } from "@/features/admin/oidc";
+
+function adminAuthError(error: unknown): string {
+  if (error instanceof ApiError) {
+    if (error.status === 401 || error.status === 403) {
+      return error.message || "Workforce sign-in was rejected. Clear the session and sign in again with SSO + OTP.";
+    }
+    if (error.status === 0) {
+      return "Could not reach the API. Confirm the Docker stack is running, then reload.";
+    }
+  }
+  return error instanceof Error ? error.message : "Workforce access check failed.";
+}
 
 export type AdminView = "overview" | "conversations" | "telemetry" | "escalations" | "directory" | "benefits" | "providers" | "messaging" | "quality" | "flags" | "languages" | "audit" | "system";
 
@@ -67,7 +79,7 @@ export function AdminShell({ activeView, children }: AdminShellProps) {
   }
 
   if (meQuery.isError || !meQuery.data) {
-    return <AdminAccessGate onToken={setToken} error={toUserMessage(meQuery.error)} onClear={clearToken} oidcConfigured={oidcConfigured} />;
+    return <AdminAccessGate onToken={setToken} error={adminAuthError(meQuery.error)} onClear={clearToken} oidcConfigured={oidcConfigured} />;
   }
 
   return (

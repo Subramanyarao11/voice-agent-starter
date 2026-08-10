@@ -46,6 +46,9 @@ export async function beginAdminOidcLogin(): Promise<void> {
     state,
     code_challenge: challenge,
     code_challenge_method: "S256",
+    // Force the password form. A stale Keycloak SSO cookie otherwise can land
+    // on the "Invalid username or password" error page with no login UI.
+    prompt: "login",
   }).toString();
   window.location.assign(authorization.toString());
 }
